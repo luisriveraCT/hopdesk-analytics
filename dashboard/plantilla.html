@@ -1574,6 +1574,7 @@ const I18N = {
     'tf.wacc.help':'El WACC mezcla datos observables con juicios. Networks es una empresa privada: no tiene precio de acción del cual estimar una beta, ni deuda cotizando en mercado. Esta tabla separa los dos para que nadie lea el resultado como si todo fuera medido.',
     'tf.insumo':'Insumo','tf.origen':'Origen',
     'tf.observado':'Observado','tf.juicio':'Juicio',
+    'tf.capturado':'Capturado','tf.capturado.n':'Lo capturó alguien del equipo en la hoja de entradas manuales. Queda en la bitácora con su nombre.',
     'tf.w.rf':'Tasa libre de riesgo','tf.w.beta':'Beta','tf.w.erp':'Prima de riesgo de mercado',
     'tf.w.kd':'Costo de la deuda','tf.w.tasa':'Tasa efectiva de impuestos',
     'tf.w.tasa.n':'Calculada del ERP: impuesto a la utilidad entre resultado antes de impuestos, de esta empresa y este periodo.',
@@ -1820,6 +1821,7 @@ const I18N = {
     'tf.wacc.help':'WACC mixes observable data with judgment. Networks is a private company: there is no share price from which to estimate a beta, and no market-traded debt. This table separates the two so nobody reads the result as if all of it were measured.',
     'tf.insumo':'Input','tf.origen':'Source',
     'tf.observado':'Observed','tf.juicio':'Judgment',
+    'tf.capturado':'Entered','tf.capturado.n':'Entered by someone on the team in the manual entry sheet. It is recorded in the change log under their name.',
     'tf.w.rf':'Risk-free rate','tf.w.beta':'Beta','tf.w.erp':'Equity risk premium',
     'tf.w.kd':'Cost of debt','tf.w.tasa':'Effective tax rate',
     'tf.w.tasa.n':'Computed from the ERP: income tax over pre-tax income, for this company and this period.',
@@ -5090,7 +5092,21 @@ function tfDupont(fila){
    Networks es privada y no hay precio de acción del cual estimar una beta. */
 function tfWacc(fila){
   const tab = document.getElementById('tfWacc');
-  const sup = KPIS.supuestos || {}, fuentes = KPIS.fuentes || {};
+  /* LOS SUPUESTOS QUE DE VERDAD SE USARON EN ESTE PERIODO, no los de la
+     configuración.
+
+     La versión anterior leía `KPIS.supuestos`, que son los del cliente. El
+     cálculo sí aplicaba las capturas manuales —el Ke cambiaba— pero esta
+     tabla, que existe justo para explicar de dónde sale el Ke, seguía
+     enseñando el valor de la configuración.
+
+     Lo peor fue cómo se veía: la beta capturada y la de la semilla coincidían
+     por casualidad, así que parecía que la beta sí respondía y las otras dos
+     no. Un error que funciona a medias cuesta más de encontrar que uno que
+     falla entero. */
+  const sup = (fila && fila._supuestos) || KPIS.supuestos || {};
+  const manuales = new Set((fila && fila._supuestos_manuales) || []);
+  const fuentes = KPIS.fuentes || {};
   const insumos = [
     {k: 'rf', v: sup.rf, u: '%', obs: true},
     {k: 'beta', v: sup.beta, u: 'x', obs: false},
@@ -5103,9 +5119,12 @@ function tfWacc(fila){
     const txt = x.v === undefined || x.v === null ? '—'
       : (x.u === '%' ? (x.v * 100).toFixed(2) + '%' : x.v.toFixed(2) + '×');
     h += `<tr><td>${t('tf.w.' + x.k)}</td><td class="num">${txt}</td>
-      <td><span class="${x.obs ? 'kpobs' : 'kpjuicio'}">${
-        t(x.obs ? 'tf.observado' : 'tf.juicio')}</span>
-        <div class="nota">${ajEsc(fuentes[x.k] || '')}</div></td></tr>`;
+      <td>${manuales.has(x.k)
+          ? `<span class="emarca">${t('tf.capturado')}</span>`
+          : `<span class="${x.obs ? 'kpobs' : 'kpjuicio'}">${
+              t(x.obs ? 'tf.observado' : 'tf.juicio')}</span>`}
+        <div class="nota">${ajEsc(manuales.has(x.k)
+          ? t('tf.capturado.n') : (fuentes[x.k] || ''))}</div></td></tr>`;
   }
   // La tasa efectiva SÍ sale del ERP, y por eso va marcada distinto. Se muestra
   // solo cuando la base la hace interpretable: con utilidad casi nula sale un

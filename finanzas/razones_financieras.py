@@ -202,7 +202,24 @@ def derivar_estado(fila, supuestos, fila_anterior=None):
     # El escudo fiscal usa la MISMA tasa que el NOPAT. Si no fuera la misma, el
     # spread ROIC − WACC estaría restando dos números calculados con supuestos
     # fiscales distintos, y la diferencia se leería como creación de valor.
-    if (None not in (pat, deu, f['ke'], kd, t_nopat)) and (pat + deu) != 0:
+    # UN PATRIMONIO NEGATIVO NO TIENE COSTO DE CAPITAL.
+    #
+    # El WACC es un promedio ponderado por la estructura de capital. Con
+    # patrimonio negativo el peso del capital propio sale negativo, y entonces
+    # el resultado deja de ser un promedio: puede quedar por DEBAJO de sus dos
+    # componentes, que es aritméticamente lo que sale y financieramente un
+    # sinsentido.
+    #
+    # Pasó y lo atrapó una prueba: una empresa del grupo con patrimonio de
+    # −28.6 millones daba un peso de capital de −0.63 y un WACC de 3.9%,
+    # cuando su Ke era 11.4% y su deuda neta de impuestos 6.8%. El número se
+    # veía perfectamente razonable — más bajo, incluso "mejor".
+    #
+    # Se suprime y se dice por qué. Una empresa con patrimonio negativo tiene
+    # un problema que ninguna tasa de descuento describe.
+    if pat is not None and pat <= 0:
+        f['wacc_no_aplica'] = 'patrimonio_negativo'
+    elif (None not in (pat, deu, f['ke'], kd, t_nopat)) and (pat + deu) != 0:
         we = pat / (pat + deu)
         wd = deu / (pat + deu)
         f['wacc'] = we * f['ke'] + wd * kd * (1 - t_nopat)

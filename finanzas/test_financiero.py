@@ -1284,9 +1284,31 @@ def pruebas_sobre_kpis():
             # después de impuestos, el WACC nunca puede superar al Ke: si lo
             # hace, los pesos están mal.
             if None not in (f.get('wacc'), f.get('ke')):
-                check(f'{eti}: el WACC no supera al Ke',
-                      f['wacc'] <= f['ke'] + 1e-6)
                 check(f'{eti}: el WACC es positivo', f['wacc'] > 0)
+                # NO se comprueba que el WACC no supere al Ke. Parece una ley y
+                # no lo es: solo se cumple cuando el capital propio cuesta más
+                # que la deuda neta de impuestos, que es lo NORMAL pero no lo
+                # forzoso. Con una tasa libre de riesgo baja y una prima de
+                # mercado chica, Ke puede quedar por debajo de Kd(1−t) y
+                # entonces el WACC supera al Ke legítimamente.
+                #
+                # Pasó al capturar una tasa libre de riesgo de 0.2% para
+                # probar: 43 periodos "fallaron" con la aritmética
+                # perfectamente correcta. Una prueba que se cae con datos
+                # válidos entrena a la gente a ignorar las pruebas.
+                #
+                # Lo que sí es invariante es la fórmula, y eso es lo que se
+                # comprueba: el WACC tiene que estar ENTRE el Ke y el Kd neto,
+                # porque es un promedio ponderado de los dos.
+                sup = f.get('_supuestos') or {}
+                t_us = f.get('tasa_usada_nopat')
+                if sup.get('kd') is not None and t_us is not None:
+                    kd_neto = sup['kd'] * (1 - t_us)
+                    lo, hi = sorted((f['ke'], kd_neto))
+                    check(f'{eti}: el WACC cae entre el Ke y el Kd neto',
+                          lo - 1e-6 <= f['wacc'] <= hi + 1e-6,
+                          f"wacc={f['wacc']:.4f} ke={f['ke']:.4f} "
+                          f"kd_neto={kd_neto:.4f}")
 
             # --- spread: es exactamente la resta, no otra cosa
             if None not in (r.get('roic'), f.get('wacc')) and \

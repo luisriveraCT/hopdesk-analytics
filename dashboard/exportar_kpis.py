@@ -87,6 +87,7 @@ CAMPOS_DERIVADOS = (
     # calculadas con tasas distintas —una medida del ERP, otra supuesta— y no
     # habría forma de saberlo mirando la pantalla.
     'tasa_usada_nopat', 'origen_tasa_nopat', 'tasa_estimada',
+    '_supuestos', '_supuestos_manuales', 'wacc_no_aplica',
     # Qué campos de esta fila los puso una persona, con su motivo. Es lo que
     # permite al tablero resaltarlos: sin este rastro, una cifra sobrescrita se
     # ve idéntica a una calculada y seis meses después nadie sabe cuál era cuál.
@@ -378,11 +379,25 @@ def procesar(filas, supuestos, metas, interco=None, conv=None, entradas=None,
         # supuestos para las 81 filas — y el que quedaría es el global, así que
         # la captura específica desaparecería sin dejar rastro.
         sup_fila = supuestos
+        sup_manuales = []
         if entradas is not None:
             resueltas = entradas.resolver(empresa or f.get('empresa') or '',
                                           f['periodo'])
             f = em.aplicar_a_fila(f, resueltas)
             sup_fila = em.aplicar_a_supuestos(supuestos, resueltas)
+            sup_manuales = [k for k in sup_fila if k in resueltas]
+        # LOS SUPUESTOS QUE DE VERDAD SE USARON, guardados en la fila.
+        #
+        # La tabla de costo de capital mostraba los de la CONFIGURACIÓN, no
+        # éstos. Así que capturar una tasa libre de riesgo nueva movía el Ke
+        # —el cálculo sí los usaba— pero la tabla que explica de dónde sale el
+        # Ke seguía enseñando el valor viejo. Peor: la beta parecía funcionar,
+        # porque la capturada y la de la semilla coincidían por casualidad.
+        #
+        # `_manuales` dice cuáles vinieron de una captura, para que la columna
+        # de origen no llame "observado" a algo que alguien escribió a mano.
+        f['_supuestos'] = dict(sup_fila)
+        f['_supuestos_manuales'] = sup_manuales
         f['base_cobranza'], f['base_pago'], f['sin_base_dias'] = bases_de_dias(
             f, (interco or {}).get(f['periodo']), conv)
         f['costo_inmaterial'] = costo_inmaterial(f)
@@ -566,6 +581,37 @@ def main():
             f'El margen bruto no es interpretable en {", ".join(inmateriales)}: '
             f'su costo de ventas es menor que sus gastos de operación, así que '
             f'sale cerca del 100% y no se puede comparar con nada.')
+    # Si el capital propio sale más barato que la deuda, los supuestos están
+    # al revés. No es un error de cálculo —la fórmula da lo que tiene que dar—
+    # pero sí una señal de que alguien capturó algo raro, y sin decirlo el WACC
+    # resultante se usa para decidir como si nada.
+    sin_wacc = sorted({c for c, serie in salida['series'].items()
+                       if serie and serie[-1].get('wacc_no_aplica')
+                       == 'patrimonio_negativo'})
+    if sin_wacc:
+        salida['avisos'].append(
+            f'{", ".join(sin_wacc)} tiene patrimonio NEGATIVO, así que no se '
+            f'calcula su costo de capital: el WACC es un promedio ponderado '
+            f'por la estructura de capital, y con patrimonio negativo el peso '
+            f'sale negativo y el resultado deja de ser un promedio. Sin WACC '
+            f'tampoco hay spread contra el ROIC ni EVA.')
+    raros = []
+    for clave, serie in salida['series'].items():
+        if not serie:
+            continue
+        f = serie[-1]
+        sup = f.get('_supuestos') or {}
+        t_us, ke = f.get('tasa_usada_nopat'), f.get('ke')
+        if None in (sup.get('kd'), t_us, ke):
+            continue
+        if sup['kd'] * (1 - t_us) > ke:
+            raros.append(clave)
+    if raros:
+        salida['avisos'].append(
+            f'En {", ".join(raros)} el capital propio sale MÁS BARATO que la '
+            f'deuda después de impuestos. Aritméticamente es correcto, pero al '
+            f'revés de lo normal: revisa la tasa libre de riesgo y la prima de '
+            f'riesgo de mercado capturadas.')
     incompletos = sorted({f['periodo'] for s in salida['series'].values()
                           for f in s if f.get('mes_incompleto')})
     if incompletos:
