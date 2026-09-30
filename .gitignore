@@ -1,0 +1,66 @@
+# ============================================================================
+#  QUÉ NO VA AL REPOSITORIO
+# ============================================================================
+#  La regla, y de ella salen todas las líneas de abajo:
+#
+#      el CÓDIGO viaja por Git   — cambia cuando alguien programa
+#      los DATOS viajan por S3   — cambian cada vez que se actualiza
+#
+#  No es solo higiene. Git no olvida: un archivo con cifras del negocio que
+#  entra una vez queda en la historia y en cada copia que alguien haya clonado,
+#  y borrarlo después no lo quita de ahí. Por eso esto se revisa ANTES del
+#  primer envío, no después.
+#
+#  Para comprobar qué se subiría:   git status --porcelain
+# ============================================================================
+
+# Basura de Python
+__pycache__/
+*.pyc
+*.pyo
+*.tmp
+.venv/
+venv/
+
+# --- Datos del ERP ---------------------------------------------------------
+# ~180 MB de saldos, catálogos de cuentas y facturas. Se regeneran corriendo
+# `python actualizar.py`.
+finanzas/datos_erp/
+
+# --- Configuración y secretos del cliente ----------------------------------
+# Vive en S3 desde el 2026-09-29. Lo que quede en disco es una copia local.
+# Los secretos están cifrados, pero la llave maestra vive fuera y un blob
+# cifrado en un repositorio es una invitación a intentar descifrarlo con calma.
+finanzas/datos_config/
+
+# --- El tablero construido y sus datos -------------------------------------
+# index.html pesa 1.5 MB porque lleva DENTRO los estados financieros y los
+# indicadores del grupo — no son una referencia a unos datos, son los datos.
+# La aplicación del servidor lo lee de S3, no del repositorio.
+dashboard/index.html
+dashboard/data/
+dashboard/meta.json
+dashboard/indice.json
+dashboard/finanzas.json
+dashboard/kpis.json
+dashboard/entradas.json
+# La base con la que el servidor recalcula los indicadores: 420 KB de cifras
+# reales del ERP (ingresos, activos, saldos) de las cinco empresas.
+# SE COLÓ AL PRIMER COMMIT porque este archivo se creó después de escribir esta
+# lista y nadie volvió a revisarla. Se detectó antes de subirlo. Es la razón de
+# que haya una comprobación automática: la memoria no basta.
+dashboard/base_financiera.json
+servidor/index.html
+
+# --- Salidas generadas -----------------------------------------------------
+finanzas/KPIs_Finanzas_generado.xlsx
+*.xlsx
+
+# --- Credenciales ----------------------------------------------------------
+.env
+.Renviron
+.aws/
+
+# --- Registro del despliegue anterior de Connect ---------------------------
+# Apunta a un contenido concreto de una cuenta concreta; no es del proyecto.
+dashboard/rsconnect/

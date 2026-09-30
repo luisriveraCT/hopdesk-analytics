@@ -1,0 +1,11 @@
+# Lo que Connect Cloud instala para correr la aplicación.
+#
+# Vive en la raíz porque es donde Connect Cloud lo busca, aunque el punto de
+# entrada sea servidor/app.py.
+#
+# Se fijan versiones MÍNIMAS, no exactas: Connect Cloud resuelve contra su
+# propio índice, y una versión clavada que no tenga hace fallar el despliegue
+# entero por una diferencia de parche que a nadie le importa.
+shiny>=1.8
+boto3>=1.34
+cryptography>=42.0
