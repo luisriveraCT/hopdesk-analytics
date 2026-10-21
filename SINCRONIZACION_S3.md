@@ -9,6 +9,69 @@ el disco de una laptop, y por eso nada se sincroniza.
 
 ---
 
+## ESTADO AL 2026-10-21 — los dos problemas están cerrados
+
+Lo de abajo se escribió cuando nada estaba montado. Ya lo está, y el documento
+se conserva porque su razonamiento sigue valiendo; lo que cambió es el estado.
+
+**Problema A — resuelto.** El almacén vive en
+`s3://hopdesk-analytics-dashboard/config/`, con el perfil
+`facturacion-dashboard`. Comprobado contra el bucket, no supuesto:
+
+```
+escritura   : OK
+privacidad  : OK — no contesta sin credenciales (HTTP 403)
+concurrencia: OK — rechaza escrituras desactualizadas
+```
+
+Es el **mismo** bucket que sirve el tablero, con dos prefijos de régimen
+distinto: `data/` de lectura pública y `config/` privado. La tabla de la
+sección 1 decía que harían falta dos buckets; no hicieron falta, pero la
+distinción que defiende sigue siendo la correcta y ahora la sostiene la
+política, no la separación física. Por eso **no se puede usar el interruptor
+"Block all public access"** en este bucket: lo apagaría todo. Lo que protege
+`config/` es que el permiso público esté acotado a `data/`, y eso se comprueba
+de verdad con un objeto canario en cada corrida:
+
+```
+python finanzas/configuracion/almacenar.py --comprobar
+```
+
+**Las cuatro variables ya no hay que recordarlas.** Resultaron ser la trampa:
+nadie en el repositorio las definía, en Connect estaban puestas a mano y en una
+laptop no, así que una corrida local leía el disco obsoleto, recalculaba sin las
+entradas capturadas y publicaba — sin error y sin aviso. Ahora la instalación lo
+declara en **`almacen.json`** (versionado, sin un solo secreto: bucket, prefijo
+y nombre de perfil; las llaves siguen en `~/.aws/credentials`). Las variables
+siguen existiendo y **mandan sobre el archivo**, que es como se apunta a un
+entorno de pruebas sin tocar nada versionado. Un `almacen.json` corrupto falla
+ruidosamente en vez de caer al disco.
+
+`actualizar.py` y `refrescar.py` ahora anuncian el almacén antes de tocar nada,
+como ya hacían `configurar.py` y `entradas.py`.
+
+**La copia local ya no existe.** `finanzas/datos_config/` se apartó el
+2026-10-21 a `finanzas/_datos_config.obsoleto-2026-10-21/` después de comprobar,
+asiento por asiento, que no tenía nada que el bucket no tuviera (0 entradas
+contra 5, 7 asientos contra 115). Se puede borrar.
+
+**Problema B — resuelto, y por el camino 2, no por el 1.** El tablero dejó de
+ser un archivo estático: vive dentro de la aplicación de `servidor/`. La
+recomendación de abajo (Opción 1, un endpoint tipo Lambda) **no era viable tal
+cual**: Posit Connect Cloud no admite APIs sueltas de Flask ni FastAPI, solo
+Shiny, Dash, Streamlit, Bokeh y Quarto. Se resolvió con Shiny for Python, que
+sirve el mismo HTML e inyecta sus dependencias en un marcador de la página.
+
+Lo que la Opción 1 exigía respetar —validar en el servidor, autor obligatorio,
+escritura con comparación de versión, bitácora— sigue aplicando igual y lo
+cumple el servidor.
+
+**Lo que sigue abierto** de la sección 4: el punto 3 (dónde vive
+`HOPDESK_SECRETS_KEY` fuera de la laptop) y la sección 5 (la contraseña de SAP
+compartida por las cinco empresas).
+
+---
+
 ## 1. Lo que ya está hecho
 
 ### Hay DOS usos de S3, y no son el mismo
@@ -18,13 +81,14 @@ de seguridad:
 
 | | **Bucket de datos del tablero** | **Almacén de configuración** |
 |---|---|---|
-| Nombre | `hopdesk-analytics-dashboard` | *(no existe todavía)* |
+| Nombre | `hopdesk-analytics-dashboard` | `hopdesk-analytics-dashboard` |
 | Qué guarda | `data/rows-2020.json` … `rows-2026.json` (~8 MB) | configuración, entradas manuales, bitácora, secretos |
 | Quién lo lee | el navegador de cualquiera que abra el tablero | solo el código, nunca el navegador |
-| Acceso | **lectura pública** | **tiene que ser privado** |
-| Estado | funcionando | **local, en una laptop** |
+| Prefijo | `data/` | `config/` |
+| Acceso | **lectura pública** | **privado** (403 sin credenciales) |
+| Estado | funcionando | funcionando desde 2026-09-30 |
 | Código | `dashboard/publicar.py` | `finanzas/configuracion/almacen.py` |
-| Perfil AWS | `facturacion-dashboard` | por definir |
+| Perfil AWS | `facturacion-dashboard` | `facturacion-dashboard` |
 
 El primero es público a propósito: son los chunks de facturación que la página
 pide por URL. El segundo **no puede ir ahí**. Guarda los identificadores de las
@@ -109,7 +173,11 @@ por separado y el primero es mucho más fácil.
 
 ### Problema A — el almacén está en una laptop
 
-Hoy `ALMACEN_S3_BUCKET` no está definida. Todo esto vive en
+> **Resuelto.** Lo que sigue describe cómo estaba. Hoy esto vive en
+> `s3://hopdesk-analytics-dashboard/config/` y la instalación lo declara en
+> `almacen.json`; ver el encabezado.
+
+Entonces `ALMACEN_S3_BUCKET` no estaba definida y todo vivía en
 `finanzas/datos_config/` de una sola máquina:
 
 ```
@@ -134,7 +202,10 @@ lo bloquee.
 
 ### Problema B — el navegador no puede escribir
 
-Aunque el almacén esté en S3, la página **sigue sin poder guardar sola**.
+> **Resuelto** por la aplicación de `servidor/` (Shiny for Python). Lo que
+> sigue describe cómo estaba, y por qué.
+
+Aunque el almacén esté en S3, la página **seguía sin poder guardar sola**.
 
 El tablero es un archivo HTML estático en Posit Connect Cloud. Para escribir en
 S3 desde el navegador harían falta credenciales dentro de la página, y la página
@@ -238,6 +309,10 @@ Si se va a tocar la gestión de credenciales para montar esto, es el momento.
 |---|---|
 | El almacén, local y S3, con la escritura condicional | `finanzas/configuracion/almacen.py` |
 | Qué almacén se usa y cómo se decide | `finanzas/configuracion/repositorio.py` → `almacen_por_defecto()` |
+| Qué almacén usa ESTA instalación | `almacen.json` (raíz) — sin secretos, versionado |
+| Comprobar, migrar y comparar el almacén | `finanzas/configuracion/almacenar.py` |
+| La aplicación que sirve el tablero y guarda | `servidor/app.py` |
+| Riesgos y capacidad de crecer | `RIESGOS.md` |
 | Cifrado de credenciales | `finanzas/configuracion/secretos.py` |
 | Reglas de validación de la captura | `finanzas/entradas_manuales.py` → `validar()` |
 | Lo que haría el endpoint | `finanzas/entradas.py` → `aplicar()` |

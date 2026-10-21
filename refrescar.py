@@ -174,6 +174,29 @@ def redesplegar_html(simular=False):
         raise SystemExit(f'El redespliegue a Connect Cloud falló (código {r.returncode}).')
 
 
+def decir_almacen():
+    """Qué almacén se va a usar, dicho antes de tocar nada.
+
+    Va aquí y no solo en los comandos de configuración porque estos dos son los
+    que recalculan y publican. Correr contra el disco creyendo que se corre
+    contra el bucket recalcula sin las entradas capturadas y publica el
+    resultado, y nada en la salida lo delata — solo lo nota, semanas después,
+    quien busca una cifra que capturó.
+    """
+    import sys as _sys
+    _sys.path.insert(0, os.path.join(AQUI, 'finanzas'))
+    _sys.path.insert(0, os.path.join(AQUI, 'finanzas', 'configuracion'))
+    try:
+        import repositorio as repo
+        # flush: los pasos siguientes lanzan subprocesos que escriben
+        # directo a la terminal, y sin esto el aviso sale DESPUÉS de lo
+        # que avisa — que es igual que no avisar.
+        print(f'  almacén: {repo.descripcion_almacen()}', flush=True)
+    except Exception as e:                                   # noqa: BLE001
+        print(f'  almacén: NO SE PUDO DETERMINAR ({e})', flush=True)
+        raise
+
+
 def main():
     ap = argparse.ArgumentParser(
         description='Publica el tablero ya construido: datos a S3 y HTML a Connect.')
@@ -185,8 +208,15 @@ def main():
                     help='dice qué haría, sin tocar nada')
     args = ap.parse_args()
 
+    decir_almacen()
+
     hacer_datos = not args.solo_html
     hacer_html = not args.solo_subir
+    if hacer_html:
+        print('\n  AVISO: el tablero ahora se sirve desde la aplicación de')
+        print('  Connect (servidor/app.py), que lo lee del almacén privado.')
+        print('  Redesplegar el HTML estático deja una copia vieja conviviendo')
+        print('  con la app. Si solo quieres subir los datos, usa --solo-subir.')
 
     if hacer_datos:
         paso('Datos del tablero → S3')

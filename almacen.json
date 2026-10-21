@@ -1,0 +1,18 @@
+{
+  "_comentario": [
+    "Dónde vive el almacén de ESTA instalación: configuración, entradas",
+    "manuales, bitácora y secretos cifrados. No hay ningún secreto en este",
+    "archivo —nombre de bucket, prefijo y nombre de perfil— y por eso se",
+    "versiona: es lo que hace que un 'python actualizar.py' recién clonado",
+    "lea el mismo almacén que el servidor, sin que nadie recuerde cuatro",
+    "variables de entorno.",
+    "Las credenciales siguen en ~/.aws/credentials, nunca aquí.",
+    "Las variables ALMACEN_S3_* mandan sobre este archivo: así un entorno de",
+    "pruebas apunta a otro sitio sin editar nada versionado."
+  ],
+  "tipo": "s3",
+  "bucket": "hopdesk-analytics-dashboard",
+  "prefijo": "config",
+  "perfil": "facturacion-dashboard",
+  "region": "us-east-1"
+}

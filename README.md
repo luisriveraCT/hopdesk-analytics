@@ -30,7 +30,20 @@ y construye. Se detiene solo en dos puntos y ninguno se puede saltar:
 python actualizar.py --subir
 ```
 
-Lo anterior más publicar: datos a S3 y la página a Posit Connect Cloud.
+Lo anterior más subir los datos de facturación al bucket público, que es de
+donde el navegador los pide.
+
+**No hay ningún Excel que actualizar.** Los datos salen del ERP. La base de
+Excel se retiró el 2026-09-26 y con ella todo el código que la leía; la
+constancia de por qué está en `legacy/README.md`.
+
+### Qué pasa con el tablero publicado
+
+El paso 17 sube el tablero al almacén privado, y la aplicación de
+`servidor/app.py` lo toma de ahí en su siguiente arranque. **Publicar datos
+nuevos no requiere tocar Git ni volver a desplegar la aplicación.**
+
+Solo se vuelve a GitHub cuando cambia el código.
 
 ### Otras banderas útiles
 

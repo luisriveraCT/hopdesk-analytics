@@ -32,6 +32,11 @@ finanzas/datos_erp/
 # Los secretos están cifrados, pero la llave maestra vive fuera y un blob
 # cifrado en un repositorio es una invitación a intentar descifrarlo con calma.
 finanzas/datos_config/
+# Cualquier copia apartada del almacen local. Renombrar la carpeta la sacaba
+# del patron de arriba y git volvia a verla, con los secretos y la bitacora
+# dentro: exactamente lo que verificar_repositorio.py existe para evitar.
+finanzas/*datos_config*/
+
 
 # --- El tablero construido y sus datos -------------------------------------
 # index.html pesa 1.5 MB porque lleva DENTRO los estados financieros y los

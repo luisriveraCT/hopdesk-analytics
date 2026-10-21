@@ -54,21 +54,31 @@ from almacen import AlmacenLocal, AlmacenS3, ConflictoDeEscritura  # noqa: E402
 CANARIO = '_canario_de_visibilidad.json'
 
 
-def _s3_desde_entorno():
-    """El almacén de destino, o un error que dice exactamente qué falta."""
-    bucket = os.environ.get(repo.VAR_S3_BUCKET, '').strip()
-    if not bucket:
+def _s3_destino():
+    """El almacén de destino, resuelto EXACTAMENTE igual que lo resuelve la app.
+
+    Por `repo.ajustes_almacen()` y no leyendo el entorno por su cuenta: ésta es
+    la herramienta que comprueba si el almacén está bien, y una herramienta que
+    mira a otro sitio que la aplicación puede dar por bueno un bucket que nadie
+    usa, o declarar que no hay ninguno cuando sí lo hay. Fue el caso: leía solo
+    las variables de entorno y no veía `almacen.json`.
+    """
+    ajustes, origen = repo.ajustes_almacen()
+    if not ajustes:
         raise SystemExit(
-            'No hay bucket configurado. Sin él no hay a dónde migrar:\n'
+            'No hay almacén en S3 configurado: esta instalación apunta al disco.\n'
+            'Declara el bucket en almacen.json (lo normal) o con variables de\n'
+            'entorno (lo temporal):\n'
             f'    set {repo.VAR_S3_BUCKET}=mi-bucket-privado\n'
             f'    set {repo.VAR_S3_PREFIJO}=config\n'
             f'    set {repo.VAR_S3_PERFIL}=facturacion-dashboard\n'
             f'    set {repo.VAR_S3_REGION}=us-east-1   (opcional)')
+    print(f'  resuelto por: {origen}')
     return AlmacenS3(
-        bucket,
-        perfil=os.environ.get(repo.VAR_S3_PERFIL, '').strip() or None,
-        region=os.environ.get(repo.VAR_S3_REGION, '').strip() or 'us-east-1',
-        prefijo_base=os.environ.get(repo.VAR_S3_PREFIJO, '').strip('/'))
+        ajustes['bucket'],
+        perfil=ajustes['perfil'] or None,
+        region=ajustes['region'] or 'us-east-1',
+        prefijo_base=ajustes['prefijo'].strip('/'))
 
 
 def _url_publica(bucket, region, clave):
@@ -97,9 +107,9 @@ def comprobar(verboso=True):
     política dice sino lo que el bucket contesta.
     """
     from botocore.exceptions import ClientError
-    s3 = _s3_desde_entorno()
+    s3 = _s3_destino()
     bucket = s3.bucket
-    region = os.environ.get(repo.VAR_S3_REGION, '').strip() or 'us-east-1'
+    region = repo.ajustes_almacen()[0].get('region') or 'us-east-1'
     clave = s3._clave(CANARIO)
     ok = True
 
@@ -195,7 +205,7 @@ def migrar(forzar=False, simular=False):
     if not comprobar():
         raise SystemExit('\nNo se migró nada.')
 
-    s3 = _s3_desde_entorno()
+    s3 = _s3_destino()
     print(f'\n{len(rutas)} archivo(s) para migrar:')
     subidos, saltados = 0, 0
     for ruta in rutas:
@@ -221,10 +231,22 @@ def migrar(forzar=False, simular=False):
 
 
 def verificar():
-    """Compara disco y bucket archivo por archivo. Dice qué difiere, no arregla."""
+    """Compara disco y bucket archivo por archivo. Dice qué difiere, no arregla.
+
+    Si no hay copia local, no hay hallazgo: hay una sola fuente, que es lo que
+    se quiere. Reportar los doce archivos como "solo en S3" y salir con error
+    sería una alarma permanente, y una herramienta que siempre marca algo deja
+    de leerse — y entonces tampoco marca lo real.
+    """
     local = AlmacenLocal(repo.raiz_local())
-    s3 = _s3_desde_entorno()
-    rutas = sorted(set(_rutas_locales(local)) | set(s3.listar('')))
+    s3 = _s3_destino()
+    locales = _rutas_locales(local)
+    if not locales:
+        print(f'\n  No hay copia local en {repo.raiz_local()}.')
+        print(f'  El bucket es la única fuente: {len(s3.listar(""))} archivo(s).')
+        print('  Nada que comparar, y es el estado correcto.')
+        return 0
+    rutas = sorted(set(locales) | set(s3.listar('')))
     if not rutas:
         raise SystemExit('No hay nada que comparar.')
     iguales = diferentes = solo_local = solo_s3 = 0

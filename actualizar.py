@@ -112,6 +112,29 @@ def ver_local():
             print('\nServidor detenido.')
 
 
+def decir_almacen():
+    """Qué almacén se va a usar, dicho antes de tocar nada.
+
+    Va aquí y no solo en los comandos de configuración porque estos dos son los
+    que recalculan y publican. Correr contra el disco creyendo que se corre
+    contra el bucket recalcula sin las entradas capturadas y publica el
+    resultado, y nada en la salida lo delata — solo lo nota, semanas después,
+    quien busca una cifra que capturó.
+    """
+    import sys as _sys
+    _sys.path.insert(0, os.path.join(AQUI, 'finanzas'))
+    _sys.path.insert(0, os.path.join(AQUI, 'finanzas', 'configuracion'))
+    try:
+        import repositorio as repo
+        # flush: los pasos siguientes lanzan subprocesos que escriben
+        # directo a la terminal, y sin esto el aviso sale DESPUÉS de lo
+        # que avisa — que es igual que no avisar.
+        print(f'  almacén: {repo.descripcion_almacen()}', flush=True)
+    except Exception as e:                                   # noqa: BLE001
+        print(f'  almacén: NO SE PUDO DETERMINAR ({e})', flush=True)
+        raise
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--solo-erp', action='store_true')
@@ -123,6 +146,8 @@ def main():
                          'local y abre el navegador')
     ap.add_argument('--desde', type=int, default=2020)
     args = ap.parse_args()
+
+    decir_almacen()
 
     if args.ver:
         ver_local()
@@ -240,9 +265,17 @@ def main():
         # una bandera que aquella versión no tenía. La subida llevaba tiempo
         # fallando sin que nadie lo notara, porque el paso no detiene la
         # corrida. Ahora existen las dos cosas y se prueba con --simular.
-        paso(18, 'Publicar en línea (datos a S3 y HTML a Connect)')
-        correr(os.path.join(AQUI, 'refrescar.py'), [], cwd=AQUI,
-               detener_si_falla=False, titulo='publicación en línea')
+        # SOLO los datos de facturación al bucket público. El HTML ya NO se
+        # redespliega a Connect: desde que el tablero vive dentro de la
+        # aplicación de `servidor/`, hacerlo dejaría una copia estática vieja
+        # conviviendo con la app, y sin nada que indicara cuál es cuál.
+        #
+        # Los trozos de facturación sí siguen yendo al bucket público: el
+        # navegador los pide por URL, esté la página servida por la aplicación
+        # o suelta.
+        paso(18, 'Publicar los datos de facturación en el bucket público')
+        correr(os.path.join(AQUI, 'refrescar.py'), ['--solo-subir'], cwd=AQUI,
+               detener_si_falla=False, titulo='publicación de datos')
 
     print(f'\n{"=" * 74}')
     print(f' LISTO en {time.time() - t0:.0f}s')

@@ -121,7 +121,21 @@ def _leer_tablero():
 
 _HTML, _RUTA = _leer_tablero()
 
+
+def _etiqueta_almacen() -> str:
+    """Bucket y prefijo, sin el perfil. Vacío si se está sirviendo del disco."""
+    try:
+        ajustes, _ = repo.ajustes_almacen()
+    except Exception:                                        # noqa: BLE001
+        return ''
+    if not ajustes:
+        return 'local'
+    pref = ajustes.get('prefijo', '').strip('/')
+    return f'{ajustes["bucket"]}/{pref}' if pref else ajustes['bucket']
+
+
 MARCADOR = '<meta name="shiny-dependency-placeholder" content="">'
+
 if MARCADOR not in _HTML:
     # Se comprueba al arrancar y se detiene. Sin el marcador la página se
     # serviría igual de bien pero SIN el canal de Shiny, así que el botón de
@@ -131,6 +145,13 @@ if MARCADOR not in _HTML:
         f'{_RUTA} no trae el marcador de dependencias de Shiny.\n'
         f'Está en dashboard/plantilla.html, junto a las demás etiquetas <meta>.\n'
         f'Reconstruye con: python actualizar.py --solo-tablero')
+
+# Se inyecta junto al marcador que ya se comprobó que existe, así que no hace
+# falta buscar otro sitio ni arriesgarse a no encontrarlo.
+_HTML = _HTML.replace(
+    MARCADOR,
+    f'<meta name="almacen-activo" content="{_etiqueta_almacen()}">\n' + MARCADOR,
+    1)
 
 app_ui = ui.page_html(_HTML)
 

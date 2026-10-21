@@ -212,10 +212,64 @@ def configuracion_publicable(cliente: Cliente) -> Dict:
     }
 
 
+ARCHIVO_ALMACEN = 'almacen.json'
+
 VAR_S3_BUCKET = 'ALMACEN_S3_BUCKET'
 VAR_S3_PREFIJO = 'ALMACEN_S3_PREFIJO'
 VAR_S3_PERFIL = 'ALMACEN_S3_PERFIL'
 VAR_S3_REGION = 'ALMACEN_S3_REGION'
+
+
+def _declaracion() -> dict:
+    """Lo que `almacen.json` declara, o {} si no existe.
+
+    Vive en la raíz del proyecto, se versiona y NO lleva secretos: nombre de
+    bucket, prefijo y nombre de perfil. Las credenciales siguen en
+    ~/.aws/credentials.
+
+    Un archivo ilegible o mal formado NO se ignora: se levanta el error. Caer al
+    disco porque el JSON tiene una coma de más sería volver a las dos verdades
+    por la puerta de atrás.
+    """
+    ruta = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__)))), ARCHIVO_ALMACEN)
+    if not os.path.exists(ruta):
+        return {}
+    import json
+    try:
+        with open(ruta, encoding='utf-8') as f:
+            datos = json.load(f)
+    except (OSError, ValueError) as e:
+        raise ErrorConfiguracion(
+            f'{ARCHIVO_ALMACEN} existe pero no se pudo leer: {e}. '
+            f'Arréglalo o bórralo; no se continúa adivinando dónde está el '
+            f'almacén.') from e
+    return datos if isinstance(datos, dict) else {}
+
+
+def ajustes_almacen() -> tuple:
+    """(ajustes, origen). Las variables de entorno mandan sobre el archivo.
+
+    Ese orden y no el contrario: el archivo es la instalación —lo normal, lo
+    versionado, lo que no hay que recordar— y las variables son la excepción
+    deliberada de quien quiere apuntar a otro sitio por un rato.
+    """
+    d = _declaracion()
+    env = {
+        'bucket': os.environ.get(VAR_S3_BUCKET, '').strip(),
+        'prefijo': os.environ.get(VAR_S3_PREFIJO, '').strip(),
+        'perfil': os.environ.get(VAR_S3_PERFIL, '').strip(),
+        'region': os.environ.get(VAR_S3_REGION, '').strip(),
+    }
+    if env['bucket']:
+        return env, 'variables de entorno'
+    if str(d.get('tipo', '')).lower() == 's3' and d.get('bucket'):
+        return ({'bucket': str(d.get('bucket', '')).strip(),
+                 'prefijo': str(d.get('prefijo', '')).strip(),
+                 'perfil': str(d.get('perfil', '')).strip(),
+                 'region': str(d.get('region', '')).strip()},
+                ARCHIVO_ALMACEN)
+    return {}, 'disco local'
 
 
 def raiz_local() -> str:
@@ -225,45 +279,55 @@ def raiz_local() -> str:
 
 
 def descripcion_almacen() -> str:
-    """Una línea que dice dónde se está guardando. Para que cualquier script
-    pueda imprimirla: correr contra el disco creyendo que se corre contra el
-    bucket —o al revés— es la clase de error que solo se nota cuando alguien
-    busca un dato que capturó y no está."""
-    bucket = os.environ.get(VAR_S3_BUCKET, '').strip()
-    if not bucket:
+    """Una línea que dice dónde se está guardando, y de dónde salió esa
+    decisión. Para que cualquier script pueda imprimirla: correr contra el disco
+    creyendo que se corre contra el bucket —o al revés— es la clase de error que
+    solo se nota cuando alguien busca un dato que capturó y no está."""
+    ajustes, origen = ajustes_almacen()
+    if not ajustes:
         return f'disco local — {raiz_local()}'
-    pref = os.environ.get(VAR_S3_PREFIJO, '').strip('/')
-    perfil = os.environ.get(VAR_S3_PERFIL, '').strip()
-    return (f's3://{bucket}/{pref + "/" if pref else ""}'
-            f'  (perfil {perfil or "por defecto"})')
+    pref = ajustes['prefijo'].strip('/')
+    return (f's3://{ajustes["bucket"]}/{pref + "/" if pref else ""}'
+            f'  (perfil {ajustes["perfil"] or "por defecto"} · {origen})')
 
 
 def almacen_por_defecto() -> Almacen:
     """Dónde vive la configuración: el bucket si está configurado, el disco si no.
 
-    POR QUÉ POR VARIABLES DE ENTORNO Y NO EN UN ARCHIVO DE CONFIGURACIÓN
-    --------------------------------------------------------------------
-    Porque esto decide dónde está el archivo de configuración. Guardar la
-    respuesta dentro del archivo que hay que encontrar no resuelve nada. Y
-    además no es una decisión del cliente —lo que vive en su configuración—
-    sino de la instalación: la misma configuración de Networks se lee desde la
-    laptop de quien extrae y desde el proceso que publica, y cada uno puede
-    apuntar a un sitio distinto sin que el dato cambie.
+    DE DÓNDE SALE LA RESPUESTA, EN ESTE ORDEN
+    -----------------------------------------
+      1. las variables ALMACEN_S3_*, si traen bucket;
+      2. `almacen.json` en la raíz del proyecto;
+      3. el disco local.
 
-        set ALMACEN_S3_BUCKET=mi-bucket-privado
-        set ALMACEN_S3_PREFIJO=config
-        set ALMACEN_S3_PERFIL=facturacion-dashboard
+    LA DISTINCIÓN QUE HAY QUE NO PERDER: la configuración DEL CLIENTE vive
+    dentro del almacén, y por eso no puede decir dónde está el almacén —sería
+    el archivo que hay que encontrar diciendo dónde encontrarlo—. Pero CUÁL
+    ALMACÉN usa esta instalación es otra cosa: no es del cliente, es de aquí, y
+    cabe en un archivo versionado junto al código, sin un solo secreto dentro.
 
-    SIN LA VARIABLE SE USA EL DISCO, y es a propósito: quien clona el proyecto
-    y corre una prueba no debe tocar el bucket compartido por omisión. La
-    degradación va en esa dirección y no en la contraria —nunca "no pude
+    Esto empezó solo con variables de entorno, y el resultado fue el error que
+    la capa existe para evitar. `servidor/app.py`, `actualizar.py` y todo el
+    cálculo llaman a esta función, y nadie en el repositorio definía las
+    variables: en Connect estaban puestas a mano y en una laptop no. Así que
+    una corrida local leía el disco —con 0 entradas capturadas frente a las 5
+    que ya había en S3— y volvía a calcular y a publicar sin ellas, sin error y
+    sin aviso. Un valor por omisión que hay que recordar no es un valor por
+    omisión.
+
+    Las variables se quedan, y mandan sobre el archivo: son como se apunta a un
+    entorno de pruebas sin tocar nada versionado.
+
+    SIN NINGUNA DE LAS DOS SE USA EL DISCO, y es a propósito: quien clona el
+    proyecto sin credenciales no debe tocar un bucket compartido por omisión.
+    La degradación va en esa dirección y no en la contraria —nunca "no pude
     hablar con S3, guardo en disco"—, porque esa sí produce dos verdades.
     """
-    bucket = os.environ.get(VAR_S3_BUCKET, '').strip()
-    if not bucket:
+    ajustes, _ = ajustes_almacen()
+    if not ajustes:
         return AlmacenLocal(raiz_local())
     return AlmacenS3(
-        bucket,
-        perfil=os.environ.get(VAR_S3_PERFIL, '').strip() or None,
-        region=os.environ.get(VAR_S3_REGION, '').strip() or 'us-east-1',
-        prefijo_base=os.environ.get(VAR_S3_PREFIJO, '').strip('/'))
+        ajustes['bucket'],
+        perfil=ajustes['perfil'] or None,
+        region=ajustes['region'] or 'us-east-1',
+        prefijo_base=ajustes['prefijo'].strip('/'))
