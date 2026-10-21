@@ -113,7 +113,7 @@ def main():
         print('  aviso: no hay base_financiera.json. El servidor va a poder')
         print('  guardar, pero NO recalcular los indicadores al hacerlo.')
 
-    print('  La aplicación lo toma en su próximo arranque.')
+    print('  La aplicación lo toma sola en menos de un minuto; no hay que reiniciarla.')
     return 0
 
 

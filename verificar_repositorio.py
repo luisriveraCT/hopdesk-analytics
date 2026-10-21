@@ -62,6 +62,23 @@ SE_EXCLUYE = {'verificar_repositorio.py'}
 # este proyecto no pasa de 400 KB por archivo.
 LIMITE_KB = 500
 
+# Terceros que se versionan A PROPÓSITO y pesan: las librerías y las
+# tipografías que la página pedía antes a cdnjs y a Google. Están aquí para
+# que el navegador no dependa de nadie más, así que tienen que viajar con el
+# código.
+#
+# Se les levanta SOLO el límite de peso, y solo a estas extensiones. Todo lo
+# demás —credenciales, cadenas sospechosas— se les sigue comprobando igual:
+# una excepción que apaga el guardián entero es cómo se cuela el archivo que
+# no debía.
+SIN_LIMITE_DE_PESO = ('dashboard/estaticos/',)
+EXT_DE_TERCEROS = ('.js', '.woff2', '.woff', '.css')
+
+
+def es_estatico_de_terceros(f):
+    return (f.startswith(SIN_LIMITE_DE_PESO)
+            and f.lower().endswith(EXT_DE_TERCEROS))
+
 
 def rastreados():
     r = subprocess.run(['git', 'ls-files'], cwd=AQUI,
@@ -87,7 +104,7 @@ def main():
         if not os.path.exists(ruta):
             continue
         kb = os.path.getsize(ruta) / 1024
-        if kb > LIMITE_KB:
+        if kb > LIMITE_KB and not es_estatico_de_terceros(f):
             problemas.append((f, f'pesa {kb:.0f} KB', 'revisar si son datos'))
         try:
             texto = open(ruta, encoding='utf-8', errors='ignore').read()

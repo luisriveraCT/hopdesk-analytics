@@ -97,29 +97,75 @@ RUTAS_LOCALES = [
 ]
 
 
-def _leer_tablero():
-    """(html, de dónde salió). Primero el almacén, luego el disco."""
+# ---------------------------------------------------------------------------
+# LO PUBLICADO CAMBIA MIENTRAS LA APP CORRE, Y LA APP TIENE QUE ENTERARSE
+# ---------------------------------------------------------------------------
+# Esto se leía UNA vez, al importar el módulo. Publicabas con `actualizar.py`
+# y la app seguía sirviendo lo anterior hasta reiniciarla; en Connect el
+# proceso vive días, así que "hasta reiniciarla" quería decir "hasta que
+# alguien se diera cuenta".
+#
+# Tampoco se puede traer el archivo en cada visita: el tablero pesa 1.6 MB.
+# Se pregunta por la VERSIÓN, que es un HEAD de S3 —medido: ~350 ms contra
+# ~900 ms de la descarga— y solo se vuelve a traer si cambió. Y no más de una
+# vez cada TTL_VERSION segundos, para que una ráfaga de visitas no se
+# convierta en una ráfaga de llamadas a S3.
+TTL_VERSION = 30.0
+_cache = {}
+
+
+def _del_almacen(clave, respaldos, leer_respaldo):
+    """El contenido de `clave`, vuelto a traer solo si cambió.
+
+    Si el almacén no contesta se sigue sirviendo lo último bueno —una caída de
+    red no debe tumbar la página— pero se dice en el registro. Lo que no se
+    hace nunca es bajar al respaldo de disco teniendo algo del almacén: así es
+    como alguien acaba mirando cifras de hace tres semanas convencido de que
+    son las de hoy.
+    """
+    import time
+    ent = _cache.get(clave)
+    ahora = time.monotonic()
+    if ent and ahora - ent['revisado'] < TTL_VERSION:
+        return ent['datos']
     try:
         almacen = repo.almacen_por_defecto()
-        datos, _ = almacen.leer(CLAVE_TABLERO)
-        if datos and datos.get('html'):
-            return datos['html'], f'{repo.descripcion_almacen()} → {CLAVE_TABLERO}'
+        version = almacen.version(clave)
+        if ent and version == ent['version']:
+            ent['revisado'] = ahora
+            return ent['datos']
+        if version is not None:
+            datos, v = almacen.leer(clave)
+            if datos:
+                if ent:
+                    print(f'{clave}: versión nueva, recargado del almacén',
+                          file=sys.stderr, flush=True)
+                _cache[clave] = {'datos': datos, 'version': v, 'revisado': ahora,
+                                 'de': f'{repo.descripcion_almacen()} → {clave}'}
+                return datos
     except Exception as e:                                   # noqa: BLE001
-        # No se calla: que el almacén no conteste y la app sirva una copia
-        # vieja del disco sin decirlo es cómo alguien acaba mirando cifras de
-        # hace tres semanas convencido de que son las de hoy.
-        print(f'aviso: no se pudo leer el tablero del almacén ({e}); '
-              f'se intenta el disco.', file=sys.stderr, flush=True)
-    for ruta in RUTAS_LOCALES:
+        print(f'aviso: no se pudo leer {clave} del almacén ({e})',
+              file=sys.stderr, flush=True)
+        if ent:
+            return ent['datos']
+    for ruta in respaldos:
         if os.path.exists(ruta):
-            with open(ruta, encoding='utf-8') as f:
-                return f.read(), ruta
+            _cache[clave] = {'datos': leer_respaldo(ruta), 'version': None,
+                             'revisado': ahora, 'de': ruta}
+            return _cache[clave]['datos']
+    return None
+
+
+def _leer_tablero():
+    """(html, de dónde salió), de la publicación más reciente."""
+    datos = _del_almacen(
+        CLAVE_TABLERO, RUTAS_LOCALES,
+        lambda r: {'html': open(r, encoding='utf-8').read()})
+    if datos and datos.get('html'):
+        return datos['html'], _cache[CLAVE_TABLERO]['de']
     raise SystemExit(
         'No se encontró el tablero, ni en el almacén ni en disco.\n'
         'Constrúyelo y publícalo con:  python actualizar.py')
-
-
-_HTML, _RUTA = _leer_tablero()
 
 
 def _etiqueta_almacen() -> str:
@@ -135,25 +181,48 @@ def _etiqueta_almacen() -> str:
 
 
 MARCADOR = '<meta name="shiny-dependency-placeholder" content="">'
+_servido = {'crudo': None, 'texto': None}
 
-if MARCADOR not in _HTML:
-    # Se comprueba al arrancar y se detiene. Sin el marcador la página se
-    # serviría igual de bien pero SIN el canal de Shiny, así que el botón de
-    # guardar caería al modo archivo — la misma pantalla, el mismo botón, y
-    # nada que explique por qué dejó de guardar.
-    raise SystemExit(
-        f'{_RUTA} no trae el marcador de dependencias de Shiny.\n'
-        f'Está en dashboard/plantilla.html, junto a las demás etiquetas <meta>.\n'
-        f'Reconstruye con: python actualizar.py --solo-tablero')
 
-# Se inyecta junto al marcador que ya se comprobó que existe, así que no hace
-# falta buscar otro sitio ni arriesgarse a no encontrarlo.
-_HTML = _HTML.replace(
-    MARCADOR,
-    f'<meta name="almacen-activo" content="{_etiqueta_almacen()}">\n' + MARCADOR,
-    1)
+def _html_actual():
+    """El tablero listo para servir, de la publicación más reciente.
 
-app_ui = ui.page_html(_HTML)
+    Sin el marcador la página se serviría igual de bien pero SIN el canal de
+    Shiny, así que el botón de guardar caería al modo archivo: la misma
+    pantalla, el mismo botón, y nada que explique por qué dejó de guardar. Al
+    arrancar, eso detiene el servidor. Una publicación POSTERIOR que llegue
+    rota se descarta y se sigue sirviendo la anterior — tirar una app que está
+    funcionando por una publicación mala es cambiar un problema por otro peor.
+    """
+    html, ruta = _leer_tablero()
+    if _servido['crudo'] == html:
+        return _servido['texto']
+    if MARCADOR not in html:
+        aviso = (f'{ruta} no trae el marcador de dependencias de Shiny.\n'
+                 f'Está en dashboard/plantilla.html, junto a las demás <meta>.\n'
+                 f'Reconstruye con: python actualizar.py --solo-tablero')
+        if _servido['texto'] is None:
+            raise SystemExit(aviso)
+        print(f'aviso: se descarta la publicación nueva. {aviso}',
+              file=sys.stderr, flush=True)
+        return _servido['texto']
+    # Se inyecta junto al marcador, que ya se comprobó que existe.
+    texto = html.replace(
+        MARCADOR,
+        f'<meta name="almacen-activo" content="{_etiqueta_almacen()}">\n' + MARCADOR,
+        1)
+    _servido['crudo'], _servido['texto'] = html, texto
+    return texto
+
+
+# Una FUNCIÓN y no un valor: Shiny la llama en cada petición, y es ahí donde
+# se nota que hubo una publicación nueva. Como valor, el tablero se quedaba
+# congelado en el que hubiera al arrancar el proceso.
+def app_ui(request):                                         # noqa: ARG001
+    return ui.page_html(_html_actual())
+
+
+_html_actual()      # falla pronto si lo que hay publicado no sirve
 
 
 # ---------------------------------------------------------------------------
@@ -181,23 +250,19 @@ RUTAS_BASE = [
 
 
 def _leer_base():
-    """La base para recalcular, o None si no está publicada."""
-    try:
-        datos, _ = repo.almacen_por_defecto().leer(CLAVE_BASE)
-        if datos and datos.get('series'):
-            return datos
-    except Exception as e:                                   # noqa: BLE001
-        print(f'aviso: no se pudo leer la base del almacén ({e})',
-              file=sys.stderr, flush=True)
-    for ruta in RUTAS_BASE:
-        if os.path.exists(ruta):
-            with open(ruta, encoding='utf-8') as f:
-                return json.load(f)
-    return None
+    """La base para recalcular, de la publicación más reciente, o None.
+
+    Se consulta en cada guardado y no al arrancar: si acabas de actualizar los
+    estados financieros, el recálculo tiene que hacerse con los nuevos. Antes
+    usaba los que hubiera cuando el proceso arrancó.
+    """
+    datos = _del_almacen(
+        CLAVE_BASE, RUTAS_BASE,
+        lambda r: json.load(open(r, encoding='utf-8')))
+    return datos if datos and datos.get('series') else None
 
 
-_BASE = _leer_base()
-if _BASE is None:
+if _leer_base() is None:
     print('aviso: sin base_financiera.json, los indicadores NO se van a '
           'recalcular al guardar. Genérala con: python actualizar.py',
           file=sys.stderr, flush=True)
@@ -209,7 +274,8 @@ def recalcular_series(entradas_obj):
     Devuelve lo mismo que `kpis.json` en su campo `series`, para que la página
     pueda reemplazarlo tal cual y repintar.
     """
-    if _BASE is None:
+    base = _leer_base()
+    if base is None:
         return None
     import exportar_kpis as ek
 
@@ -219,11 +285,11 @@ def recalcular_series(entradas_obj):
     conv = ek.leer_convenciones(pol)
     supuestos = dict(pol.supuestos)
     metas = dict(pol.metas)
-    interco = _BASE.get('interco') or {}
-    grupo = _BASE.get('clave_grupo')
+    interco = base.get('interco') or {}
+    grupo = base.get('clave_grupo')
 
     series = {}
-    for clave, filas in (_BASE.get('series') or {}).items():
+    for clave, filas in (base.get('series') or {}).items():
         ic = {} if clave == grupo else interco.get(clave, {})
         ent = None if clave == grupo else entradas_obj
         series[clave] = ek.procesar(filas, supuestos, metas, ic, conv,

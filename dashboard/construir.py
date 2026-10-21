@@ -141,7 +141,7 @@ def leer_kpis():
         'vacías. Genera con: python exportar_kpis.py')
 
 
-def construir_html(chunk_urls, out_path=None):
+def construir_html(chunk_urls, estaticos, out_path=None):
     """chunk_urls: lista de dicts {'archivo': <url o ruta>, 'n': <filas>}.
     No le importa si 'archivo' es una ruta relativa, una URL pública de S3 o
     (a futuro, Opción B) una URL pre-firmada — ese detalle lo decide quien
@@ -152,6 +152,9 @@ def construir_html(chunk_urls, out_path=None):
         meta = f.read()
     html = html.replace('__META_JSON__', meta)
     html = html.replace('__CHUNKS_JSON__', json.dumps(chunk_urls, ensure_ascii=False))
+    # Las librerías y las fuentes. Mismo criterio que los trozos: ruta
+    # relativa para verlo en esta máquina, URL del bucket para publicar.
+    html = html.replace('__ESTATICOS__', estaticos)
     html = html.replace('__BITACORA_JSON__', json.dumps(leer_bitacora(), ensure_ascii=False))
     html = html.replace('__CONFIG_JSON__', json.dumps(leer_config_publica(), ensure_ascii=False))
     html = html.replace('__FINANZAS_JSON__', leer_finanzas())
@@ -178,8 +181,10 @@ def main():
 
     if args.modo == 'local':
         chunks = [{'archivo': 'data/' + c['archivo'], 'n': c['n']} for c in idx]
+        estaticos = 'estaticos'
     else:
         chunks = [{'archivo': f'{S3_BASE_URL}/{c["archivo"]}', 'n': c['n']} for c in idx]
+        estaticos = f'{S3_BASE_URL}/estaticos'
         # Aviso, no error: construir en modo s3 es correcto y necesario para
         # publicar. Lo que no es correcto es ABRIR ese archivo aquí esperando
         # ver los datos recién extraídos — los leería del bucket, que tiene la
@@ -190,7 +195,7 @@ def main():
         print('       data/. Para ver lo recién extraído en esta máquina usa:')
         print('           python ..\\actualizar.py --ver')
 
-    construir_html(chunks)
+    construir_html(chunks, estaticos)
     print(f'modo: {args.modo}')
 
 

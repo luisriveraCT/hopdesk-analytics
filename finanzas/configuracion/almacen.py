@@ -64,6 +64,18 @@ class Almacen:
         """
         raise NotImplementedError
 
+    def version(self, ruta: str) -> Optional[str]:
+        """La versión actual, SIN traerse el contenido. None si no existe.
+
+        Existe para poder preguntar "¿cambió?" barato. Quien sirve un archivo
+        grande —el tablero pesa casi dos megas— no puede descargarlo en cada
+        visita solo para comprobar si sigue siendo el mismo.
+
+        Devuelve lo mismo que la segunda mitad de `leer()`, y eso es lo que la
+        hace útil: se compara con la versión que uno ya tenía.
+        """
+        raise NotImplementedError
+
     def listar(self, prefijo: str) -> list:
         raise NotImplementedError
 
@@ -116,6 +128,11 @@ class AlmacenLocal(Almacen):
             f.write(crudo)
         os.replace(tmp, p)
         return hashlib.sha256(crudo).hexdigest()
+
+    def version(self, ruta: str):
+        # En disco no hay forma más barata: el hash exige leer el archivo. No
+        # importa, porque el almacén local es el de una sola máquina.
+        return self.leer(ruta)[1]
 
     def listar(self, prefijo: str):
         base = self._ruta(prefijo)
@@ -185,6 +202,16 @@ class AlmacenS3(Almacen):
                     'simultáneos se pisen, así que no se continúa: revisa la '
                     'configuración del bucket antes de usarlo para '
                     'configuración compartida.') from e
+            raise
+        return r['ETag'].strip('"')
+
+    def version(self, ruta: str):
+        from botocore.exceptions import ClientError
+        try:
+            r = self.s3.head_object(Bucket=self.bucket, Key=self._clave(ruta))
+        except ClientError as e:
+            if e.response['Error']['Code'] in ('NoSuchKey', '404', '403'):
+                return None
             raise
         return r['ETag'].strip('"')
 

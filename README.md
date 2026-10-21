@@ -281,7 +281,8 @@ Un cliente nuevo se da de alta sin tocar un archivo `.py`.
 | `exportar_kpis.py` | indicadores, razones, DuPont y costo de capital |
 | `exportar_entradas.py` | la hoja de captura y la bitácora |
 | `construir.py` | inyecta todo en la plantilla → `index.html` |
-| `publicar.py` | sube a S3 **y borra lo que sobra** |
+| `estaticos/` | las librerías y las tipografías, versionadas aquí. El navegador **no le pide nada a terceros** |
+| `publicar.py` | sube los datos y los estáticos a S3 **y borra lo que sobra** |
 | `verificar_sintaxis.py` | que el JavaScript compile |
 | `verificar_alcance.py` | que ningún bloque quede dentro de otra función |
 | `verificar_idiomas.py` | que no falte ninguna traducción |

@@ -1,0 +1,4 @@
+# Los estáticos de terceros viajan tal cual: sin conversión de fin de línea.
+# Convertir un .woff2 lo corrompe, y cambiarle los bytes a una librería
+# impide cotejar su hash contra el que publica el origen.
+dashboard/estaticos/** -text

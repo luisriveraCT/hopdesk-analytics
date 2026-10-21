@@ -46,7 +46,8 @@ for i, b in enumerate(bloques, 1):
                 print(f'     {marca} {j+1}: {b.splitlines()[j][:110]}')
         problemas += 1
 
-sin = [m for m in ('__META_JSON__', '__CHUNKS_JSON__', '__BITACORA_JSON__') if m in s]
+sin = [m for m in ('__META_JSON__', '__CHUNKS_JSON__', '__BITACORA_JSON__',
+                   '__ESTATICOS__') if m in s]
 if sin:
     print('  MARCADORES SIN SUSTITUIR:', sin)
     problemas += 1
