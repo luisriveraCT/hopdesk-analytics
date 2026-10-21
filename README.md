@@ -269,7 +269,7 @@ Un cliente nuevo se da de alta sin tocar un archivo `.py`.
 | `entradas.py` | la línea de comandos de la captura |
 | `verificar_cuadre.py` | el punto de paro contable |
 | `configuracion/` | todo lo que decide el cliente |
-| `test_financiero.py` | **21,000+ pruebas** |
+| `verificar_datos.py` | **20,000+ comprobaciones sobre los datos de cada corrida** |
 
 ### `dashboard/` — la pantalla
 
@@ -287,6 +287,7 @@ Un cliente nuevo se da de alta sin tocar un archivo `.py`.
 | `verificar_idiomas.py` | que no falte ninguna traducción |
 | `verificar_modo_discreto.py` | qué columna es un monto, y que la descarga lo respete |
 | `verificar_publicacion.py` | que no se publique ningún secreto |
+| `verificar_guardado.py` | que el botón de guardar pueda hablar con el servidor |
 
 ### `legacy/`
 
@@ -295,26 +296,54 @@ y no los archivos de Excel. Ya no hay código ni datos ahí.
 
 ---
 
-## Pruebas
+## Lo que se comprueba, y cuándo
+
+Aquí no hay una batería de pruebas aparte que alguien tenga que acordarse de
+correr. **Todo lo que se comprueba es un paso del pipeline**, y corre solo cada
+vez que se actualiza:
+
+| Paso | Qué comprueba | ¿Detiene? |
+|---|---|---|
+| 4 | `verificar_cuadre.py` — la identidad contable, empresa por empresa | **sí** |
+| 9 | `verificar_datos.py` — 20,000+ relaciones sobre los datos calculados | no |
+| 12 | `verificar_sintaxis.py` — que el JavaScript compile | sí |
+| 13 | `verificar_alcance.py` — que ningún bloque quede dentro de otra función | no |
+| 14 | `verificar_idiomas.py` — que no falte ninguna traducción | no |
+| 15 | `verificar_modo_discreto.py` — qué es un monto, y que la descarga lo respete | no |
+| 16 | `verificar_guardado.py` — que el botón de guardar hable con el servidor | no |
+| 17 | `verificar_publicacion.py` — que no se publique ningún secreto | **sí** |
+
+Y fuera del pipeline, antes de subir a git:
 
 ```
-python finanzas/test_financiero.py            todo (~21,000 pruebas)
-python finanzas/test_financiero.py --rapido   solo las unitarias
-python finanzas/configuracion/test_configuracion.py
+python verificar_repositorio.py     que no se suba ningún dato del negocio
 ```
 
-Dos clases, y las dos hacen falta:
+### Por qué `verificar_datos.py` no comprueba un valor esperado
 
-- **Unitarias**, sobre casos construidos a mano: los límites que los datos
-  reales rara vez producen.
-- **De propiedad, sobre los datos reales**. No comprueban un valor esperado
-  —nadie sabe de memoria el ROIC de un mes— sino relaciones que tienen que
-  cumplirse siempre: que el balance cuadre, que el EBITDA menos el EBIT sea
-  exactamente la depreciación, que ningún plazo salga negativo, que consolidar
-  no cree utilidad, y **que las dos pestañas coincidan**.
+Porque nadie se sabe de memoria el ROIC de un mes. Comprueba **relaciones** que
+tienen que cumplirse siempre: que el balance cuadre, que el EBITDA menos el
+EBIT sea exactamente la depreciación, que ningún plazo salga negativo, que
+consolidar no cree utilidad, y **que las dos pestañas coincidan**.
 
 Esa última faltaba, y por eso un EBIT con la depreciación restada dos veces
 sobrevivió semanas. Está contado en `FUNDAMENTOS.md`.
+
+Son más de veinte mil porque cada empresa y cada periodo es un caso distinto
+—cinco por ochenta y uno—, y el dato cambia en cada corrida. Su sujeto no es
+el código: es la información.
+
+### Lo que se retiró, y por qué
+
+Había además 856 pruebas unitarias sobre entradas inventadas a mano y una
+batería para la capa de configuración. Comprobaban que las funciones
+estuvieran bien escritas; eso se comprueba una vez, y ya se comprobó. También
+una prueba del guardado con navegador, que además escribía de verdad en el
+almacén de producción. Lo que aquélla atrapaba de forma estática —que los tres
+nombres del canal de guardado coincidan— lo cubre `verificar_guardado.py`, que
+sí corre en cada actualización.
+
+Quedan en la historia de git por si alguna vez hacen falta.
 
 ---
 

@@ -207,17 +207,35 @@ def main():
     correr(os.path.join(TABLERO, 'exportar_kpis.py'), [], cwd=TABLERO,
            detener_si_falla=False, titulo='cálculo de indicadores')
 
+    # Más de veinte mil comprobaciones sobre los datos recién calculados: que
+    # el balance cuadre en las cinco empresas y los ochenta y un periodos, que
+    # los rubros sumen el activo, que consolidar no cree utilidad, que ningún
+    # plazo salga negativo, que las dos pestañas digan lo mismo.
+    #
+    # Vivían en una batería de pruebas que nadie corría. No comprueban el
+    # código —eso se comprueba una vez— sino el DATO de esta corrida, que es
+    # distinto cada vez. Por eso van aquí: después de calcularlo y antes de
+    # construir el tablero con él.
+    #
+    # No detienen la corrida, a diferencia del cuadre contable del paso 4: ése
+    # comprueba una identidad que no admite excepción, y éstas abarcan
+    # relaciones donde un caso raro legítimo es concebible. Si se quiere que
+    # detengan, es cambiar detener_si_falla a True.
+    paso(9, 'Comprobar los datos calculados')
+    correr(os.path.join(AQUI, 'finanzas', 'verificar_datos.py'), [], cwd=AQUI,
+           detener_si_falla=False, titulo='comprobación de los datos')
+
     # La hoja de captura y la bitácora. Va antes de construir porque su
     # archivo se incrusta en el HTML.
-    paso(9, 'Hoja de captura y bitácora de cambios')
+    paso(10, 'Hoja de captura y bitácora de cambios')
     correr(os.path.join(TABLERO, 'exportar_entradas.py'), [], cwd=TABLERO,
            detener_si_falla=False, titulo='hoja de captura')
 
-    paso(10, 'Construir el tablero')
+    paso(11, 'Construir el tablero')
     correr(os.path.join(TABLERO, 'construir.py'), [], cwd=TABLERO,
            titulo='construcción del tablero')
 
-    paso(11, 'Sintaxis del tablero')
+    paso(12, 'Sintaxis del tablero')
     correr(os.path.join(TABLERO, 'verificar_sintaxis.py'), ['index.html'],
            cwd=TABLERO, titulo='verificación de sintaxis')
 
@@ -225,19 +243,19 @@ def main():
     # un bloque de código que quedó dentro de otra función deja su sección en
     # blanco sin error visible, y una clave de texto sin traducir solo se nota
     # al abrir el tablero en el otro idioma.
-    paso(12, 'Alcance del código del tablero')
+    paso(13, 'Alcance del código del tablero')
     correr(os.path.join(TABLERO, 'verificar_alcance.py'),
            ['index.html', 'DASHBOARD DE DIRECCIÓN Y TABLERO DE INDICADORES'],
            cwd=TABLERO, detener_si_falla=False, titulo='verificación de alcance')
 
-    paso(13, 'Textos completos en todos los idiomas')
+    paso(14, 'Textos completos en todos los idiomas')
     correr(os.path.join(TABLERO, 'verificar_idiomas.py'), ['plantilla.html'],
            cwd=TABLERO, detener_si_falla=False, titulo='verificación de idiomas')
 
     # Existía y no lo llamaba nadie. Un verificador que no corre no verifica:
     # el modo de montos es justo donde un descuido no se ve —la pantalla
     # oculta la cifra y el archivo descargado la lleva dentro.
-    paso(14, 'El modo de montos oculta lo que debe, y solo eso')
+    paso(15, 'El modo de montos oculta lo que debe, y solo eso')
     correr(os.path.join(TABLERO, 'verificar_modo_discreto.py'), ['plantilla.html'],
            cwd=TABLERO, detener_si_falla=False, titulo='verificación del modo de montos')
 
@@ -245,18 +263,18 @@ def main():
     # hay error en ningún lado. Esto comprueba que las tres piezas —lo que la
     # página manda, lo que el servidor escucha y lo que la página oye de
     # vuelta— sigan coincidiendo.
-    paso(15, 'El botón de guardar puede hablar con el servidor')
+    paso(16, 'El botón de guardar puede hablar con el servidor')
     correr(os.path.join(TABLERO, 'verificar_guardado.py'), ['index.html'],
            cwd=TABLERO, detener_si_falla=False, titulo='verificación del guardado')
 
-    paso(16, 'Que no se publique ningún secreto  ← PUNTO DE PARO')
+    paso(17, 'Que no se publique ningún secreto  ← PUNTO DE PARO')
     correr(os.path.join(TABLERO, 'verificar_publicacion.py'), ['index.html'],
            cwd=TABLERO, titulo='verificación de secretos')
 
     # El tablero al almacén privado, para que lo lea la aplicación de Connect.
     # Va aquí y no en el paso de publicación porque no depende de --subir: la
     # aplicación tiene que ver el tablero nuevo aunque no se toque S3 público.
-    paso(17, 'Publicar el tablero para la aplicación')
+    paso(18, 'Publicar el tablero para la aplicación')
     correr(os.path.join(TABLERO, 'publicar_tablero.py'), [], cwd=TABLERO,
            detener_si_falla=False, titulo='publicación del tablero')
 
@@ -273,7 +291,7 @@ def main():
         # Los trozos de facturación sí siguen yendo al bucket público: el
         # navegador los pide por URL, esté la página servida por la aplicación
         # o suelta.
-        paso(18, 'Publicar los datos de facturación en el bucket público')
+        paso(19, 'Publicar los datos de facturación en el bucket público')
         correr(os.path.join(AQUI, 'refrescar.py'), ['--solo-subir'], cwd=AQUI,
                detener_si_falla=False, titulo='publicación de datos')
 
