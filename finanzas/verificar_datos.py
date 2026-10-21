@@ -474,6 +474,43 @@ def pruebas_sobre_kpis():
 
 
 # ===========================================================================
+def pruebas_sobre_facturas():
+    """Que los tres importes de cada factura en moneda extranjera se expliquen.
+
+    El ERP guarda el total en moneda local (DocTotal) y en la del documento
+    (DocTotalFc), y el tipo de cambio que los une. Si local ≠ documento × tipo
+    de cambio, uno de los tres está mal capturado — así apareció una venta de
+    2014 con un tipo de cambio de 131,689 que convertía 3,588 dólares en 472
+    millones de pesos, que el Total MXN sumaba como cualquier otra factura.
+
+    Solo se comprueban las filas cuyo importe en moneda del documento VINO del
+    ERP. En las que se dedujo dividiendo entre el tipo de cambio la relación se
+    cumple por construcción, y una comprobación que no puede fallar no es una.
+    """
+    import repositorio as repo
+    import extraer_facturacion as ef
+    cliente = repo.cliente_actual(repo.almacen_por_defecto())
+    seccion('Facturas — moneda local, moneda del documento y tipo de cambio')
+    for ini in [e.iniciales for e in cliente.empresas_conectadas()]:
+        for tipo in ('venta', 'compra'):
+            docs = [d for d in ef.cargar(ini, tipo)
+                    if d['clase_documento'] == 'normal'
+                    and not d.get('total_moneda_deducido')]
+            if not docs:
+                continue
+            ext = [d for d in docs if (d.get('tipo_cambio') or 1) != 1]
+            malos = [d for d in ext
+                     if abs(d['total'] - d['total_moneda'] * d['tipo_cambio'])
+                     > max(1.0, abs(d['total']) * 0.001)]
+            check(f'{ini} {tipo}: local = documento × tipo de cambio '
+                  f'({len(ext):,} en moneda extranjera)', not malos,
+                  ', '.join(f"folio {d['folio']} {d['fecha']}" for d in malos[:5]))
+            locales = [d for d in docs if (d.get('tipo_cambio') or 1) == 1
+                       and not casi(d['total'], d['total_moneda'], 0.01)]
+            check(f'{ini} {tipo}: en moneda local los dos importes coinciden',
+                  not locales,
+                  ', '.join(f"folio {d['folio']}" for d in locales[:5]))
+
 
 # ===========================================================================
 if __name__ == '__main__':
@@ -481,6 +518,10 @@ if __name__ == '__main__':
     faltan = []
     try:
         pruebas_sobre_datos_reales()
+    except FileNotFoundError as e:
+        faltan.append(e.filename)
+    try:
+        pruebas_sobre_facturas()
     except FileNotFoundError as e:
         faltan.append(e.filename)
     try:

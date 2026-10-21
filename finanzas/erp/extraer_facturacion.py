@@ -92,6 +92,12 @@ def cargar(empresa, tipo):
     tNO↔csNo, tYES↔csYes, None↔csCancellation. Se convierte al leer en lugar
     de obligar a rebajar todo, pero la extracción nueva sí guarda el campo
     explícito: deducir está bien para lo ya descargado, no para lo que viene.
+
+    Lo mismo con `total_moneda`, el importe en la moneda del documento: los
+    archivos anteriores no traen DocTotalFc. Se deduce como total / tipo de
+    cambio, que es la definición del tipo de cambio del documento, y la fila
+    queda marcada con `total_moneda_deducido` para que se sepa que no salió
+    del ERP. Puede diferir del de SAP en algún centavo de redondeo.
     """
     try:
         with open(_ruta(empresa, tipo), encoding='utf-8') as f:
@@ -104,6 +110,10 @@ def cargar(empresa, tipo):
             f['clase_documento'] = ('normal' if c is False else
                                     'cancelada' if c is True else
                                     'documento_de_cancelacion')
+        if 'total_moneda' not in f:
+            tc = f.get('tipo_cambio') or 1
+            f['total_moneda'] = round((f.get('total') or 0) / tc, 2)
+            f['total_moneda_deducido'] = True
     return filas
 
 

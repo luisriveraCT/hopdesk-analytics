@@ -453,8 +453,27 @@ def homologar(crudo: List[Dict], que: str, empresa: str = '') -> List[Dict]:
 # necesitan, porque multiplican el volumen por el número de renglones.
 CAMPOS_FACTURA = ['DocEntry', 'DocNum', 'DocDate', 'CardCode', 'CardName',
                   'FederalTaxID', 'DocTotal', 'VatSum', 'DocCurrency', 'DocRate',
-                  'DocTotalSys', 'CancelStatus', 'Cancelled', 'DocumentStatus',
+                  'DocTotalFc', 'VatSumFc', 'DocTotalSys',
+                  'CancelStatus', 'Cancelled', 'DocumentStatus',
                   'CreationDate', 'NumAtCard', 'Series']
+
+# CADA IMPORTE EXISTE TRES VECES, UNA POR MONEDA. Así lo define la tabla de
+# documentos del SDK (OINV/OPCH, idéntica en todos los documentos de marketing):
+#     DocTotal     "Document Total"        en MONEDA LOCAL  (LC)
+#     DocTotalFC   "Document Total (FC)"   en MONEDA DEL DOCUMENTO, si no es la local
+#     DocTotalSy   "Document Total (SC)"   en MONEDA DE SISTEMA
+# y lo mismo VatSum / VatSumFC / VatSumSy. DocRate es cuántas unidades de
+# moneda local vale una de la moneda del documento.
+#
+# Durante un tiempo se extrajo solo DocTotal y DocTotalSys, y el tablero sumaba
+# DocTotal de las facturas en USD llamándolo "Total USD": eran pesos. El error
+# era de 19 veces y nada lo delataba, porque un monto en la columna equivocada
+# se ve idéntico a uno bueno. Lo que lo destapó fue dividir DocTotal entre
+# DocRate: salían 775.00, 1,106.00, 2,212.00 — así se ve una tarifa en dólares.
+#
+# En este SAP la moneda local y la de sistema son la misma (en los 390,983
+# documentos vigentes DocTotal == DocTotalSys), así que DocTotalSys no aporta
+# un tercer dato; se conserva para detectar el día que dejen de coincidir.
 
 # LA CANCELACIÓN TIENE TRES ESTADOS, NO DOS. Verificado en NCS (29,630 ventas):
 #     csNo           27,008   factura normal
@@ -490,6 +509,13 @@ def homologar_facturas(crudo: List[Dict], tipo: str, empresa: str = '') -> List[
         fecha = (d.get('DocDate') or '')[:10]
         total = _num(d.get('DocTotal'))
         iva = _num(d.get('VatSum'))
+        # En un documento en moneda local (DocRate 1), DocTotalFc viene en cero:
+        # su importe en la moneda del documento ES el local. Fuera de ese caso
+        # se toma DocTotalFc tal cual, aunque venga en cero: caer al importe
+        # local sería volver, sin avisar, al error que esto corrige.
+        local = _num(d.get('DocRate')) in (0.0, 1.0)
+        total_fc = total if local else _num(d.get('DocTotalFc'))
+        iva_fc = iva if local else _num(d.get('VatSumFc'))
         salida.append({
             'empresa': empresa,
             'tipo': tipo,
@@ -505,7 +531,9 @@ def homologar_facturas(crudo: List[Dict], tipo: str, empresa: str = '') -> List[
             'total': round(total, 2),
             'moneda': d.get('DocCurrency') or '',
             'tipo_cambio': _num(d.get('DocRate')) or None,
-            'total_local': round(_num(d.get('DocTotalSys')), 2),
+            'total_moneda': round(total_fc, 2),
+            'impuestos_moneda': round(iva_fc, 2),
+            'total_sistema': round(_num(d.get('DocTotalSys')), 2),
             # `clase_documento` es el campo con el que se debe filtrar. Solo
             # 'normal' cuenta como venta o compra realizada. Se deriva de
             # `Cancelled` cuando falta `CancelStatus`, para que los archivos

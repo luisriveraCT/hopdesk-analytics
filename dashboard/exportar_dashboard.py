@@ -64,6 +64,8 @@ DATA_DIR = os.path.join(OUT_DIR, 'data')
 os.makedirs(DATA_DIR, exist_ok=True)
 
 sys.path.insert(0, os.path.join(FINANZAS, 'configuracion'))
+sys.path.insert(0, os.path.join(FINANZAS, 'erp'))
+from extraer_facturacion import cargar as cargar_facturas   # noqa: E402
 
 ANIO_EPOCH = 2020          # base del índice `ym` que usa el tablero
 
@@ -151,32 +153,24 @@ def main():
     # ---------------- cargar las facturas del ERP ----------------
     filas, descartes = [], defaultdict(int)
     for ini in EMPRESAS:
-        ruta = os.path.join(DATOS_ERP, f'facturas_{ini}_venta.json')
-        if not os.path.exists(ruta):
+        # La lectura y la compatibilidad con esquemas anteriores viven en
+        # cargar(), y solo ahí: cuando este archivo tenía su propia copia de
+        # esa tolerancia, las dos discreparon y el tablero mostró 4,663 M
+        # mientras el generador de KPIs calculaba 3,038 M para lo mismo.
+        docs = cargar_facturas(ini, 'venta')
+        if not docs:
             print(f'  {ini}: sin extracción todavía')
             continue
-        with open(ruta, encoding='utf-8') as f:
-            docs = json.load(f)
         # UN ARCHIVO CON EL ESQUEMA ANTERIOR SE AVISA, NO SE DISIMULA.
-        # La tolerancia estaba pensada como una gentileza y por poco cuesta
-        # caro: el archivo de NTS se quedó con el esquema viejo mientras los
-        # otros cuatro se reextraían, el respaldo lo aceptó en silencio, y el
-        # tablero mostró 4,663 M mientras el generador de KPIs —que no tiene
-        # respaldo— calculaba 3,038 M. Dos números distintos para la misma
-        # cosa, y ninguno de los dos se quejaba.
-        if docs and 'clase_documento' not in docs[0]:
-            print(f'     AVISO: {ini} trae el esquema anterior. Se interpreta, '
-                  f'pero conviene reextraerlo:')
+        if any(d.get('total_moneda_deducido') for d in docs):
+            print(f'     AVISO: {ini} no trae el importe en moneda del documento '
+                  f'(DocTotalFc); se deduce del tipo de cambio. Conviene reextraerlo:')
             print(f'            python finanzas/erp/extraer_facturacion.py '
                   f'--empresa {ini}')
 
         n_ini = 0
         for d in docs:
-            clase = d.get('clase_documento')
-            if clase is None:            # archivo del esquema anterior
-                c = d.get('cancelada')
-                clase = ('normal' if c is False else
-                         'cancelada' if c is True else 'documento_de_cancelacion')
+            clase = d['clase_documento']
             if clase != 'normal':
                 descartes[clase] += 1
                 continue
@@ -279,8 +273,13 @@ def main():
         cols['s'].append(0)                      # todas las publicadas son vigentes
         cols['t'].append(round(d.get('total') or 0, 2))
         cols['b'].append(round(d.get('subtotal') or 0, 2))
-        cols['u'].append(round(d.get('total') or 0, 2) if es_usd else 0.0)
-        tc = d.get('tipo_cambio') or 0
+        # `total` está en moneda LOCAL aunque la factura sea en dólares; los
+        # dólares son `total_moneda` (DocTotalFc). Ver CAMPOS_FACTURA en sap_b1.
+        cols['u'].append(round(d.get('total_moneda') or 0, 2) if es_usd else 0.0)
+        # Solo el tipo de cambio del dólar: el del euro (~21.5) cae dentro del
+        # rango plausible y se promediaba con el del dólar sin que nada lo
+        # distinguiera.
+        tc = (d.get('tipo_cambio') or 0) if es_usd else 0
         cols['x'].append(round(tc, 4) if 10 <= tc <= 35 else 0.0)
         cols['f'].append(str(d.get('folio') or ''))
         anios.add(d['anio'])
