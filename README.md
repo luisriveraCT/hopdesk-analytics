@@ -80,8 +80,12 @@ pequeña, los resultados con sus valores p. En la barra:
 - **Periodicidad**: se escribe cuántos datos por año (12, 6, 4, 3, 2 o 1). Cada
   periodo se calcula con sus propias cifras en el servidor
   (`series_periodicas()` en `dashboard/exportar_kpis.py`), no promediando meses.
-- **12 m móviles / Por periodo**: con periodicidad 12.
-- **Periodo**: 12, 24 o 36 periodos, todo, o periodos elegidos uno por uno.
+- **12 m móviles / Por periodo**: con periodicidad 12, en los indicadores que
+  tienen versión de doce meses (márgenes EBITDA, EBIT y neto, ROE, ROIC, spread,
+  EVA, rotación de activos, deuda neta / EBITDA). En los demás se apaga.
+- **Periodo**: 12, 24 o 36 periodos, todo, o **Elegir…**: una barra de rango
+  cuyos pasos son los periodos de la periodicidad. Se arrastran los extremos o
+  la ventana entera; al cambiar la periodicidad, el rango se queda en las mismas fechas.
 - **Incluir dudosos**: los meses que no cerraron quedan fuera por omisión.
 - **Capas**: serie, media móvil, banda P25–P75, percentil, tendencia, tendencia
   robusta, meta y control. Se prenden y apagan sin cambiar de gráfica.

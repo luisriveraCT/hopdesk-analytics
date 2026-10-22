@@ -71,7 +71,8 @@ Cómo se escriben las piezas (entre comillas invertidas):
 | Empresas y Grupo | Una o varias empresas en la misma gráfica; elegir el Grupo apaga las empresas | `anBarra()` `#anEntidades` |
 | Periodicidad | El usuario escribe 12, 6, 4, 3, 2 o 1 datos por año; cada periodo se calcula con sus propias cifras, no promediando meses. Rechaza lo que no reparte el año | `#anP` `t:an.periodicidad.help` `dashboard/exportar_kpis.py` |
 | 12 meses móviles o el mes | Por omisión, doce meses móviles; con periodicidad 12 se puede ver el dato del mes | `#anBase` `t:an.base.ttm` |
-| Ventana | 12, 24, 36 periodos, toda la historia o periodos elegidos uno por uno | `#anVentana` `anPintarMeses()` `#anMeses` |
+| Ventana | 12, 24, 36 periodos, toda la historia, o un rango en una barra cuyos pasos son los periodos de la periodicidad; el rango se conserva en las mismas fechas al cambiarla. Se mueve por los extremos, arrastrando la ventana entera, con clic en la pista o con el teclado | `#anVentana` `anPintarRango()` `#anRango` `t:an.rango.help` |
+| Base honesta | "12 m móviles" se apaga en los indicadores que no tienen versión de doce meses, y el botón marcado es lo que se ve | `anPintarBase()` `t:an.base.sinttm` |
 | Meses dudosos | Excluidos por omisión y reincorporables; en la gráfica salen huecos | `#anDudosos` `t:an.dudosos.help` |
 | Capas | Serie, media móvil (SMA o EMA), banda P25–P75, percentil libre, tendencia MCO, tendencia robusta, meta y control; se prenden y apagan sin cambiar de gráfica y conservan sus parámetros | `anPintarCapas()` `#anCapas` `css:.ancapas .capagrp` |
 | Cursor | Al pasar el cursor, el valor de cada capa en esa fecha | `anGrafica()` |

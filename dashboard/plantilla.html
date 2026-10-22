@@ -394,10 +394,35 @@ th[data-help]{text-decoration:underline dotted var(--axis);text-underline-offset
 .anp{width:52px;min-width:0;text-align:center;padding:3px 4px}
 .anp[aria-invalid="true"]{border-color:var(--crit);color:var(--crit)}
 .anchk{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-2);cursor:pointer}
-.anmeses{padding:8px 16px;background:var(--surface-2);border-bottom:1px solid var(--line);
-  display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;max-height:160px;overflow:auto}
-.anmeses label{display:inline-flex;gap:3px;align-items:center;font-family:var(--mono)}
-.anmeses b{flex-basis:100%;font-size:10px;color:var(--muted);margin-top:4px}
+/* La barra de rango: dos extremos sobre una pista con la silueta de la serie.
+   Los <input type="range"> se extienden medio botón a cada lado para que el
+   centro del botón caiga justo en el periodo, y solo sus botones reciben el
+   ratón: la pista y la ventana tienen su propio arrastre. */
+.anrango{padding:7px 24px 6px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.anr-cab{display:flex;gap:8px;align-items:center;font-size:11px;margin-bottom:3px}
+.anr-cab b{font-family:var(--mono);font-weight:600;color:var(--ink)}
+.anr-pista{position:relative;height:30px;--a:0%;--b:100%;touch-action:none;cursor:pointer;isolation:isolate}
+.anr-spark{position:absolute;left:0;top:4px;width:100%;height:22px;overflow:visible}
+.anr-spark polyline{fill:none;stroke:var(--muted);stroke-width:1.2;vector-effect:non-scaling-stroke}
+.anr-pista::before{content:'';position:absolute;left:0;right:0;top:4px;bottom:4px;border-radius:4px;
+  background:var(--surface);border:1px solid var(--line);z-index:-1}
+.anr-sel{position:absolute;left:var(--a);width:calc(var(--b) - var(--a));top:2px;bottom:2px;min-width:3px;
+  background:color-mix(in srgb, var(--accent) 14%, transparent);border:1.5px solid var(--accent);
+  border-radius:4px;cursor:grab;z-index:2}
+.anr-sel:active{cursor:grabbing}
+.anr-in{position:absolute;left:-7px;width:calc(100% + 14px);top:0;height:100%;margin:0;padding:0;
+  background:none;pointer-events:none;-webkit-appearance:none;appearance:none;z-index:3}
+.anr-in::-webkit-slider-runnable-track{background:none;height:100%;border:0}
+.anr-in::-moz-range-track{background:none;border:0}
+.anr-in::-webkit-slider-thumb{-webkit-appearance:none;pointer-events:auto;width:14px;height:30px;
+  border-radius:4px;background:var(--surface);border:1.5px solid var(--accent);cursor:ew-resize;
+  box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.anr-in::-moz-range-thumb{pointer-events:auto;width:11px;height:27px;border-radius:4px;
+  background:var(--surface);border:1.5px solid var(--accent);cursor:ew-resize}
+.anr-in:focus-visible::-webkit-slider-thumb{outline:2px solid var(--accent);outline-offset:1px}
+.anr-in:focus-visible::-moz-range-thumb{outline:2px solid var(--accent);outline-offset:1px}
+.anr-ejes{position:relative;height:13px;margin-top:2px;font-family:var(--mono);font-size:9.5px;color:var(--muted)}
+.anr-ejes span{position:absolute;white-space:nowrap;padding-left:3px;border-left:1px solid var(--line)}
 .anlayout{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:12px;padding:12px 16px}
 @media (max-width:900px){.anlayout{grid-template-columns:1fr}}
 .anlista{font-size:11px;max-height:calc(100vh - 150px);overflow:auto;background:var(--surface);
@@ -407,6 +432,16 @@ th[data-help]{text-decoration:underline dotted var(--axis);text-underline-offset
 .anlista caption{text-align:left;padding:7px 8px 3px;font-size:10px;font-weight:600;
   letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .anlista tr.sel td{background:var(--accent-soft)}
+/* Con varias empresas la lista se desplaza a lo ancho; el nombre y la meta se
+   quedan fijos a los lados para que nunca se pierda qué fila ni dónde se escribe.
+   Fondo opaco debajo del tono de la fila elegida, o se transparentaría. */
+.anlista th:first-child,.anlista td:first-child{position:sticky;left:0;z-index:1;background:var(--surface)}
+.anlista th:last-child,.anlista td:last-child{position:sticky;right:0;z-index:1;background:var(--surface)}
+/* Todo th ya es sticky arriba con z-index 1: las esquinas van encima, o los
+   encabezados de las empresas pasan por sobre "Indicador" al desplazarse. */
+.anlista thead th:first-child,.anlista thead th:last-child{background:var(--surface-2);z-index:3}
+.anlista tr.sel td:first-child,.anlista tr.sel td:last-child{
+  background:linear-gradient(var(--accent-soft),var(--accent-soft)),var(--surface)}
 .anlista td.ind{cursor:pointer;max-width:12em}
 .anlista td.ind:hover{color:var(--accent)}
 .anlista input{width:54px;font:inherit;font-family:var(--mono);text-align:right;padding:1px 3px;
@@ -419,6 +454,12 @@ th[data-help]{text-decoration:underline dotted var(--axis);text-underline-offset
 .anresumen .ch{border:1px solid var(--line);border-radius:7px;padding:4px 8px;background:var(--surface-2);font-size:11.5px}
 .anresumen .ch b{font-family:var(--mono);font-weight:600}
 .anresumen .ch small{display:block;font-size:9.5px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.anrestab{font-size:11px;width:auto}
+.anrestab th,.anrestab td{padding:3px 10px 3px 6px;white-space:nowrap}
+.anrestab thead th{font-size:9.5px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;font-weight:500}
+.anrestab tbody th{text-align:left;font-weight:600}
+.anrestab td{font-family:var(--mono)}
+.anrestab td.sig{color:var(--accent);font-weight:600}
 .ancapas{display:flex;flex-wrap:wrap;gap:5px 8px;align-items:center;font-size:11px;margin:4px 0}
 .ancapas .capa{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;
   padding:1px 8px;cursor:pointer;background:var(--surface-2);color:var(--ink-2)}
@@ -431,8 +472,12 @@ th[data-help]{text-decoration:underline dotted var(--axis);text-underline-offset
 .ancapas select{width:auto}
 .ancapas .capagrp{display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
 .anplot{min-height:320px}
-.anresultados{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px;margin-top:8px;font-size:10.5px}
-.anresultados details{border:1px solid var(--line-2);border-radius:6px;background:var(--surface-2);padding:4px 7px}
+/* El ancho mínimo de cada bloque crece con las entidades vistas (--n): con
+   cinco empresas, la tabla de tendencia no cabe en 260 px y se encimaba sobre
+   el bloque vecino. Si aun así no cabe, se desplaza dentro de su recuadro. */
+.anresultados{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(190px + var(--n,1) * 70px)),1fr));
+  gap:8px;margin-top:8px;font-size:10.5px}
+.anresultados details{overflow-x:auto;min-width:0;border:1px solid var(--line-2);border-radius:6px;background:var(--surface-2);padding:4px 7px}
 .anresultados summary{cursor:pointer;font-weight:600;font-size:11px}
 .anresultados table{font-size:10.5px;margin-top:3px}
 .anresultados th,.anresultados td{padding:2px 5px}
@@ -1068,7 +1113,7 @@ tr.esob .ecelda{border-color:var(--sem-bad);background:rgba(220,38,38,.09);
     <button class="tbtn" id="anGuardar" data-i18n="en.guardar">Guardar</button>
     <button class="tbtn" id="anReset" data-i18n="an.reset">Restablecer</button>
   </div>
-  <div class="anmeses" id="anMeses" hidden></div>
+  <div class="anrango" id="anRango" hidden></div>
   <div class="anlayout">
     <aside class="anlista" id="anLista"></aside>
     <section class="anmain">
@@ -1678,7 +1723,11 @@ const ENTRADAS = __ENTRADAS_JSON__;
      anPT / anPZ                 valores p de la t de Student y de la normal
      anMediaMovil                SMA o EMA
      anTicks(lo, hi, n)          marcas del eje; la última ALCANZA el máximo
-     anBarra / anPintarMeses     la barra de herramientas y la lista de periodos
+     anBarra / anPintarBase      la barra de herramientas; los botones de base
+                                 dicen lo que se ve, no lo que quedó guardado
+     anPintarRango()             la barra de rango: sus pasos son los periodos de
+                                 la periodicidad, y AN.rango se guarda en meses
+     anCorto(ent)                "Grupo" en encabezados, en vez del nombre largo
      anPintarLista()             los 31 indicadores, con meta arriba; metas
                                  editables para las entidades vistas
      anPintarResumen / anPintarCapas / anGrafica / anPintarResultados
@@ -2221,6 +2270,14 @@ const I18N = {
     'an.n.ctrl':'Fuera de ±{k}σ robusta de la mediana es raro para este indicador: un periodo así merece revisarse.',
     'an.n.meta':'Con la meta vigente, {ok} de {n} periodos la habrían cumplido.',
     'an.n.sinmeta':'Sin meta para comparar.',
+    'an.rango':'Rango',
+    'an.rango.txt':'{a} → {b} · {n} periodo(s)',
+    'an.rango.desde':'Inicio del rango',
+    'an.rango.hasta':'Fin del rango',
+    'an.rango.mover':'Arrastra para mover el rango completo',
+    'an.rango.help':'Arrastra los extremos para elegir dónde empieza y dónde termina, arrastra la ventana para moverla entera, o haz clic en la barra para llevar ahí el extremo más cercano. Con el teclado, las flechas mueven el extremo elegido. Los pasos son los periodos de la periodicidad vigente; al cambiarla, el rango se conserva en las mismas fechas. Debajo se ve la silueta de la serie.',
+    'an.base.sinttm':'Este indicador no tiene versión de doce meses móviles: se ve el dato de cada mes.',
+    'an.grupo.corto':'Grupo',
     'nodata':'Sin datos con los filtros actuales'
   },
   en:{
@@ -2643,6 +2700,14 @@ const I18N = {
     'an.n.ctrl':'Beyond ±{k} robust σ from the median is rare for this indicator: such a period deserves a look.',
     'an.n.meta':'With the current target, {ok} of {n} periods would have met it.',
     'an.n.sinmeta':'No target to compare against.',
+    'an.rango':'Range',
+    'an.rango.txt':'{a} → {b} · {n} period(s)',
+    'an.rango.desde':'Range start',
+    'an.rango.hasta':'Range end',
+    'an.rango.mover':'Drag to move the whole range',
+    'an.rango.help':'Drag the ends to choose where it starts and ends, drag the window to move it whole, or click the bar to bring the nearest end there. With the keyboard, the arrows move the focused end. Steps are the periods of the current periodicity; when it changes, the range keeps the same dates. The series outline shows underneath.',
+    'an.base.sinttm':'This indicator has no rolling twelve-month version: each month\'s own figure is shown.',
+    'an.grupo.corto':'Group',
     'nodata':'No data for the current filters'
   }
 };
@@ -7212,7 +7277,9 @@ function enConstruir(){
    Cuando entran, se dibujan huecos para que nunca se confundan con los demás.
    ========================================================================== */
 const AN_PERIODICIDADES = [12, 6, 4, 3, 2, 1];
-const AN_DEF = {ents: null, kpi: null, p: 12, base: 'ttm', ventana: '36', meses: null,
+// rango: {desde, hasta} en meses AAAA-MM, no en periodos, para que el mismo
+// rango sirva con cualquier periodicidad.
+const AN_DEF = {ents: null, kpi: null, p: 12, base: 'ttm', ventana: '36', rango: null,
   dudosos: false,
   capas: {serie: true, media: true, banda: true, tendencia: false, robusta: false,
           meta: true, control: false, percentil: false},
@@ -7223,12 +7290,13 @@ const AN = JSON.parse(JSON.stringify(AN_DEF));
   if (g && typeof g === 'object') for (const k of Object.keys(AN_DEF))
     if (g[k] !== undefined) AN[k] = (typeof AN_DEF[k] === 'object' && AN_DEF[k] && !Array.isArray(AN_DEF[k]))
       ? Object.assign({}, AN_DEF[k], g[k]) : g[k];
+  if (AN.rango && !(typeof AN.rango.desde === 'string' && typeof AN.rango.hasta === 'string')) AN.rango = null;
 })();
 const anRecordar = () => recordar('analisis', AN);
 
 /* ---- estadística: funciones puras, sin pantalla --------------------------- */
 const anOrden = a => a.slice().sort((x, y) => x - y);
-function anCuantil(ord, q){                 // tipo 7, el de Excel y R por omisión
+function anCuantil(ord, q){                 // tipo 7, el de R y numpy por omisión
   if (!ord.length) return null;
   const h = (ord.length - 1) * q, lo = Math.floor(h);
   return ord[lo] + (h - lo) * ((ord[Math.min(lo + 1, ord.length - 1)]) - ord[lo]);
@@ -7339,6 +7407,8 @@ function anEntidades(){
 const anEsGrupo = e => e === KPIS.clave_grupo;
 const anColor = e => anEsGrupo(e) ? cssv('--ink') : empColor(Math.max(0, (KPIS.empresas || []).indexOf(e)));
 const anNombre = e => anEsGrupo(e) ? t('fz.consolidado') : e;
+// En encabezados de tabla, "Grupo (consolidado)" empuja las demás columnas.
+const anCorto = e => anEsGrupo(e) ? t('an.grupo.corto') : e;
 function anUsaTTM(k){ return AN.p === 12 && AN.base === 'ttm' && !!kpCat(k).ttm; }
 
 /* Etiqueta de un periodo: "2026-09", "T3 2026", "S1 2026", "2025"… */
@@ -7349,19 +7419,22 @@ function anEtiqueta(f){
   return t(pre, {n: f.idx, a: f.anio});
 }
 /* La serie de una entidad para el indicador: [{llave, etiqueta, fin, v, dudoso}],
-   ya recortada a la ventana. `fin` es el último mes del periodo (AAAA-MM). */
+   ya recortada a la ventana. `ini` y `fin` son el primer y el último mes del
+   periodo (AAAA-MM); el del año en curso termina en el último mes con datos. */
 function anSerie(ent, k){
   const crudo = AN.p === 12 ? ((KPIS.series || {})[ent] || [])
               : (((KPIS.periodicas || {})[ent] || {})[String(AN.p)] || []);
   const kk = anUsaTTM(k) ? kpCat(k).ttm : k;
   let s = crudo.map(f => {
     const v = (f.r || {})[kk];
-    return {llave: f.periodo, etiqueta: anEtiqueta(f), fin: f.ultimo_mes || f.periodo,
+    const ini = AN.p === 12 ? f.periodo
+              : `${f.anio}-${String((f.idx - 1) * (12 / AN.p) + 1).padStart(2, '0')}`;
+    return {llave: f.periodo, etiqueta: anEtiqueta(f), ini, fin: f.ultimo_mes || f.periodo,
             v: (v === undefined || v === null || !isFinite(v)) ? null : v,
             dudoso: !!(f.mes_incompleto || f.es_cierre_anual || f.completo === false)};
   });
-  if (AN.ventana === 'custom' && Array.isArray(AN.meses))
-    s = s.filter(x => AN.meses.includes(x.llave));
+  if (AN.ventana === 'custom' && AN.rango)
+    s = s.filter(x => x.ini >= AN.rango.desde && x.fin <= AN.rango.hasta);
   else if (AN.ventana !== 'all'){
     const ult = s.length ? s[s.length - 1].fin : null;
     if (ult){
@@ -7433,21 +7506,21 @@ function anBarra(){
       toast(t('an.p.invalida', {l: AN_PERIODICIDADES.join(', ')}));
       return;
     }
-    AN.p = n; if (AN.ventana === 'custom') AN.meses = null;
+    // El rango se guarda en meses, así que sobrevive al cambio: la barra se
+    // vuelve a armar con los periodos de la periodicidad nueva.
+    AN.p = n;
     anRecordar(); anPintar();
   };
-  document.querySelectorAll('#anBase button').forEach(b => {
-    b.setAttribute('aria-pressed', String(b.dataset.v === AN.base));
-    b.disabled = AN.p !== 12;
-    b.title = AN.p !== 12 ? t('an.base.solo12') : '';
-    b.onclick = () => { AN.base = b.dataset.v; anRecordar(); anPintar(); };
-  });
+  document.querySelectorAll('#anBase button').forEach(b =>
+    b.onclick = () => { AN.base = b.dataset.v; anRecordar(); anPintar(); });
   document.querySelectorAll('#anVentana button').forEach(b => {
     b.setAttribute('aria-pressed', String(b.dataset.v === AN.ventana));
     b.onclick = () => {
       AN.ventana = b.dataset.v;
-      if (AN.ventana === 'custom' && !Array.isArray(AN.meses))
-        AN.meses = anSerieCompleta().map(x => x.llave).slice(-24);
+      if (AN.ventana === 'custom' && !AN.rango){
+        const s = anSerieCompleta();
+        if (s.length) AN.rango = {desde: s[Math.max(0, s.length - 24)].ini, hasta: s[s.length - 1].fin};
+      }
       anRecordar(); anPintar();
     };
   });
@@ -7459,37 +7532,106 @@ function anBarra(){
     Object.assign(AN, JSON.parse(JSON.stringify(AN_DEF))); anRecordar(); anPintar();
   };
   document.getElementById('anGuardar').onclick = () => enGuardar();
-  anPintarMeses();
 }
-/* Toda la serie sin recortar, para el selector de periodos específicos. */
+/* Los botones de base dicen lo que de verdad se ve. Con periodicidad distinta
+   de 12, o con un indicador que no tiene versión de doce meses (los saldos y
+   varias razones del mes), "12 m móviles" no cambiaría nada: se apagan, y el
+   botón marcado es el que se está usando, no el que quedó guardado. */
+function anPintarBase(){
+  const tiene = !!kpCat(AN.kpi).ttm, ttm = anUsaTTM(AN.kpi);
+  document.querySelectorAll('#anBase button').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.v === (ttm ? 'ttm' : 'mes')));
+    b.disabled = AN.p !== 12 || !tiene;
+    b.title = AN.p !== 12 ? t('an.base.solo12') : !tiene ? t('an.base.sinttm') : '';
+  });
+}
+/* Toda la serie sin recortar, para la barra de rango. */
 function anSerieCompleta(){
-  const ent = AN.ents[0], v = AN.ventana, m = AN.meses;
-  AN.ventana = 'all'; const s = anSerie(ent, AN.kpi); AN.ventana = v; AN.meses = m;
+  const v = AN.ventana;
+  AN.ventana = 'all'; const s = anSerie(AN.ents[0], AN.kpi); AN.ventana = v;
   return s;
 }
-function anPintarMeses(){
-  const caja = document.getElementById('anMeses');
+/* LA BARRA DE RANGO. Sus pasos son los periodos de la periodicidad vigente, y
+   el rango se guarda en meses (AN.rango), así que al pasar de mensual a
+   trimestral la barra se rearma con trimestres sobre las mismas fechas. Se
+   mueve un extremo, se arrastra la ventana entera, o se hace clic en la pista
+   para llevar ahí el extremo más cercano. Debajo de la ventana, la silueta de
+   la serie para saber qué se está eligiendo. */
+function anPintarRango(){
+  const caja = document.getElementById('anRango');
   caja.hidden = AN.ventana !== 'custom';
   if (caja.hidden) return;
-  const todos = anSerieCompleta(), sel = new Set(AN.meses || []);
-  let h = `<button class="minibtn" data-a="todos">${t('f.todas')}</button>`
-        + `<button class="minibtn" data-a="ninguno">${t('f.ninguna')}</button>`, anio = null;
-  for (const x of todos){
-    const a = x.fin.slice(0, 4);
-    if (a !== anio){ h += `<b>${a}</b>`; anio = a; }
-    h += `<label><input type="checkbox" data-k="${ajEsc(x.llave)}"${sel.has(x.llave) ? ' checked' : ''}>${ajEsc(x.etiqueta)}</label>`;
+  const s = anSerieCompleta(), n = s.length;
+  if (!n){ caja.innerHTML = `<span class="hint">${t('an.vacio')}</span>`; return; }
+  const R = AN.rango || {desde: s[0].ini, hasta: s[n - 1].fin};
+  let a = s.findIndex(x => x.ini >= R.desde), b = -1;
+  for (let i = n - 1; i >= 0; i--) if (s[i].fin <= R.hasta){ b = i; break; }
+  if (a < 0) a = n - 1; if (b < 0) b = 0; if (b < a) b = a;
+  const pct = i => n === 1 ? 50 : i / (n - 1) * 100;
+  // La silueta: la serie de la primera entidad, partida donde no hay dato.
+  const vs = s.map(x => x.v).filter(v => v !== null);
+  let spark = '';
+  if (vs.length > 1){
+    const lo = Math.min(...vs), hi = Math.max(...vs), Yv = v => 18 - (v - lo) / ((hi - lo) || 1) * 16;
+    let tramo = [];
+    const cerrar = () => { if (tramo.length > 1) spark += `<polyline points="${tramo.join(' ')}"/>`; tramo = []; };
+    s.forEach((x, i) => { if (x.v === null) cerrar(); else tramo.push(`${pct(i).toFixed(2)},${Yv(x.v).toFixed(2)}`); });
+    cerrar();
   }
-  caja.innerHTML = h;
-  caja.querySelectorAll('input').forEach(i => i.onchange = () => {
-    const s = new Set(AN.meses || []);
-    if (i.checked) s.add(i.dataset.k); else s.delete(i.dataset.k);
-    AN.meses = todos.map(x => x.llave).filter(k => s.has(k));
-    anRecordar(); anPintarCuerpo();
-  });
-  caja.querySelectorAll('button').forEach(b => b.onclick = () => {
-    AN.meses = b.dataset.a === 'todos' ? todos.map(x => x.llave) : [];
-    anRecordar(); anPintar();
-  });
+  // Una marca por año. Si dos quedan demasiado juntas (un primer año con un
+  // solo mes), se queda la del año siguiente, que es el completo.
+  const marcas = [];
+  s.forEach((x, i) => { const y = x.ini.slice(0, 4);
+    if (marcas.length && marcas[marcas.length - 1].y === y) return;
+    if (marcas.length && pct(i) - marcas[marcas.length - 1].p < 4) marcas.pop();
+    marcas.push({y, p: pct(i)}); });
+  const anios = marcas.map(m => `<span style="left:${m.p}%">${m.y}</span>`).join('');
+  caja.innerHTML = `<div class="anr-cab"><span class="flabel">${t('an.rango')}</span><b id="anRangoTxt"></b>
+      <button class="help" type="button" data-help="an.rango.help">?</button></div>
+    <div class="anr-pista" id="anRangoPista">
+      <svg class="anr-spark" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true">${spark}</svg>
+      <div class="anr-sel" title="${ajEsc(t('an.rango.mover'))}"></div>
+      <input type="range" class="anr-in" data-h="a" min="0" max="${n - 1}" step="1" value="${a}" aria-label="${ajEsc(t('an.rango.desde'))}">
+      <input type="range" class="anr-in" data-h="b" min="0" max="${n - 1}" step="1" value="${b}" aria-label="${ajEsc(t('an.rango.hasta'))}">
+    </div>
+    <div class="anr-ejes">${anios}</div>`;
+  const pista = caja.querySelector('.anr-pista'), [ia, ib] = caja.querySelectorAll('.anr-in');
+  let pend = 0;
+  const pintar = (aplicar) => {
+    pista.style.setProperty('--a', pct(a) + '%'); pista.style.setProperty('--b', pct(b) + '%');
+    ia.value = a; ib.value = b;
+    // Con los dos extremos juntos al final, el de inicio tiene que quedar
+    // encima, o ya no se podría separar.
+    ia.style.zIndex = a === n - 1 ? 4 : 3; ib.style.zIndex = a === n - 1 ? 3 : 4;
+    document.getElementById('anRangoTxt').textContent =
+      t('an.rango.txt', {a: s[a].etiqueta, b: s[b].etiqueta, n: b - a + 1});
+    if (!aplicar) return;
+    AN.rango = {desde: s[a].ini, hasta: s[b].fin};
+    // La gráfica sigue al arrastre, pero a lo más una vez por cuadro.
+    if (!pend) pend = requestAnimationFrame(() => { pend = 0; anPintarCuerpo(); });
+  };
+  const fijar = () => { anRecordar(); anPintarLista(); };
+  ia.oninput = () => { a = Math.min(+ia.value, b); pintar(true); };
+  ib.oninput = () => { b = Math.max(+ib.value, a); pintar(true); };
+  ia.onchange = ib.onchange = fijar;
+  const idxDe = ev => { const bb = pista.getBoundingClientRect();
+    return Math.max(0, Math.min(n - 1, Math.round((ev.clientX - bb.left) / (bb.width || 1) * (n - 1)))); };
+  // Arrastrar la ventana entera conserva su ancho; un clic en la pista mueve
+  // el extremo más cercano.
+  pista.onpointerdown = ev => {
+    if (ev.target.classList.contains('anr-in')) return;
+    const i0 = idxDe(ev);
+    if (ev.target.classList.contains('anr-sel')){
+      const a0 = a, b0 = b; pista.setPointerCapture(ev.pointerId);
+      pista.onpointermove = e => { const d = Math.max(-a0, Math.min(n - 1 - b0, idxDe(e) - i0));
+        if (a0 + d !== a){ a = a0 + d; b = b0 + d; pintar(true); } };
+    } else {
+      if (Math.abs(i0 - a) <= Math.abs(i0 - b)) a = Math.min(i0, b); else b = Math.max(i0, a);
+      pintar(true);
+    }
+    pista.onpointerup = pista.onpointercancel = () => { pista.onpointermove = null; fijar(); };
+  };
+  pintar(false);
 }
 
 /* ---- la lista compacta, con las metas editables ---------------------------- */
@@ -7510,7 +7652,7 @@ function anPintarLista(){
   const sinMeta = claves.filter(k => !conMeta.includes(k));
   const srv = enHayServidor();
   const cab = `<thead><tr><th>${t('an.lista.ind')}</th>${AN.ents.map(e =>
-    `<th class="num" style="color:${anColor(e)}">${ajEsc(anNombre(e))}</th>`).join('')}<th class="num">${t('an.lista.meta')}</th></tr></thead>`;
+    `<th class="num" style="color:${anColor(e)}" title="${ajEsc(kpNombre(e))}">${ajEsc(anCorto(e))}</th>`).join('')}<th class="num">${t('an.lista.meta')}</th></tr></thead>`;
   const fila = k => {
     const metas = AN.ents.map(e => metasDe(e)[k]);
     const iguales = metas.every(m => m === metas[0]);
@@ -7571,8 +7713,27 @@ function anFmtPend(k, b){            // pendiente por año en la unidad del indi
   return (b >= 0 ? '+' : '') + kpFmt(k, b).replace(/^\+?/, '');
 }
 function anPintarResumen(res){
-  const k = AN.kpi;
-  document.getElementById('anResumen').innerHTML = res.map(r => {
+  const k = AN.kpi, caja = document.getElementById('anResumen');
+  // Con varias entidades, una tabla: una fila por empresa y las mismas cinco
+  // cifras en columnas. En recuadros serían cinco por empresa y empujarían la
+  // gráfica fuera de la pantalla.
+  if (res.length > 1){
+    const ctrl = AN.capas.control;
+    caja.innerHTML = `<table class="anrestab"><thead><tr><th></th><th class="num">${t('an.r.ultimo')}</th>
+      <th class="num">${t('an.r.mediana')}</th><th class="num">${t('an.r.rango')}</th>
+      <th class="num">${t('an.r.tendencia')}</th><th class="num">${t('an.r.meta')}</th>${
+      ctrl ? `<th class="num">${t('an.r.fuera')}</th>` : ''}</tr></thead><tbody>${res.map(r => {
+        const e = r.est, ult = r.pts.length ? r.pts[r.pts.length - 1] : null;
+        return `<tr><th style="color:${anColor(r.ent)}" title="${ajEsc(kpNombre(r.ent))}">${ajEsc(anCorto(r.ent))}</th>
+          <td class="num">${ult ? kpFmt(k, ult.v) : '—'}</td><td class="num">${e ? kpFmt(k, e.mediana) : '—'}</td>
+          <td class="num">${e ? `${kpFmt(k, e.p25)} – ${kpFmt(k, e.p75)}` : '—'}</td>
+          <td class="num${r.ts && r.ts.p < .05 ? ' sig' : ''}">${r.ts ? `${anFmtPend(k, r.ts.b)} · p ${anFmtP(r.ts.p)}` : '—'}</td>
+          <td class="num">${r.meta === undefined ? '—' : `${kpFmt(k, r.meta)}${r.cumple ? ` · ${r.cumple.ok}/${r.cumple.n}` : ''}`}</td>${
+          ctrl ? `<td class="num">${r.control ? r.control.fuera.length : '—'}</td>` : ''}</tr>`;
+      }).join('')}</tbody></table>`;
+    return;
+  }
+  caja.innerHTML = res.map(r => {
     const e = r.est; if (!e) return '';
     const ult = r.pts.length ? r.pts[r.pts.length - 1] : null;
     const tend = r.ts ? `${anFmtPend(k, r.ts.b)} · p ${anFmtP(r.ts.p)}` : '—';
@@ -7725,7 +7886,7 @@ function anGrafica(res){
   capa.addEventListener('mouseleave', () => { guia.setAttribute('opacity', 0); tipHide(); });
 }
 function anPintarResultados(res){
-  const k = AN.kpi, cols = res.map(r => `<th class="num" style="color:${anColor(r.ent)}">${ajEsc(anNombre(r.ent))}</th>`).join('');
+  const k = AN.kpi, cols = res.map(r => `<th class="num" style="color:${anColor(r.ent)}">${ajEsc(anCorto(r.ent))}</th>`).join('');
   const fila = (tit, f, sig) => `<tr><td>${ajEsc(tit)}</td>${res.map(r => {
     const v = f(r), s = sig && sig(r);
     return `<td class="num${s ? ' sig' : ''}">${v}</td>`; }).join('')}</tr>`;
@@ -7774,7 +7935,9 @@ function anPintarResultados(res){
     + fila(t('an.mt.cumple'), r => r.cumple ? `${r.cumple.ok} / ${r.cumple.n} (${PF.format(r.cumple.ok / r.cumple.n)})` : '—')
     + fila(t('an.mt.dif'), r => r.est && r.meta !== undefined ? F(r.est.mediana - r.meta) : '—')),
     r0.cumple ? t('an.n.meta', {ok: r0.cumple.ok, n: r0.cumple.n}) : t('an.n.sinmeta'));
-  document.getElementById('anResultados').innerHTML = est + tend + meta + media + ctrl;
+  const caja = document.getElementById('anResultados');
+  caja.style.setProperty('--n', res.length);
+  caja.innerHTML = est + tend + meta + media + ctrl;
 }
 /* Lo que depende del indicador elegido, sin reconstruir la barra ni la lista. */
 function anPintarCuerpo(){
@@ -7785,6 +7948,7 @@ function anPintarCuerpo(){
   const dud = res.reduce((s, r) => s + r.dudosos, 0);
   document.getElementById('anDudososTxt').textContent = t('an.dudosos.n', {n: dud});
   document.getElementById('anSub').textContent = `${base} · ${t(cat.mayor_mejor ? 'en.metas.mayor' : 'en.metas.menor')}`;
+  anPintarBase();
   anPintarResumen(res);
   anPintarCapas();
   anGrafica(res);
@@ -7797,6 +7961,7 @@ function anPintar(){
   }
   anBarra();
   anPintarLista();
+  anPintarRango();        // después de la lista: ahí se valida el indicador
   anPintarCuerpo();
 }
 

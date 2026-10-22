@@ -69,6 +69,12 @@ SE_EXCLUYE = {'verificar_repositorio.py'}
 # este proyecto no pasa de 400 KB por archivo.
 LIMITE_KB = 500
 
+# La excepción: la plantilla del tablero es código —HTML, estilos, JavaScript
+# y los textos de los dos idiomas— y pasó de 500 KB con la vista de análisis.
+# Tiene su propio tope, no uno infinito: si un día alguien le pega los datos
+# dentro, salta igual. Los datos viajan en index.html, que no se versiona.
+LIMITE_KB_POR_ARCHIVO = {'dashboard/plantilla.html': 900}
+
 # Terceros que se versionan A PROPÓSITO y pesan: las librerías y las
 # tipografías que la página pedía antes a cdnjs y a Google. Están aquí para
 # que el navegador no dependa de nadie más, así que tienen que viajar con el
@@ -120,7 +126,7 @@ def main():
         if not os.path.exists(ruta):
             continue
         kb = os.path.getsize(ruta) / 1024
-        if kb > LIMITE_KB and not es_estatico_de_terceros(f):
+        if kb > LIMITE_KB_POR_ARCHIVO.get(f, LIMITE_KB) and not es_estatico_de_terceros(f):
             problemas.append((f, f'pesa {kb:.0f} KB', 'revisar si son datos'))
         try:
             texto = open(ruta, encoding='utf-8', errors='ignore').read()
