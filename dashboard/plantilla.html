@@ -1311,11 +1311,23 @@ const ENTRADAS = __ENTRADAS_JSON__;
    pendientes: volver mañana y encontrar la hoja apuntando a las seis empresas
    es como se produce una captura masiva que nadie quiso.
 
-   La hoja edita una copia de trabajo en el navegador y produce un archivo que
-   se aplica con `entradas.py --aplicar`. No guarda sola —esta página es
-   estática y no puede escribir en el almacén sin llevar credenciales dentro— y
-   lo dice en pantalla. Una hoja que parece guardar y no guarda es peor que una
-   que pide un paso extra.
+   CÓMO SE GUARDA. Servida por la aplicación (servidor/app.py, en Connect, o
+   en local con `actualizar.py --ver`), la hoja GUARDA SOLA: el botón Guardar
+   manda el lote por el canal de Shiny, el servidor lo valida, lo escribe en el
+   almacén y lo anota en la bitácora con el nombre de la sesión. Al abrir, la
+   página le pide al servidor el estado vigente —entradas, metas, bitácora e
+   indicadores rehechos— y se repinta con él, así que lo guardado se ve aunque
+   el HTML se haya construido antes. Abierta como archivo suelto, sin
+   servidor, edita una copia de trabajo y exporta un archivo para
+   `entradas.py --aplicar`, y lo dice en pantalla; las metas, en ese modo, no
+   se capturan. Una hoja que parece guardar y no guarda es peor que una que
+   pide un paso extra.
+
+   LAS METAS DEL SEMÁFORO se fijan en esta misma hoja, en su propia tabla, con
+   el mismo Guardar y la misma bitácora. Valen para todo el grupo. Sus reglas
+   viven en configurar.validar_meta() y su escritura en configurar.
+   cambiar_metas(), que cambia SOLO las metas tocadas con comparación de
+   versión: dos personas fijando metas a la vez no se pisan.
 
    NADA DE LO QUE EL CLIENTE DECIDE VIVE EN EL CÓDIGO. Es la regla que más
    trabajo cuesta sostener y la que más vale. Qué empresas hay, con qué ERP se
@@ -1528,6 +1540,11 @@ const ENTRADAS = __ENTRADAS_JSON__;
      enCapturar(campo, texto)    vaciar = volver al cálculo automático
      enPintarAviso / enPintarBitacora / enPintar
      enExportar()                produce el archivo para entradas.py --aplicar
+     enGuardar / enRegistrarRespuesta   guardar contra el servidor; al conectar
+                                 pide 'estado_actual' (pedir_estado)
+     enAplicarEstado(r)          repinta con lo que hay HOY en el almacén
+     enTablaMetas / enCapturarMeta   la tabla de metas del semáforo
+     enMetaFmt / enMetaEsFraccion    metas en %/pp se guardan como fracción
      enConstruir()               arma controles y dibuja
      ajRenderEntradas()          la puerta discreta, dentro de Ajustes
 
@@ -1786,7 +1803,7 @@ const I18N = {
     'en.bit.truncada':'Se muestran los más recientes de {n}. La completa: python finanzas/entradas.py --bitacora --todo',
     'aj.sec.entradas':'Entradas manuales',
     'aj.ent.title':'Hoja de captura de entradas manuales',
-    'aj.ent.desc':'Para los datos que el ERP no tiene (beta, prima de mercado, capex) y para corregir una cifra mal capturada en el ERP mientras contabilidad la arregla en su origen.',
+    'aj.ent.desc':'Para los datos que el ERP no tiene (beta, prima de mercado, capex), para corregir una cifra mal capturada en el ERP mientras contabilidad la arregla en su origen, y para fijar las metas del semáforo.',
     'aj.ent.capturadas':'Entradas capturadas','aj.ent.sobrescritas':'Cifras calculadas reemplazadas',
     'aj.ent.pendientes':'Cambios sin aplicar en este navegador','aj.ent.asientos':'Asientos en la bitácora',
     'aj.ent.abrir':'Abrir la hoja de captura',
@@ -1962,6 +1979,16 @@ const I18N = {
     'th.plaza.help':'Sede de la operación registrada en la factura.',
     'th.mes.help':'El mes de la fecha del documento.',
     'th.pct.help':'Qué porcentaje del total de la tabla representa la fila.',
+    'en.metas.t':'Metas del semáforo',
+    'en.metas.s':'Contra qué se pinta cada indicador en Dirección e Indicadores. Valen para todo el grupo: "Aplicar a" no les afecta. Vaciar una meta deja al indicador sin semáforo.',
+    'en.metas.mayor':'Mayor es mejor: en verde si alcanza o supera la meta.',
+    'en.metas.menor':'Menor es mejor: en verde si queda en la meta o por debajo.',
+    'en.metas.sinsrv':'Las metas se fijan desde la aplicación: esta página no está conectada a ella.',
+    'en.metas.vaciar':'Escribe la nueva meta y oprime Guardar. Vacía la celda para quitarla.',
+    'en.metas.col.ind':'Indicador',
+    'en.metas.col.vigente':'Meta vigente',
+    'en.metas.col.nueva':'Nueva meta',
+    'en.metas.de':'Meta de {k}',
     'nodata':'Sin datos con los filtros actuales'
   },
   en:{
@@ -2102,7 +2129,7 @@ const I18N = {
     'en.bit.truncada':'Showing the most recent of {n}. For the full log: python finanzas/entradas.py --bitacora --todo',
     'aj.sec.entradas':'Manual entries',
     'aj.ent.title':'Manual entry sheet',
-    'aj.ent.desc':'For data the ERP does not have (beta, market premium, capex) and to correct a figure entered wrong in the ERP while accounting fixes it at the source.',
+    'aj.ent.desc':'For data the ERP does not have (beta, market premium, capex), to correct a figure entered wrong in the ERP while accounting fixes it at the source, and to set the traffic-light targets.',
     'aj.ent.capturadas':'Entries on record','aj.ent.sobrescritas':'Computed figures replaced',
     'aj.ent.pendientes':'Changes not applied in this browser','aj.ent.asientos':'Entries in the change log',
     'aj.ent.abrir':'Open the manual entry sheet',
@@ -2278,6 +2305,16 @@ const I18N = {
     'th.plaza.help':'Operating site recorded on the invoice.',
     'th.mes.help':'The month of the document date.',
     'th.pct.help':'What percentage of the table total the row represents.',
+    'en.metas.t':'Traffic-light targets',
+    'en.metas.s':'What each indicator is measured against in Management and Indicators. They apply to the whole group: "Apply to" does not affect them. Clearing a target leaves the indicator without a traffic light.',
+    'en.metas.mayor':'Higher is better: green when it meets or beats the target.',
+    'en.metas.menor':'Lower is better: green when it is at or below the target.',
+    'en.metas.sinsrv':'Targets are set from the application: this page is not connected to it.',
+    'en.metas.vaciar':'Type the new target and press Save. Clear the cell to remove it.',
+    'en.metas.col.ind':'Indicator',
+    'en.metas.col.vigente':'Current target',
+    'en.metas.col.nueva':'New target',
+    'en.metas.de':'Target for {k}',
     'nodata':'No data for the current filters'
   }
 };
@@ -4453,8 +4490,8 @@ const GLOSARIO = [
     en:{t:'Net debt / EBITDA', d:'How many years of EBITDA it would take to repay debt, net of cash on hand. It is the leverage measure banks use. A negative value means there is more cash than debt.'}},
   {cat:'razones', es:{t:'Tasa efectiva de impuestos', d:'Impuesto a la utilidad (ISR y PTU) entre el resultado antes de impuestos, calculado del ERP por empresa y periodo. Solo se muestra cuando la base la hace interpretable: con utilidad cercana a cero sale fuera de rango —una empresa del grupo dio 206%— y es aritméticamente correcta pero inservible.'},
     en:{t:'Effective tax rate', d:'Income tax (ISR and statutory profit sharing) over pre-tax income, computed from the ERP per company and period. Shown only when the base makes it interpretable: with near-zero profit it lands out of range — one group company came out at 206% — arithmetically correct and useless.'}},
-  {cat:'razones', es:{t:'Meta y semáforo', d:'Verde cumple la meta, amarillo queda dentro del 10% y rojo se aleja más. Cada estado lleva además una forma (▲ ● ▼) para que no dependa solo del color. Las metas son del CLIENTE y viven en su configuración: sin meta capturada no se pinta semáforo, en vez de comparar contra el objetivo de alguien más.'},
-    en:{t:'Target and status', d:'Green meets the target, amber is within 10%, red is further off. Each state also carries a shape (▲ ● ▼) so it never relies on color alone. Targets belong to the CLIENT and live in their configuration: with no target set, no status is shown, rather than comparing against someone else\'s objective.'}},
+  {cat:'razones', es:{t:'Meta y semáforo', d:'Verde cumple la meta, amarillo queda dentro del 10% y rojo se aleja más. Cada estado lleva además una forma (▲ ● ▼) para que no dependa solo del color. Las metas son del CLIENTE: se fijan en la hoja de captura (Ajustes → Hoja de captura → Metas del semáforo), se guardan al oprimir Guardar y quedan en la bitácora con nombre. Sin meta no se pinta semáforo, en vez de comparar contra el objetivo de alguien más.'},
+    en:{t:'Target and traffic light', d:'Green meets the target, amber falls within 10% and red is further off. Each state also carries a shape (▲ ● ▼) so it never depends on color alone. Targets belong to the CLIENT: they are set on the capture sheet (Settings → Capture sheet → Traffic-light targets), saved when you press Save, and logged with a name. Without a target there is no traffic light, rather than comparing against someone else\'s goal.'}},
 
   {cat:'siglas', es:{t:'MXN', d:'Pesos mexicanos.'}, en:{t:'MXN', d:'Mexican pesos.'}},
   {cat:'siglas', es:{t:'USD', d:'Dólares estadounidenses.'}, en:{t:'USD', d:'US dollars.'}},
@@ -6138,7 +6175,7 @@ function enPintarDestino(){
 }
 
 function enPintarAviso(){
-  const n = Object.keys(EN.cambios).length;
+  const n = Object.keys(EN.cambios).length + Object.keys(EN.metas || {}).length;
   const sob = Object.values(ENTRADAS.entradas || {})
     .filter(r => r.tipo === ((ENTRADAS.tipos || {}).sobrescritura || 'sobrescritura'));
   const avisos = [];
@@ -6237,8 +6274,12 @@ function enPintarTablas(){
       <tbody>${campos.map(enRenglon).join('')}</tbody></table>`;
   }).join('');
 
+  cont.insertAdjacentHTML('beforeend', enTablaMetas());
   cont.querySelectorAll('.ecelda').forEach(inp => {
     inp.onchange = () => enCapturar(inp.dataset.campo, inp.value);
+  });
+  cont.querySelectorAll('.emeta').forEach(inp => {
+    inp.onchange = () => enCapturarMeta(inp.dataset.meta, inp.value);
   });
   cont.querySelectorAll('.emotivo').forEach(inp => {
     inp.onchange = () => {
@@ -6258,6 +6299,112 @@ function enPintarTablas(){
     // campo en mitad de la frase.
     inp.oninput = inp.onchange;
   });
+}
+
+/* ---- METAS DEL SEMÁFORO ----------------------------------------------------
+   Las metas son decisiones del cliente, igual que lo que se captura en esta
+   hoja, y por eso se fijan aquí: con el mismo botón Guardar, los mismos
+   pendientes que sobreviven a recargar y la misma bitácora con nombre. Antes
+   solo se podían cambiar por línea de comandos.
+
+   DIFERENCIAS CON UNA ENTRADA, y por qué:
+     · No tienen empresa ni periodo: una meta vale para todo el grupo. Por eso
+       "Aplicar a" no les afecta, y su tabla lo dice.
+     · Se guardan en la configuración del cliente (politica.metas), no en las
+       entradas. Las reglas viven en configurar.validar_meta(): la página no
+       decide qué es una meta válida.
+     · SOLO SE FIJAN CON LA APLICACIÓN. Sin servidor la tabla se ve pero no se
+       captura: el archivo exportado es para entradas.py, que no toca metas, y
+       una meta que se "exporta" para no aplicarse nunca es peor que no poder
+       escribirla.
+     · Se mandan en su unidad INTERNA (18% viaja como 0.18), que es como se
+       guardan. Lo que en pantalla se escribe en porcentaje se convierte aquí,
+       una sola vez. */
+const EN_ALMACEN_METAS = 'metasPendientes';
+EN.metas = {};
+function enCargarMetasPendientes(){
+  try { EN.metas = JSON.parse(localStorage.getItem(EN_ALMACEN_METAS) || '{}') || {}; }
+  catch (e) { EN.metas = {}; }
+}
+function enGuardarMetasPendientes(){
+  try { localStorage.setItem(EN_ALMACEN_METAS, JSON.stringify(EN.metas)); } catch (e) {}
+}
+enCargarMetasPendientes();
+
+const enMetaCat = k => (KPIS.catalogo || {})[k] || {};
+// Porcentajes Y puntos porcentuales se guardan como fracción: un spread de
+// +10.5 pp es 0.105. Tratar solo '%' guardaba una meta de 2 pp como 200 pp.
+const enMetaEsFraccion = k => ['%', 'pp'].includes(enMetaCat(k).unidad);
+function enMetaFmt(k, v){
+  if (v === null || v === undefined || v === '') return '';
+  const n = enMetaEsFraccion(k) ? v * EN_FACTOR_PCT : v;
+  return String(Math.round(n * 10000) / 10000);
+}
+function enTablaMetas(){
+  const cat = KPIS.catalogo || {};
+  const claves = Object.keys(cat);
+  if (!claves.length) return '';
+  const metas = KPIS.metas || {}, srv = enHayServidor();
+  const hayPct = claves.some(enMetaEsFraccion);
+  const filas = claves.map(k => {
+    const c = cat[k], vig = metas[k];
+    const pend = Object.prototype.hasOwnProperty.call(EN.metas, k) ? EN.metas[k] : undefined;
+    // Con los montos ocultos, una meta en dinero tampoco se escribe a ciegas.
+    const oculta = DISCRETO && c.monetario;
+    const valor = pend !== undefined ? (pend === null ? '' : enMetaFmt(k, pend)) : enMetaFmt(k, vig);
+    const sentido = t(c.mayor_mejor ? 'en.metas.mayor' : 'en.metas.menor');
+    const titulo = !srv ? t('en.metas.sinsrv') : oculta ? t('en.oculto') : t('en.metas.vaciar');
+    return `<tr>
+      <td><span class="cam">${ajEsc(c.nombre || k)}</span>${
+        pend !== undefined ? `<span class="epend">${t('en.marca.pend')}</span>` : ''}
+        <span class="pista">${ajEsc(sentido)}</span></td>
+      <td class="uni">${ajEsc(c.unidad || '')}</td>
+      <td class="num">${vig === undefined ? '—' : ajEsc(oculta ? MASCARA : enMetaFmt(k, vig))}</td>
+      <td><input class="ecelda emeta ${pend !== undefined ? 'edit' : ''}" data-meta="${ajEsc(k)}"
+            inputmode="decimal" value="${ajEsc(oculta && valor !== '' ? MASCARA : valor)}"
+            ${!srv || oculta ? 'disabled' : ''} title="${ajEsc(titulo)}"></td>
+    </tr>`;
+  }).join('');
+  return `<table class="etab etab-metas">
+    <caption><b>${t('en.metas.t')}</b><span>${t('en.metas.s')}</span>${
+      hayPct ? `<span class="epct">${t('en.unidad.pct')}</span>` : ''}${
+      srv ? '' : `<span class="epct">${t('en.metas.sinsrv')}</span>`}</caption>
+    <thead><tr><th>${t('en.metas.col.ind')}</th><th>${t('en.col.unidad')}</th>
+      <th class="num">${t('en.metas.col.vigente')}</th><th>${t('en.metas.col.nueva')}</th></tr></thead>
+    <tbody>${filas}</tbody></table>`;
+}
+function enCapturarMeta(k, bruto){
+  const txt = (bruto || '').trim(), vig = (KPIS.metas || {})[k];
+  if (txt === ''){
+    // Vaciar quita la meta: el indicador se queda sin semáforo, que es mejor
+    // que compararlo contra un objetivo que nadie fijó.
+    if (vig === undefined) delete EN.metas[k]; else EN.metas[k] = null;
+  } else {
+    const escrito = Number(txt.replace(/,/g, ''));
+    if (!isFinite(escrito)){ toast(t('en.nonumero')); enPintar(); return; }
+    const v = enMetaEsFraccion(k) ? escrito / EN_FACTOR_PCT : escrito;
+    if (vig !== undefined && Math.abs(v - vig) < 1e-12) delete EN.metas[k];
+    else EN.metas[k] = v;
+  }
+  enGuardarMetasPendientes();
+  enPintar();
+}
+
+/* Lo que hay hoy en el almacén, para repintar con la verdad: lo manda el
+   servidor al conectarse la página y después de cada guardado. Sin esto, al
+   recargar se veía lo horneado el día de la publicación y parecía que lo
+   guardado se había perdido. */
+function enAplicarEstado(r){
+  if (!r) return;
+  if (r.entradas) ENTRADAS.entradas = r.entradas;
+  if (r.metas) KPIS.metas = r.metas;
+  if (r.series) KPIS.series = r.series;
+  if (r.bitacora_actos) ENTRADAS.bitacora_actos = r.bitacora_actos;
+  if (r.bitacora){ ENTRADAS.bitacora = r.bitacora; enPintarBitacora(); }
+  const abierta = PESTANA;
+  if (abierta === 'direccion') kpConstruir();
+  else if (abierta === 'indicadores') tfConstruir();
+  else if (abierta === 'entradas') enPintar();
 }
 
 function enCapturar(campo, bruto){
@@ -6319,15 +6466,23 @@ function enPintarBitacora(){
   for (const a of asientos){
     const d = a.detalle || {};
     const partes = [];
+    // Una meta no tiene empresa ni periodo, y se guarda en fracción: se
+    // nombra como el indicador y se enseña en la unidad en que se escribe.
+    const esMeta = a.acto === 'meta';
+    const fmtV = v => v === null || v === undefined ? '—'
+      : ajEsc(esMeta ? enMetaFmt(d.campo, v) + (enMetaEsFraccion(d.campo) ? ' ' + enMetaCat(d.campo).unidad : '')
+                     : String(v));
     if (d.campo){
-      const c = enCampo(d.campo);
-      partes.push(`<b>${ajEsc(c.etiqueta || d.campo)}</b>`
-                  + ` <span class="pista" style="display:inline">[${
-                      ajEsc(d.empresa || '*')}/${ajEsc(d.periodo || '*')}]</span>`);
+      if (esMeta) partes.push(`<b>${ajEsc(t('en.metas.de', {k: enMetaCat(d.campo).nombre || d.campo}))}</b>`);
+      else {
+        const c = enCampo(d.campo);
+        partes.push(`<b>${ajEsc(c.etiqueta || d.campo)}</b>`
+                    + ` <span class="pista" style="display:inline">[${
+                        ajEsc(d.empresa || '*')}/${ajEsc(d.periodo || '*')}]</span>`);
+      }
     }
     if (d.de !== undefined || d.a !== undefined)
-      partes.push(`${d.de === null || d.de === undefined ? '—' : ajEsc(String(d.de))}
-                   → ${d.a === null || d.a === undefined ? '—' : ajEsc(String(d.a))}`);
+      partes.push(`${fmtV(d.de)} → ${fmtV(d.a)}`);
     if (d.n) partes.push(t('en.bit.ncambios', {n: d.n}));
     if (d.motivo) partes.push(`<i>${ajEsc(d.motivo)}</i>`);
     h += `<tr><td>${ajEsc(a.fecha || '')}</td>
@@ -6379,7 +6534,9 @@ function enLotePendiente(){
      y lo que se manda al servidor salgan del mismo sitio evita que un día
      lleven cosas distintas. */
   const cambios = Object.values(EN.cambios);
-  if (!cambios.length){ toast(t('en.nada')); return null; }
+  // Las metas solo viajan al servidor (ver METAS DEL SEMÁFORO).
+  const metas = enHayServidor() ? EN.metas : {};
+  if (!cambios.length && !Object.keys(metas).length){ toast(t('en.nada')); return null; }
   const sinMotivo = cambios.filter(c => !c.borrar && enEsSobrescritura(c.campo)
                                      && !(c.motivo || '').trim());
   if (sinMotivo.length){ toast(t('en.faltamotivo', {n: sinMotivo.length})); return null; }
@@ -6387,7 +6544,7 @@ function enLotePendiente(){
     c.borrar ? c : Object.assign({}, c, {valor: enAMostrado(c.campo, c.valor),
                                          unidad: enCampo(c.campo).unidad})));
   return {generado: new Date().toISOString(), cliente: ENTRADAS.cliente,
-          cambios: paraEnviar};
+          cambios: paraEnviar, metas: Object.assign({}, metas)};
 }
 
 function enGuardar(){
@@ -6474,6 +6631,11 @@ function enBindRespuesta(){
 }
 
 function enRegistrarRespuesta(){
+  // Al conectarse, la página pide lo que hay HOY en el almacén y se repinta
+  // con ello (ver enAplicarEstado). El número cambia en cada apertura para que
+  // Shiny lo vea como un valor nuevo.
+  Shiny.addCustomMessageHandler('estado_actual', function(r){ enAplicarEstado(r); });
+  Shiny.setInputValue('pedir_estado', Date.now());
   Shiny.addCustomMessageHandler('entradas_guardadas', function(r){
     clearTimeout(EN.espera);
     const b = document.getElementById('enExportar');
@@ -6485,21 +6647,15 @@ function enRegistrarRespuesta(){
     // reaparecía con el valor viejo. La escritura era correcta —estaba en S3—
     // y la pantalla decía lo contrario. Un guardado que dice "listo" y deja la
     // cifra anterior es lo que más rápido destruye la confianza en una hoja.
-    if (r.entradas) ENTRADAS.entradas = r.entradas;
-    // Y los indicadores ya rehechos con los supuestos nuevos. Sin esto,
-    // cambiar una beta no movía nada en pantalla y parecía que el guardado no
-    // había servido de nada.
-    if (r.series){
-      KPIS.series = r.series;
-      const abierta = document.querySelector('.tabbar button[aria-selected="true"]');
-      const cual = abierta && abierta.dataset.tab;
-      if (cual === 'direccion') kpConstruir();
-      else if (cual === 'indicadores') tfConstruir();
-    }
+    // Y los indicadores ya rehechos con los supuestos y las metas nuevas. Sin
+    // esto, cambiar una beta no movía nada en pantalla y parecía que el
+    // guardado no había servido de nada.
+    enAplicarEstado(r);
     if (r.ok){
       // Lo pendiente se limpia SOLO cuando el servidor confirmó. Limpiarlo al
       // enviar dejaría a alguien sin su captura si la escritura falla.
       EN.cambios = {}; enGuardarPendientes();
+      EN.metas = {}; enGuardarMetasPendientes();
       toast(t(r.series ? 'en.guardado.recalc' : 'en.guardado',
               {n: r.aplicados, a: r.autor || ''}));
       enPintar();

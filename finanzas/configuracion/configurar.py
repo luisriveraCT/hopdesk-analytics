@@ -40,6 +40,7 @@ import sys
 import json
 import getpass
 import argparse
+import dataclasses
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI)
@@ -531,6 +532,96 @@ def sembrar_politica(cliente: Cliente, almacen) -> None:
     fijar_politica(cliente, almacen)
 
 
+# ---------------------------------------------------------------------------
+# METAS DEL SEMÁFORO — las reglas viven aquí y solo aquí
+# ---------------------------------------------------------------------------
+# Las usan la línea de comandos (fijar_politica) y la aplicación del tablero
+# (servidor/app.py). Un servidor con su propia copia de las reglas es un
+# servidor que un día acepta lo que la línea de comandos rechaza.
+
+# Una meta en porcentaje se guarda como fracción (18% = 0.18). Pasado este
+# tope en valor absoluto —1,000%— casi seguro es el error del factor 100:
+# alguien escribió 18 donde iba 0.18, o 1800 donde iba 18.
+TOPE_META_PCT = 10.0
+
+
+def validar_meta(clave: str, valor) -> float:
+    """El valor de la meta, ya como número, o ErrorConfiguracion con el motivo."""
+    if clave not in rf_mod.CATALOGO_KPIS:
+        raise ErrorConfiguracion(
+            f'No existe el indicador {clave!r}. Una meta sobre un indicador '
+            f'inexistente nunca se compara con nada y nadie lo nota.')
+    try:
+        v = float(valor)
+    except (TypeError, ValueError):
+        raise ErrorConfiguracion(f'La meta de {clave} no es un número: {valor!r}.')
+    if v != v or v in (float('inf'), float('-inf')):
+        raise ErrorConfiguracion(f'La meta de {clave} no es un número finito.')
+    cat = rf_mod.CATALOGO_KPIS[clave]
+    # Porcentajes y puntos porcentuales: los dos se guardan como fracción.
+    if cat.get('unidad') in ('%', 'pp') and abs(v) > TOPE_META_PCT:
+        raise ErrorConfiguracion(
+            f'La meta de {cat.get("nombre", clave)} sería {v * 100:,.0f} '
+            f'{cat.get("unidad")}. Las metas en porcentaje se guardan como fracción '
+            f'(18% = 0.18); esto parece un error de captura.')
+    return v
+
+
+def cambiar_metas(almacen, cliente_id: str, cambios: dict):
+    """Aplica {indicador: valor | None} a las metas. None quita la meta.
+
+    Devuelve (aplicados, rechazados, metas_resultantes). Cada cambio se valida
+    por separado y se guardan los que pasan, igual que la hoja de captura: un
+    renglón mal escrito no debe tirar el trabajo de los otros.
+
+    SE ESCRIBE SOLO LO QUE CAMBIÓ, CON COMPARACIÓN DE VERSIÓN. No se carga el
+    cliente, se modifica y se guarda entero —que es lo que hace guardar_cliente,
+    y pisaría lo que otra persona cambió entre medias—: se lee la configuración
+    en el momento de escribir, se le cambian estas metas y nada más, y si
+    alguien escribió en medio se reintenta sobre lo nuevo.
+    """
+    from almacen import actualizar_con_reintento
+
+    validos, rechazados = {}, []
+    for clave, valor in (cambios or {}).items():
+        try:
+            validos[clave] = None if valor is None else validar_meta(clave, valor)
+        except ErrorConfiguracion as e:
+            rechazados.append({'campo': clave, 'motivo': str(e)})
+    if not validos:
+        cli = repo.cargar_cliente(almacen, cliente_id)
+        return [], rechazados, dict(cli.politica.metas) if cli else {}
+
+    aplicados = []
+
+    def transformar(datos):
+        if not datos:
+            raise ErrorConfiguracion(f'No existe la configuración del cliente {cliente_id}.')
+        aplicados.clear()
+        d = dict(datos)
+        pol = dict(d.get('politica') or {})
+        metas = dict(pol.get('metas') or {})
+        for clave, v in validos.items():
+            antes = metas.get(clave)
+            if v is None:
+                if clave in metas:
+                    del metas[clave]
+                    aplicados.append(('borrado', clave, antes, None))
+            elif antes != v:
+                metas[clave] = v
+                aplicados.append(('cambio' if antes is not None else 'captura',
+                                  clave, antes, v))
+        pol['metas'] = metas
+        d['politica'] = pol
+        Cliente.de_dict(d)          # que lo escrito siga siendo un cliente válido
+        return d
+
+    actualizar_con_reintento(almacen, f'clientes/{cliente_id}/configuracion.json',
+                             transformar)
+    cli = repo.cargar_cliente(almacen, cliente_id)
+    return list(aplicados), rechazados, dict(cli.politica.metas)
+
+
 def fijar_politica(cliente: Cliente, almacen, par: str = None) -> None:
     """Muestra o cambia un supuesto/meta. `par` con forma `metas.dso=50`.
 
@@ -551,15 +642,24 @@ def fijar_politica(cliente: Cliente, almacen, par: str = None) -> None:
         if grupo not in ('metas', 'supuestos'):
             raise ErrorConfiguracion(
                 f'Grupo desconocido: {grupo!r}. Solo hay "metas" y "supuestos".')
-        if grupo == 'metas' and clave not in rf_mod.CATALOGO_KPIS:
-            raise ErrorConfiguracion(
-                f'No existe el indicador {clave!r}. Una meta sobre un indicador '
-                f'inexistente nunca se compara con nada y nadie lo nota. Los '
-                f'registrados son: {", ".join(sorted(rf_mod.CATALOGO_KPIS))}')
-        getattr(pol, grupo)[clave] = float(valor)
-        cliente.politica = PoliticaFinanciera(
-            supuestos=pol.supuestos, metas=pol.metas, fuentes=pol.fuentes)
-        repo.guardar_cliente(almacen, cliente)
+        if grupo == 'metas':
+            # Por el mismo camino que la aplicación: mismas reglas, escritura
+            # con comparación de versión y asiento en la bitácora.
+            import bitacora_cambios as bc
+            aplicados, rechazados, metas = cambiar_metas(
+                almacen, cliente.id, {clave: validar_meta(clave, valor)})
+            for acto, k, de, a in aplicados:
+                bc.registrar(almacen, cliente, 'meta', getpass.getuser(),
+                             {'campo': k, 'de': de, 'a': a, 'tipo': acto}, origen='cli')
+            pol.metas.clear(); pol.metas.update(metas)
+        else:
+            getattr(pol, grupo)[clave] = float(valor)
+            # replace() y no un PoliticaFinanciera(...) nuevo con tres campos:
+            # así se construía, y cada cambio por esta vía BORRABA las
+            # convenciones (la base de los días de pago) y el vocabulario de
+            # rubros, sin aviso. replace() conserva todo y vuelve a validar.
+            cliente.politica = dataclasses.replace(pol)
+            repo.guardar_cliente(almacen, cliente)
         print(f'{grupo}.{clave} = {valor}')
 
     print('\n  Supuestos del costo de capital')

@@ -83,12 +83,14 @@ def ver_local():
       anterior— junto al diccionario recién generado. No truena: mezcla, que es
       peor, porque se ve bien.
 
-    · **Un servidor, no doble clic.** Con `file://` el navegador bloquea la
-      lectura de los archivos de `data/` por seguridad, y el tablero se queda
-      cargando para siempre sin decir por qué.
+    · **La aplicación, no un servidor de archivos.** Se arranca la MISMA app de
+      servidor/app.py que corre en Connect, en modo local: sirve lo recién
+      construido y GUARDA. Antes esto levantaba un servidor de archivos
+      estático, y una página estática no puede escribir en el almacén: la hoja
+      de captura caía a "Exportar cambios" y las metas no se podían fijar.
+      Lo que se guarda va al almacén de almacen.json —el de producción—: ver en
+      local es la misma app en otra máquina, no un entorno de pruebas.
     """
-    import http.server
-    import socketserver
     import threading
     import webbrowser
 
@@ -96,20 +98,20 @@ def ver_local():
     correr(os.path.join(TABLERO, 'construir.py'), ['--modo', 'local'],
            cwd=TABLERO, titulo='construcción en modo local')
 
-    os.chdir(TABLERO)
-    manejador = http.server.SimpleHTTPRequestHandler
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(('127.0.0.1', PUERTO_LOCAL), manejador) as srv:
-        url = f'http://127.0.0.1:{PUERTO_LOCAL}/index.html'
-        print(f'\n{"=" * 74}')
-        print(f' Tablero disponible en:  {url}')
-        print(' Ctrl+C para detener el servidor.')
-        print(f'{"=" * 74}\n')
-        threading.Timer(1.0, lambda: webbrowser.open(url)).start()
-        try:
-            srv.serve_forever()
-        except KeyboardInterrupt:
-            print('\nServidor detenido.')
+    url = f'http://127.0.0.1:{PUERTO_LOCAL}/'
+    print(f'\n{"=" * 74}')
+    print(f' Tablero disponible en:  {url}')
+    print(' Guarda de verdad en el almacén. Ctrl+C para detener.')
+    print(f'{"=" * 74}\n', flush=True)
+    threading.Timer(3.0, lambda: webbrowser.open(url)).start()
+    entorno = dict(os.environ, ANALITICA_TABLERO_LOCAL='1')
+    try:
+        subprocess.run([PY, '-m', 'shiny', 'run', '--host', '127.0.0.1',
+                        '--port', str(PUERTO_LOCAL),
+                        os.path.join(AQUI, 'servidor', 'app.py')],
+                       cwd=AQUI, env=entorno)
+    except KeyboardInterrupt:
+        print('\nServidor detenido.')
 
 
 def decir_almacen():

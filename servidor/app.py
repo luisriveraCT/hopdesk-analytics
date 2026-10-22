@@ -113,6 +113,15 @@ RUTAS_LOCALES = [
 TTL_VERSION = 30.0
 _cache = {}
 
+# EN TU MÁQUINA, EL TABLERO RECIÉN CONSTRUIDO. `actualizar.py --ver` arranca
+# esta misma aplicación con ANALITICA_TABLERO_LOCAL=1: sirve el index.html y
+# los datos de dashboard/ —lo que acabas de construir— en vez de lo publicado.
+# Sin esto, verlo en local era abrir una página estática, y una página estática
+# no puede guardar: la hoja caía a "Exportar cambios". Lo que se GUARDA sigue
+# yendo al almacén de siempre (almacen.json), que es el mismo de producción:
+# ver en local no es un entorno de pruebas, es la misma app en otra máquina.
+TABLERO_LOCAL = os.environ.get('ANALITICA_TABLERO_LOCAL', '').strip() == '1'
+
 
 def _del_almacen(clave, respaldos, leer_respaldo):
     """El contenido de `clave`, vuelto a traer solo si cambió.
@@ -126,6 +135,14 @@ def _del_almacen(clave, respaldos, leer_respaldo):
     import time
     ent = _cache.get(clave)
     ahora = time.monotonic()
+    if TABLERO_LOCAL:
+        for ruta in respaldos:
+            if os.path.exists(ruta):
+                v = os.path.getmtime(ruta)
+                if not (ent and ent['version'] == v):
+                    _cache[clave] = ent = {'datos': leer_respaldo(ruta), 'version': v,
+                                           'revisado': ahora, 'de': ruta}
+                return ent['datos']
     if ent and ahora - ent['revisado'] < TTL_VERSION:
         return ent['datos']
     try:
@@ -268,19 +285,20 @@ if _leer_base() is None:
           file=sys.stderr, flush=True)
 
 
-def recalcular_series(entradas_obj):
+def recalcular_series(entradas_obj, cliente=None):
     """Los indicadores con los supuestos capturados. None si no hay base.
 
     Devuelve lo mismo que `kpis.json` en su campo `series`, para que la página
-    pueda reemplazarlo tal cual y repintar.
+    pueda reemplazarlo tal cual y repintar. Las metas entran aquí también: el
+    semáforo de cada indicador se recalcula contra las metas vigentes.
     """
     base = _leer_base()
     if base is None:
         return None
     import exportar_kpis as ek
 
-    almacen = repo.almacen_por_defecto()
-    cliente = repo.cliente_actual(almacen)
+    if cliente is None:
+        cliente = repo.cliente_actual(repo.almacen_por_defecto())
     pol = cliente.politica
     conv = ek.leer_convenciones(pol)
     supuestos = dict(pol.supuestos)
@@ -305,10 +323,18 @@ def _autor_de(session: Session) -> str:
     nombre: una bitácora que dice "Luis" cuando no sabe quién era es peor que
     una que dice que no lo sabe.
     """
+    import getpass
+    # En tu máquina no hay sesión de Connect, pero sí un usuario del sistema
+    # operativo: es quien está sentado frente a la app, y se dice que es local
+    # para que nadie lo confunda con un usuario autenticado.
+    # Solo en modo local: en Connect, getuser() sería la cuenta del contenedor,
+    # y firmar con ella sería inventar un autor.
+    local = (f'{getpass.getuser()} (local)' if TABLERO_LOCAL
+             else '(sesión sin autenticar)')
     try:
         cab = dict(session.http_conn.headers)
     except Exception:                                        # noqa: BLE001
-        return '(sesión local, sin autenticar)'
+        return local
     for clave in ('rstudio-connect-credentials', 'x-rsc-user',
                   'x-forwarded-user', 'x-auth-request-user'):
         crudo = cab.get(clave)
@@ -323,7 +349,7 @@ def _autor_de(session: Session) -> str:
                 return str(nombre)
         except (ValueError, AttributeError):
             return str(crudo)
-    return '(sesión local, sin autenticar)'
+    return local
 
 
 def aplicar_lote(cambios, autor):
@@ -381,7 +407,68 @@ def aplicar_lote(cambios, autor):
     return aplicados, rechazados, ent.entradas
 
 
+def estado_actual(almacen=None, cliente=None, entradas_obj=None):
+    """Lo que hay HOY en el almacén: entradas, metas e indicadores rehechos.
+
+    La página trae horneado lo que había el día que se construyó. Sin esto,
+    guardar funcionaba pero al recargar la pantalla volvía a enseñar lo de la
+    última publicación: la captura estaba en S3 y la página decía lo contrario
+    hasta el siguiente `actualizar.py`. Ahora, en cuanto la página se conecta,
+    pide el estado vigente y se repinta con él. Es el mismo paquete que se
+    devuelve después de guardar, armado en un solo sitio.
+    """
+    almacen = almacen or repo.almacen_por_defecto()
+    cliente = cliente or repo.cliente_actual(almacen)
+    ent = entradas_obj or em.cargar(almacen, cliente)
+    series = None
+    try:
+        series = recalcular_series(ent, cliente)
+    except Exception:                                        # noqa: BLE001
+        # Sin indicadores rehechos la página sigue sirviendo: enseña los
+        # horneados. Se registra para que alguien lo vea.
+        print('ERROR al recalcular indicadores:', traceback.format_exc(),
+              file=sys.stderr, flush=True)
+    # La bitácora reciente también: lo recién guardado tiene que aparecer en
+    # ella sin esperar la siguiente publicación. Mismo recorte que la que se
+    # incrusta al construir (exportar_entradas.ASIENTOS_PUBLICADOS).
+    try:
+        import exportar_entradas as ee
+        bitacora = bc.leer(almacen, cliente, ee.ASIENTOS_PUBLICADOS)
+    except Exception:                                        # noqa: BLE001
+        bitacora = None
+    return {'entradas': ent.entradas, 'metas': dict(cliente.politica.metas),
+            'series': series, 'bitacora': bitacora, 'bitacora_actos': bc.ACTOS}
+
+
+def aplicar_metas(cambios_metas, autor):
+    """Guarda {indicador: valor | None} en las metas del cliente.
+
+    Las reglas y la escritura viven en configurar.cambiar_metas(), que es lo
+    mismo que usa `configurar.py --politica metas.x=y`: una sola puerta.
+    """
+    import configurar as cfg
+    almacen = repo.almacen_por_defecto()
+    cliente = repo.cliente_actual(almacen)
+    aplicados, rechazados, _ = cfg.cambiar_metas(almacen, cliente.id, cambios_metas)
+    for acto, clave, de, a in aplicados:
+        bc.registrar(almacen, cliente, 'meta', autor,
+                     {'campo': clave, 'de': de, 'a': a, 'tipo': acto}, origen='tablero')
+    return aplicados, rechazados
+
+
 def server(input, output, session):        # noqa: A002
+
+    # En cuanto la página se conecta pide el estado vigente (ver estado_actual).
+    @reactive.effect
+    @reactive.event(input.pedir_estado)
+    async def _estado():
+        try:
+            await session.send_custom_message('estado_actual', estado_actual())
+        except Exception:                                    # noqa: BLE001
+            # Si falla, la página se queda con lo horneado, que es lo mismo que
+            # pasaba antes de existir esto. No vale tumbar la sesión por ello.
+            print('ERROR al entregar el estado:', traceback.format_exc(),
+                  file=sys.stderr, flush=True)
 
     # NO se usa `priority: "event"` del lado del navegador, y conviene saber
     # por qué antes de "arreglarlo": esa opción es de Shiny para R. El Shiny de
@@ -395,61 +482,49 @@ def server(input, output, session):        # noqa: A002
     @reactive.effect
     @reactive.event(input.guardar_entradas)
     async def _guardar():
-        lote = input.guardar_entradas()
+        lote = input.guardar_entradas() or {}
         autor = _autor_de(session)
+        cambios = lote.get('cambios') or []
+        metas = lote.get('metas') or {}
         # Se registra ANTES de intentar nada. Si el guardado revienta a la
         # mitad, esta línea es la que dice que la petición sí llegó — la
         # diferencia entre "el servidor no lo recibió" y "lo recibió y falló"
         # es media hora de búsqueda en el lugar equivocado.
-        n = len((lote or {}).get('cambios') or [])
-        print(f'guardar_entradas: {n} cambio(s) de {autor}',
-              file=sys.stderr, flush=True)
+        print(f'guardar_entradas: {len(cambios)} cambio(s) y {len(metas)} meta(s) '
+              f'de {autor}', file=sys.stderr, flush=True)
         try:
-            cambios = (lote or {}).get('cambios') or []
-            if not cambios:
+            if not cambios and not metas:
                 await session.send_custom_message(
                     'entradas_guardadas',
                     {'ok': False, 'mensaje': 'El lote no traía ningún cambio.'})
                 return
-            aplicados, rechazados, entradas = aplicar_lote(cambios, autor)
+            aplicados, rechazados, ent = [], [], None
+            if cambios:
+                aplicados, rechazados, _ = aplicar_lote(cambios, autor)
+            if metas:
+                a_m, r_m = aplicar_metas(metas, autor)
+                aplicados += a_m
+                rechazados += r_m
             print(f'  aplicados {len(aplicados)}, rechazados {len(rechazados)}',
                   file=sys.stderr, flush=True)
-            # Los indicadores se rehacen SOLO si de verdad se guardó algo.
-            # Recalcular tras un lote rechazado entero gastaría medio segundo
-            # para devolver exactamente lo mismo que ya estaba en pantalla.
-            series = None
-            if aplicados:
-                try:
-                    almacen = repo.almacen_por_defecto()
-                    cliente = repo.cliente_actual(almacen)
-                    series = recalcular_series(em.cargar(almacen, cliente))
-                    print(f'  indicadores recalculados: '
-                          f'{len(series or {})} serie(s)',
-                          file=sys.stderr, flush=True)
-                except Exception:                            # noqa: BLE001
-                    # El guardado ya ocurrió y es lo que importa. Si el
-                    # recálculo falla se dice, pero no se pierde la captura ni
-                    # se le devuelve un error a quien sí guardó bien.
-                    print('ERROR al recalcular indicadores:',
-                          traceback.format_exc(), file=sys.stderr, flush=True)
-            await session.send_custom_message('entradas_guardadas', {
+            # El estado COMPLETO tras guardar, no solo "salió bien" —entradas,
+            # metas e indicadores rehechos—, para que la página se repinte con
+            # la verdad y no con lo que traía desde que se construyó. Solo se
+            # recalcula si de verdad se guardó algo: tras un lote rechazado
+            # entero sería medio segundo para devolver lo mismo.
+            estado = estado_actual() if aplicados else {}
+            await session.send_custom_message('entradas_guardadas', dict(estado, **{
                 'ok': not rechazados,
                 'aplicados': len(aplicados),
                 'rechazados': rechazados,
                 'autor': autor,
-                # El estado completo, para que la hoja se repinte con la verdad
-                # y no con lo que traía desde que se construyó la página.
-                'entradas': entradas,
-                # Los indicadores ya rehechos con los supuestos nuevos, para
-                # que la pantalla los muestre sin esperar una reconstrucción.
-                'series': series,
-            })
+            }))
         except Exception as e:                               # noqa: BLE001
             # El error se registra COMPLETO del lado del servidor y se le manda
             # al navegador uno corto. Un rastro de pila en la pantalla no le
             # dice nada a quien captura, y sí le dice de más a cualquiera que
             # abra la página.
-            print('ERROR al guardar entradas:', traceback.format_exc(),
+            print('ERROR al guardar:', traceback.format_exc(),
                   file=sys.stderr, flush=True)
             await session.send_custom_message('entradas_guardadas', {
                 'ok': False,
@@ -457,4 +532,11 @@ def server(input, output, session):        # noqa: A002
                            f'El detalle quedó en el registro del servidor.'})
 
 
-app = App(app_ui, server)
+# En modo local la página pide sus datos y librerías con rutas relativas
+# (data/…, estaticos/…): se sirven desde dashboard/. Publicada, los pide al
+# bucket por URL completa y esto no hace falta.
+_estaticos = ({'/data': os.path.join(RAIZ, 'dashboard', 'data'),
+               '/estaticos': os.path.join(RAIZ, 'dashboard', 'estaticos')}
+              if TABLERO_LOCAL else None)
+
+app = App(app_ui, server, static_assets=_estaticos)

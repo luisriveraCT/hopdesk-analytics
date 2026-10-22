@@ -69,6 +69,7 @@ ACTOS = {
     'desbloqueo':  'Desbloqueó un campo calculado para editarlo',
     'bloqueo':     'Volvió a bloquear los campos calculados',
     'aplicacion':  'Aplicó un lote de cambios',
+    'meta':        'Fijó o quitó una meta del semáforo',
     'consulta':    'Consultó la bitácora',
     'exportacion': 'Exportó la hoja de captura',
 }

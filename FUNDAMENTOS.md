@@ -374,6 +374,27 @@ de las líneas del documento: líneas por 64,000 → `DocTotal` 71,680, `VatSum`
 **La regla:** antes de restar dos campos del ERP, confirma qué incluye cada uno.
 "Total" en un ERP rara vez es solo "subtotal más IVA".
 
+### 3.19 🟠 Cambiar una meta borraba las convenciones
+
+`configurar.py --politica` reconstruía la política con un
+`PoliticaFinanciera(supuestos=…, metas=…, fuentes=…)`: tres de sus cinco campos.
+Cada cambio de meta o de supuesto por esa vía borraba las **convenciones** —la
+base de los días de pago— y el vocabulario de rubros, sin aviso. Los días de
+pago volvían a medirse contra el costo de ventas, que en este grupo es casi
+cero.
+
+**La regla:** para cambiar un campo de un objeto, se cambia ese campo
+(`dataclasses.replace`), no se construye uno nuevo nombrando los que uno
+recuerda.
+
+### 3.20 🟡 Guardado que "se perdía" al recargar
+
+El guardado desde la aplicación sí escribía en S3, pero la página trae sus
+entradas y metas horneadas desde que se construyó. Al recargar volvía a enseñar
+las de la publicación anterior: la cifra estaba guardada y la pantalla decía lo
+contrario hasta el siguiente `actualizar.py`. Ahora, al conectarse, la página
+le pide al servidor el estado vigente.
+
 ## 4. Lo que las pruebas vigilan
 
 **21,000+ pruebas**, en dos clases:

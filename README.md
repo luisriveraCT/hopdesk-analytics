@@ -12,9 +12,10 @@ indicadores de dirección y captura de las cifras que el ERP no tiene.
 python actualizar.py --ver
 ```
 
-Construye todo con los datos que ya hay en disco, levanta un servidor local y
-abre el navegador. **No toca el ERP ni publica nada.** Es la forma de ver el
-tablero sin riesgo.
+Construye todo con los datos que ya hay en disco, levanta **la aplicación** en
+tu máquina y abre el navegador. **No toca el ERP ni publica el tablero.** Lo
+que sí hace es guardar: si capturas algo o cambias una meta y oprimes Guardar,
+se escribe en el almacén de producción, con tu nombre en la bitácora.
 
 ```
 python actualizar.py
@@ -204,19 +205,44 @@ alguien no va a encontrar cuando lo necesite.
 
 ### Cómo se guarda (importante)
 
-El tablero es una página estática: no tiene servidor propio y no puede escribir
-en el almacén sin llevar credenciales dentro, que es justo lo que no se hace.
+**Abierta desde la aplicación, la hoja guarda sola.** El botón **Guardar**
+escribe en el almacén (S3), con la bitácora y el nombre de quien guardó, y los
+indicadores se recalculan al momento. La aplicación es la de `servidor/app.py`:
+la de Connect, o en tu máquina:
 
-Así que la hoja edita una **copia de trabajo en el navegador** (sobrevive a
-recargar la página) y produce un archivo. Quien corre la actualización lo
-aplica:
+```
+python actualizar.py --ver
+```
+
+que ya no levanta un servidor de archivos sino **la misma aplicación**, con lo
+recién construido. Lo que guardes ahí va al mismo almacén que producción.
+
+Al abrir, la página pide lo que hay hoy en el almacén y se repinta con ello:
+lo guardado se ve aunque el tablero se haya publicado antes.
+
+**Abierta como archivo suelto** (sin la aplicación detrás), la hoja no puede
+escribir y lo dice: produce un archivo que se aplica con
 
 ```
 python finanzas/entradas.py --aplicar entradas-2026-09-26.json --autor "Tu Nombre"
 ```
 
-La pantalla lo dice con todas sus letras. Una hoja que parece guardar y no
-guarda es peor que una que pide un paso extra.
+Una hoja que parece guardar y no guarda es peor que una que pide un paso extra.
+
+### Las metas del semáforo
+
+Se fijan en la misma hoja, en la tabla **Metas del semáforo**: se escribe la
+meta (los porcentajes como porcentaje: 18 para 18%), se oprime **Guardar**, y
+Dirección e Indicadores se repintan contra ella. Valen para todo el grupo.
+Vaciar una celda quita la meta y el indicador se queda sin semáforo. Una meta
+absurda —1,900% en vez de 19%— se rechaza con su motivo.
+
+Solo se pueden fijar desde la aplicación. También por línea de comandos, por el
+mismo camino y con las mismas reglas:
+
+```
+python finanzas/configuracion/configurar.py --politica metas.dso=50
+```
 
 ### También desde la línea de comandos
 

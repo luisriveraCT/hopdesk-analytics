@@ -66,6 +66,22 @@ Lo que la Opción 1 exigía respetar —validar en el servidor, autor obligatori
 escritura con comparación de versión, bitácora— sigue aplicando igual y lo
 cumple el servidor.
 
+**2026-10-22 — tres huecos más, cerrados:**
+
+- **Las metas se guardan solas.** Antes solo se cambiaban por línea de comandos.
+  Ahora tienen su tabla en la hoja de captura y viajan en el mismo lote que las
+  entradas; el servidor las valida (`configurar.validar_meta`) y escribe SOLO las
+  metas tocadas, con comparación de versión (`configurar.cambiar_metas`).
+- **Lo guardado se ve al recargar.** La página pide el estado vigente al
+  conectarse (`pedir_estado` → `estado_actual`). Antes recargar enseñaba lo
+  horneado en la última publicación.
+- **`actualizar.py --ver` es la aplicación**, no un servidor de archivos: en
+  local también se guarda.
+
+Para que guarde, la página tiene que abrirse **desde la aplicación Shiny**. El
+contenido estático viejo de Connect (`facturacion_consolidada_networks`) no
+puede guardar nunca: es un archivo.
+
 **Lo que sigue abierto** de la sección 4: el punto 3 (dónde vive
 `HOPDESK_SECRETS_KEY` fuera de la laptop) y la sección 5 (la contraseña de SAP
 compartida por las cinco empresas).

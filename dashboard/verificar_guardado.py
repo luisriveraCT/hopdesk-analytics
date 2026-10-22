@@ -79,14 +79,18 @@ envios = set(re.findall(r"setInputValue\(\s*['\"]([\w.]+)['\"]", html))
 escuchas = set(re.findall(r"input\.(\w+)\(\)", app)) | set(
     re.findall(r"reactive\.event\(input\.(\w+)\)", app))
 revisar('la página manda a alguna entrada', bool(envios), 'no se encontró setInputValue')
-revisar('el servidor escucha lo que la página manda',
-        bool(envios & escuchas), f'manda {sorted(envios)}, escucha {sorted(escuchas)}')
+# TODOS, no alguno. Con un solo mensaje "alguno" y "todos" eran lo mismo; con
+# dos (guardar y pedir el estado al abrir), uno roto pasaba porque el otro sí
+# coincidía.
+revisar('el servidor escucha TODO lo que la página manda',
+        bool(envios) and envios <= escuchas,
+        f'sin oyente: {sorted(envios - escuchas)}')
 
 manda_srv = set(re.findall(r"send_custom_message\(\s*['\"](\w+)['\"]", app))
 oye_pag = set(re.findall(r"addCustomMessageHandler\(\s*['\"](\w+)['\"]", html))
-revisar('la página escucha la respuesta del servidor',
-        bool(manda_srv & oye_pag),
-        f'servidor manda {sorted(manda_srv)}, página oye {sorted(oye_pag)}')
+revisar('la página escucha TODO lo que el servidor le manda',
+        bool(manda_srv) and manda_srv <= oye_pag,
+        f'sin oyente: {sorted(manda_srv - oye_pag)}')
 
 # 3. Sin el marcador, la página se sirve sin el canal de Shiny.
 revisar('la página trae el marcador de dependencias de Shiny',

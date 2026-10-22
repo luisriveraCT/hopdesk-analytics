@@ -68,7 +68,9 @@ Cómo se escriben las piezas (entre comillas invertidas):
 | Hoja de captura | Suministro de lo que el ERP no tiene; se abre desde Ajustes o con `#entradas` | `enConstruir()` `ajRenderEntradas()` `#panelEntradas` |
 | Sobrescritura con candado | Reemplazar una cifra calculada exige quitar el candado y escribir el motivo | `enCapturar()` `#enCandado` |
 | A qué empresas | Esta empresa, una selección o todas, con la regla "gana la más específica" | `enAmbitos()` `#enDestino` |
-| Guardar | Guarda en el servidor cuando la página corre en la aplicación; si no, produce el archivo para aplicarlo | `enGuardar()` `enExportar()` `servidor/app.py` |
+| Guardar | Guarda en el almacén (S3) al oprimir Guardar cuando la página corre en la aplicación —en Connect o con `actualizar.py --ver`—; si no, produce el archivo para aplicarlo | `enGuardar()` `enExportar()` `servidor/app.py` |
+| Lo guardado se ve al recargar | Al abrir, la página pide al servidor entradas, metas, bitácora e indicadores vigentes y se repinta con ellos | `enAplicarEstado()` `enRegistrarRespuesta()` |
+| Metas del semáforo | Fijarlas o quitarlas desde la hoja de captura, con validación, bitácora y escritura que no pisa a otros | `enTablaMetas()` `enCapturarMeta()` `t:en.metas.t` `finanzas/configuracion/configurar.py` |
 | Bitácora de cambios | Quién tocó qué, cuándo y por qué; solo se agrega | `enPintarBitacora()` `finanzas/bitacora_cambios.py` |
 
 ## Para todo el tablero
