@@ -46,6 +46,11 @@ dashboard/index.html
 dashboard/data/
 dashboard/meta.json
 dashboard/indice.json
+# Los de cada tipo de factura que no es venta (hoy, compras): proveedores e
+# importes. Con patrón y no por nombre, para que el próximo tipo quede cubierto
+# sin que nadie se acuerde de volver aquí.
+dashboard/meta-*.json
+dashboard/indice-*.json
 dashboard/finanzas.json
 dashboard/kpis.json
 dashboard/entradas.json

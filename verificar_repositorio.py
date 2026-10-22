@@ -48,6 +48,13 @@ SENALES = [
     (r'"cuenta_padre":\s*"\d', 'catálogo de cuentas del ERP'),
     (r'"activos_totales":\s*\d{7,}', 'balances reales'),
     (r'"ingresos":\s*\d{7,}', 'ingresos reales'),
+    # La facturación: el resumen del tablero (clientes o proveedores con su
+    # nombre, y el agregado mensual) y las cabeceras extraídas del ERP. Faltaban
+    # y una copia de meta-compra.json —1,183 proveedores con sus importes— pasó
+    # por "limpio".
+    (r'"clientes":\s*\[\{"n":\s*"[^"]', 'catálogo de clientes o proveedores'),
+    (r'"agg":\s*\[\[\d+,\s*\d+', 'agregado mensual de facturación'),
+    (r'"contraparte":\s*"[^"]+",\s*"contraparte_id"', 'facturas extraídas del ERP'),
     (r'aws_secret_access_key\s*=\s*\S{20,}|AKIA[0-9A-Z]{16}',
      'credenciales de AWS'),
     (r'"datos":\s*"[A-Za-z0-9+/=]{40,}"', 'secreto cifrado de verdad'),
@@ -81,12 +88,21 @@ def es_estatico_de_terceros(f):
 
 
 def rastreados():
-    r = subprocess.run(['git', 'ls-files'], cwd=AQUI,
-                       capture_output=True, text=True)
+    """Lo que ya está en Git MÁS lo nuevo que el próximo `git add -A` metería.
+
+    Solo con `git ls-files` esta revisión miraba lo que ya entró, no lo que
+    está por entrar: un archivo de datos recién creado y fuera del .gitignore
+    pasaba sin aviso. Es exactamente como se coló base_financiera.json, y pasó
+    otra vez con meta-compra.json —los proveedores y sus importes— el día que
+    se agregaron las compras. `--others --exclude-standard` son los archivos
+    sin rastrear que .gitignore no excluye.
+    """
+    r = subprocess.run(['git', 'ls-files', '--cached', '--others', '--exclude-standard'],
+                       cwd=AQUI, capture_output=True, text=True)
     if r.returncode != 0:
         print('No es un repositorio de Git todavía.')
         return None
-    return [f for f in r.stdout.split('\n') if f.strip()]
+    return sorted({f for f in r.stdout.split('\n') if f.strip()})
 
 
 def main():
