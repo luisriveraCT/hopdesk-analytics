@@ -1,45 +1,36 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
- EXTRACCIÓN DE FACTURACIÓN DESDE EL ERP  +  AUDITORÍA CONTRA LA BASE DE EXCEL
+ EXTRACCIÓN DE FACTURACIÓN DESDE EL ERP — ventas y compras, toda la historia
 ===============================================================================
 PARA QUÉ
 --------
-Hoy la base de facturación se arma leyendo ~400 hojas de Excel repartidas en
-siete carpetas anuales, con unos 35 formatos distintos. Funciona, pero depende
-de que alguien guarde el archivo del mes con la forma de siempre. SAP tiene la
-misma información de origen, con más historia (desde 2013, no 2020) y sin
-depender de ningún archivo.
+Baja las cabeceras de todas las facturas de venta y de compra de cada empresa,
+desde el primer documento que el ERP tenga. No hay límite de año: cuánta
+historia se PUBLICA lo decide la retención del cliente, más adelante en el
+pipeline; aquí se trae todo lo que existe.
 
-Este módulo baja las facturas del ERP y las compara contra la base de Excel,
-empresa por empresa y año por año. La comparación es el entregable, no un
-extra: **antes de sustituir una fuente por otra hay que demostrar que dicen lo
-mismo**, y donde no lo digan, entender por qué antes de decidir cuál manda.
-
-LO QUE YA SE SABE Y HAY QUE TENER EN CUENTA AL LEER EL RESULTADO
----------------------------------------------------------------
- 1. **PL (Paragon Logistics) no existe en SAP.** Sus 16 facturas solo están en
-    el Excel. Sustituir la base completa por SAP perdería esa empresa: o se
-    conserva el Excel para PL, o se le da de alta en el ERP. No hay tercera.
- 2. **Las facturas canceladas.** SAP las conserva (en NG, 16 de 595) y el Excel
-    aparentemente no. Sumar sin filtrarlas infla las ventas. La extracción las
-    trae SIEMPRE, marcadas — filtrarlas aquí escondería la decisión.
- 3. **Hay documentos con `Cancelled` nulo** (16 en NG). No se asumen vigentes:
-    quedan como desconocidos y se reportan aparte.
- 4. **Las iniciales no coinciden entre sistemas:** SAP usa `NRS` para Realtors
-    y la facturación usaba `NR`. Ese mapeo desapareció con el Excel.
- 5. **SAP arranca en 2013 y el Excel en 2020.** La comparación se limita al
-    periodo común; fuera de él una diferencia no significa nada.
+LO QUE HAY QUE TENER EN CUENTA AL LEER EL RESULTADO
+---------------------------------------------------
+ 1. **Las facturas canceladas.** El ERP las conserva, marcadas, y además emite
+    un documento de cancelación por cada una (ver CANCEL_STATUS en sap_b1).
+    La extracción las trae SIEMPRE — filtrarlas aquí escondería la decisión.
+ 2. **Hay documentos con `Cancelled` nulo.** No se asumen vigentes: son los
+    documentos de cancelación, y se clasifican como tales.
+ 3. **Cada importe viene en dos monedas:** la local (`total`) y la del
+    documento (`total_moneda`, los dólares de una factura en USD). Ninguna se
+    calcula a partir de la otra.
+ 4. **Una empresa sin ERP configurado no se extrae.** Se da de alta con
+    configurar.py --agregar-empresa.
 
 CACHÉ
 -----
-Las cabeceras se guardan en `datos_erp/facturas_<EMPRESA>_<tipo>.json`. La
-auditoría se puede repetir sin volver a bajar 219,000 documentos, que es lo que
-permite discutir las diferencias sin castigar al servidor cada vez.
+Las cabeceras se guardan en `datos_erp/facturas_<EMPRESA>_<tipo>.json`, y todo
+lo demás del pipeline lee de ahí sin volver a molestar al servidor.
 
-    python extraer_facturacion.py --todas            # bajar todo (ventas y compras)
-    python extraer_facturacion.py --auditar          # retirada (ver legacy/)
-    python extraer_facturacion.py --empresa NG
+    python extraer_facturacion.py --todas            # todas las empresas
+    python extraer_facturacion.py --empresa NG       # una
+    python extraer_facturacion.py --empresa NCS --tipo compra
 ===============================================================================
 """
 import os
@@ -55,11 +46,6 @@ sys.path.insert(0, os.path.dirname(AQUI))
 import sap_b1
 
 SALIDA = os.path.join(os.path.dirname(AQUI), 'datos_erp')
-# El Excel ya no se actualiza y vive en legacy/. La ruta se conserva solo para
-# _auditar_historico(), que permite reproducir la comparación de aquella fecha.
-# Ya no hay ninguna ruta al Excel en este archivo: el único código que lo
-# abría se movió a legacy/auditoria_contra_excel.py. Ver auditar().
-ANIO_COMUN_DESDE = 2020
 
 
 def _ruta(empresa, tipo):
@@ -93,11 +79,10 @@ def cargar(empresa, tipo):
     de obligar a rebajar todo, pero la extracción nueva sí guarda el campo
     explícito: deducir está bien para lo ya descargado, no para lo que viene.
 
-    Lo mismo con `total_moneda`, el importe en la moneda del documento: los
-    archivos anteriores no traen DocTotalFc. Se deduce como total / tipo de
-    cambio, que es la definición del tipo de cambio del documento, y la fila
-    queda marcada con `total_moneda_deducido` para que se sepa que no salió
-    del ERP. Puede diferir del de SAP en algún centavo de redondeo.
+    `total_moneda` (los dólares de una factura en USD) NO se deduce: el ERP lo
+    tiene (DocTotalFc) y se extrae. Un archivo que no lo trae se queda sin él,
+    y quien lo lea avisa que hay que reextraer — un importe calculado aquí se
+    vería idéntico al de SAP sin serlo.
     """
     try:
         with open(_ruta(empresa, tipo), encoding='utf-8') as f:
@@ -110,63 +95,40 @@ def cargar(empresa, tipo):
             f['clase_documento'] = ('normal' if c is False else
                                     'cancelada' if c is True else
                                     'documento_de_cancelacion')
-        if 'total_moneda' not in f:
-            tc = f.get('tipo_cambio') or 1
-            f['total_moneda'] = round((f.get('total') or 0) / tc, 2)
-            f['total_moneda_deducido'] = True
     return filas
-
-
-def auditar():
-    """RETIRADA. La comparación contra la base de Excel ya cumplió su función.
-
-    Existió para responder una pregunta: ¿puede el ERP sustituir a los archivos
-    de Excel? La respuesta fue sí, y está documentada con números en
-    `legacy/README.md`. El Excel dejó de actualizarse el 2026-09-25 y vive en
-    `legacy/`; compararse contra él hoy solo mediría cuánto ha avanzado el ERP
-    desde esa fecha, que no le sirve a nadie.
-
-    Se conserva la función, y no se borra el archivo de Excel, porque algún día
-    alguien va a preguntar por una cifra histórica de antes del cambio. Pero
-    dejarla ejecutable era dejar armada una trampa: el día que alguien la
-    corriera vería "diferencias" crecientes y creería que el ERP está mal.
-    """
-    raise SystemExit(
-        'La auditoría contra el Excel está retirada.\n\n'
-        'Cumplió su función el 2026-09-25: demostró que el ERP es una fuente\n'
-        'estrictamente mejor (218,808 facturas desde 2013 contra 159,123 desde\n'
-        '2020) y que donde ambas coincidían, coincidían al centavo. El detalle\n'
-        'está en legacy/README.md.\n\n'
-        'El Excel ya no se actualiza, así que compararse contra él hoy solo\n'
-        'mediría el tiempo transcurrido. Para verificar los datos del ERP usa:\n'
-        '    python finanzas/verificar_cuadre.py')
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--empresa')
     ap.add_argument('--todas', action='store_true')
-    ap.add_argument('--auditar', action='store_true')
-    ap.add_argument('--solo-ventas', action='store_true')
+    ap.add_argument('--tipo', choices=('venta', 'compra'),
+                    help='solo un tipo de factura; por omisión, los dos')
     args = ap.parse_args()
 
-    if args.auditar:
-        auditar()
-        return
-
-    tipos = ('venta',) if args.solo_ventas else ('venta', 'compra')
+    tipos = (args.tipo,) if args.tipo else ('venta', 'compra')
     empresas = ([args.empresa.upper()] if args.empresa
                 else sap_b1.empresas_con_erp() if args.todas
                 else sap_b1.empresas_con_erp()[:1])
+    # UNA EMPRESA QUE FALLA SE DICE CON EL CÓDIGO DE SALIDA, no solo en
+    # pantalla. Se sigue con las demás —no hay razón para perderlas—, pero al
+    # final se sale con error. Antes salía con 0: una caída de la VPN a la mitad
+    # de las compras de NCS dejó el archivo de un mes antes, y actualizar.py
+    # siguió construyendo y publicando con él sin enterarse.
+    fallidas = []
     for ini in empresas:
         try:
             extraer(ini, tipos)
         except Exception as e:
+            fallidas.append(ini)
             print(f'  ERROR en {ini}: {type(e).__name__}: {e}', flush=True)
     sin_erp = sap_b1.empresas_sin_erp()
     if sin_erp:
         print(f'\nNota: {", ".join(sin_erp)} no tiene(n) ERP configurado '
               f'todavía; se dan de alta con configurar.py --agregar-empresa.')
+    if fallidas:
+        raise SystemExit(f'\nLa extracción falló en: {", ".join(fallidas)}. Sus '
+                         f'archivos conservan la extracción anterior.')
 
 
 if __name__ == '__main__':

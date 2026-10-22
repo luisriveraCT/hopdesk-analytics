@@ -48,10 +48,6 @@ RENVIRON_HOPDESK = r'C:\Users\luisr\Antiguedad_App\.Renviron'
 # y sus iniciales. Funcionaba, y era exactamente el tipo de atajo que impide que
 # un segundo cliente use esto sin que alguien edite código.
 #
-# También había un `INICIALES_SAP_A_FACTURACION` que traducía NRS→NR para
-# empatar con los archivos de Excel. Ese Excel se retiró: el mapeo se eliminó
-# porque ya no traduce a nada.
-#
 # Ahora las empresas, su base de datos en el ERP y sus credenciales salen del
 # cliente configurado. Lo único que queda aquí es cómo se habla con SAP.
 def _repo():
@@ -471,8 +467,9 @@ CAMPOS_FACTURA = ['DocEntry', 'DocNum', 'DocDate', 'CardCode', 'CardName',
 # se ve idéntico a uno bueno. Lo que lo destapó fue dividir DocTotal entre
 # DocRate: salían 775.00, 1,106.00, 2,212.00 — así se ve una tarifa en dólares.
 #
-# En este SAP la moneda local y la de sistema son la misma (en los 390,983
-# documentos vigentes DocTotal == DocTotalSys), así que DocTotalSys no aporta
+# En este SAP la moneda local y la de sistema son la misma (lo declara
+# CompanyService_GetAdminInfo: LocalCurrency = SystemCurrency = MXP, y en los
+# 390,983 documentos vigentes DocTotal == DocTotalSys), así que DocTotalSys no aporta
 # un tercer dato; se conserva para detectar el día que dejen de coincidir.
 
 # LA CANCELACIÓN TIENE TRES ESTADOS, NO DOS. Verificado en NCS (29,630 ventas):

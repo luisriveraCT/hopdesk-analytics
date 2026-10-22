@@ -80,9 +80,12 @@ def pruebas_sobre_datos_reales():
     inis = [e.iniciales for e in cliente.empresas_conectadas()]
 
     seccion('Integridad contable en cada empresa y periodo')
+    ultimos = []
     for ini in inis:
         cuentas, saldos = mk.cargar_empresa(ini)
         pers = sorted({(s['anio'], s['mes']) for s in saldos})
+        if pers:
+            ultimos.append(pers[-1])
         acum_por_anio = {}
         for (a, m) in pers:
             bal = av.balance_general(saldos, cuentas, a, m)
@@ -199,8 +202,15 @@ def pruebas_sobre_datos_reales():
               casi(e['activo'], e['pasivo'], 1.0),
               f"activo {e['activo']:,.2f} vs pasivo {e['pasivo']:,.2f}")
 
+    # El último periodo que TODAS las empresas ya tienen. Estaba escrito a mano
+    # (septiembre de 2026), así que la reciprocidad se seguía comprobando en
+    # ese mes aunque los datos avanzaran.
     seccion('Reciprocidad intercompañía')
-    r = co.analizar(2026, 9, verbose=False)
+    if not ultimos:
+        return
+    anio_r, mes_r = min(ultimos)
+    print(f'  periodo comprobado: {anio_r}-{mes_r:02d}')
+    r = co.analizar(anio_r, mes_r, verbose=False)
     for f in r['confirmadas']:
         check(f"{f['a']}↔{f['b']} confirmada concilia",
               abs(f['diferencia']) <= max(abs(f['saldo_a']) * 0.005, 1000))
@@ -483,9 +493,10 @@ def pruebas_sobre_facturas():
     2014 con un tipo de cambio de 131,689 que convertía 3,588 dólares en 472
     millones de pesos, que el Total MXN sumaba como cualquier otra factura.
 
-    Solo se comprueban las filas cuyo importe en moneda del documento VINO del
-    ERP. En las que se dedujo dividiendo entre el tipo de cambio la relación se
-    cumple por construcción, y una comprobación que no puede fallar no es una.
+    Los tres datos vienen del ERP por separado (DocTotal, DocTotalFc, DocRate);
+    ninguno se calcula aquí a partir de los otros. Si se calculara, la
+    relación se cumpliría por construcción, y una comprobación que no puede
+    fallar no es una.
     """
     import repositorio as repo
     import extraer_facturacion as ef
@@ -494,8 +505,7 @@ def pruebas_sobre_facturas():
     for ini in [e.iniciales for e in cliente.empresas_conectadas()]:
         for tipo in ('venta', 'compra'):
             docs = [d for d in ef.cargar(ini, tipo)
-                    if d['clase_documento'] == 'normal'
-                    and not d.get('total_moneda_deducido')]
+                    if d['clase_documento'] == 'normal' and 'total_moneda' in d]
             if not docs:
                 continue
             ext = [d for d in docs if (d.get('tipo_cambio') or 1) != 1]

@@ -24,25 +24,19 @@ El tablero se sirve en dos piezas y viven en lugares distintos:
 Los estados financieros y los indicadores sí van incrustados en el HTML: pesan
 poco al lado de los chunks y así esas pestañas abren sin esperar red.
 
-QUÉ PASÓ CON LA VERSIÓN ANTERIOR DE ESTE ARCHIVO
-------------------------------------------------
-Hasta el 2026-09-26 este script era el orquestador completo del pipeline de
-Excel: reconsolidaba los archivos de origen, revisaba si el formato de alguno
-había cambiado, exportaba, construía y subía. Todo eso quedó obsoleto cuando la
-fuente de verdad pasó al ERP, y los pasos de Excel se eliminaron con el resto.
-
-Se conserva el NOMBRE y la posición en la raíz por dos razones: `actualizar.py
---subir` lo llama por ahí, y es donde alguien lo va a buscar. La versión vieja
-estuvo un tiempo en `legacy/`, y el resultado fue que `--subir` quedó apuntando
-a un archivo que ya no estaba ahí —con una bandera que además nunca existió—,
-así que la subida llevaba tiempo fallando en silencio.
+POR QUÉ VIVE EN LA RAÍZ
+-----------------------
+`actualizar.py --subir` lo llama por ahí, y es donde alguien lo va a buscar.
+Cuando estuvo en otra carpeta, `--subir` quedó apuntando a un archivo que ya no
+estaba —con una bandera que además nunca existió—, y la subida llevaba tiempo
+fallando en silencio.
 
 LA SUBIDA A S3 NO ESTÁ AQUÍ, Y ES A PROPÓSITO
 ----------------------------------------------
 La hace `dashboard/publicar.py`, que además **borra del bucket lo que ya no
-corresponde**. Esa limpieza importa: al cambiar de fuente, el bucket conservó
-archivos que solo existían en la base de Excel y siguió sirviéndolos dos días.
-Tener dos códigos que suben lo mismo garantiza que un día solo uno limpie.
+corresponde**. Esa limpieza importa: el bucket llegó a conservar archivos que
+ya nadie producía y siguió sirviéndolos dos días. Tener dos códigos que suben
+lo mismo garantiza que un día solo uno limpie.
 ===============================================================================
 """
 import os

@@ -89,8 +89,7 @@ SEMILLA_EMPRESAS = [
     dict(iniciales='PL',  nombre='Paragon Logistics, S.A. de C.V.',
          rfc='PLO2509182U5', id_en_erp='',
          notas='Pendiente de alta en el ERP. Mientras no tenga base de datos '
-               'propia no se le puede extraer; sus facturas históricas solo '
-               'existían en los archivos de Excel que se retiraron.'),
+               'propia no se le puede extraer.'),
 ]
 
 # Política financiera de arranque: los supuestos del costo de capital y las

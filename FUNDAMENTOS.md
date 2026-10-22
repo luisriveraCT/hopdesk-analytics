@@ -14,14 +14,16 @@ una mejora evidente ahí ya se intentó y salió mal.
 
 ### 1.1 Nunca sumar leyendo una fila de "TOTAL"
 
-Los números se calculan sumando documentos individuales. Nació porque había 8
-hojas de Excel donde el total escrito no coincidía con la suma de sus propias
-filas, y sobrevivió al cambio de fuente porque en el ERP reapareció con otra
-cara: las facturas canceladas conviven con su **documento de cancelación**, que
-trae el importe en positivo. Sumar "todo lo que hay" cuenta tres veces la misma
-operación.
+Los números se calculan sumando documentos individuales, nunca leyendo un total
+ya hecho: un total escrito puede quedarse desactualizado respecto a sus
+documentos, y una suma de documentos no. En el ERP la regla tiene una cara
+concreta: las facturas canceladas conviven con su **documento de cancelación**,
+que trae el importe en positivo. Sumar "todo lo que hay" cuenta tres veces la
+misma operación.
 
-Por eso se filtra siempre por `clase_documento == 'normal'`.
+Por eso se suma siempre solo lo de `clase_documento == 'normal'`. Las canceladas
+se publican marcadas, para que el filtro de Canceladas pueda enseñarlas; los
+documentos de cancelación no se publican.
 
 ### 1.2 Ninguna verificación debe poder cumplirse sola
 
@@ -317,7 +319,7 @@ Corrí el exportador con `| grep "kpis.json"` y el grep se tragó un
 ### 3.15 🟡 Un paso del pipeline que fallaba en silencio
 
 `actualizar.py --subir` llamaba a `refrescar.py` en la raíz cuando el archivo
-estaba en `legacy/`, con una bandera que esa versión nunca tuvo. El paso no
+estaba en otra carpeta, con una bandera que esa versión nunca tuvo. El paso no
 detiene la corrida, así que la subida llevaba tiempo fallando sin que nadie lo
 notara.
 
@@ -330,6 +332,31 @@ corregido y el EBIT viejo: 26 millones de ingreso con un margen calculado sobre
 26.3. Lo detectó la prueba que compara las dos pestañas.
 
 ---
+
+### 3.17 🔴 "Total USD" sumaba pesos
+
+El ERP guarda cada importe tres veces: en moneda local (`DocTotal`), en la del
+documento (`DocTotalFC`) y en la de sistema (`DocTotalSy`). La extracción pedía
+`DocTotal` y `DocTotalSys`, nunca `DocTotalFC`, y el tablero sumaba `DocTotal`
+de las facturas en dólares bajo el nombre "Total USD". Eran pesos: 1,410 M
+"USD" en ventas 2020-2026 contra 73.5 M reales, diecinueve veces de más.
+
+Nada lo delataba. Un monto en la columna equivocada se ve idéntico a uno bueno,
+y el texto de ayuda decía con toda seguridad que era "la columna Total USD".
+Lo destapó dividir `DocTotal` entre `DocRate`: salían 775.00, 1,106.00,
+2,212.00 — así se ve una tarifa en dólares.
+
+De paso apareció el otro: el tipo de cambio "promedio del dólar" promediaba
+también el del euro, que cae dentro del rango plausible de 10 a 35.
+
+**La regla:** si el ERP ya trae el dato, se extrae; no se calcula a partir de
+otros. Y una columna de moneda se nombra por lo que el manual del ERP dice que
+contiene, no por lo que uno espera que contenga.
+
+**Lo que lo vigila:** `verificar_datos.py` comprueba en cada factura en moneda
+extranjera que local = documento × tipo de cambio, con los tres datos traídos
+del ERP por separado. En la primera corrida encontró capturas reales con el tipo
+de cambio mal escrito en SAP.
 
 ## 4. Lo que las pruebas vigilan
 

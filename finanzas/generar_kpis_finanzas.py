@@ -7,9 +7,8 @@ Produce un Excel con la estructura de KPIs_Finanzas.xlsx, lleno con lo que ya
 tenemos hoy y con los huecos marcados de lo que falta.
 
 QUÉ SE PUEDE LLENAR HOY (sin esperar a Contabilidad):
-  · "Ingresos" mensuales reales 2020-2026 — salen de la base de facturación
-    consolidada que ya vive en esta misma carpeta. Son ~159 mil facturas
-    sumadas una por una, no totales leídos de un Excel.
+  · "Ingresos" mensuales reales — salen de las facturas de venta extraídas del
+    ERP, sumadas una por una, no de totales ya hechos.
   · La pestaña "Precision_Pronostico" COMPLETA, con backtest de origen móvil
     de los 5 métodos de pronóstico, y la comparación de cuál es más preciso.
 
@@ -40,7 +39,7 @@ from esquema_financiero import SUPUESTOS_DEFAULT, CAMPOS_MINIMOS, TODOS_LOS_CAMP
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(AQUI)
-# La facturación ya no viene de un Excel: sale del ERP (ver ingresos_mensuales).
+# La facturación sale del ERP (ver ingresos_mensuales).
 SALIDA = os.path.join(AQUI, 'KPIs_Finanzas_generado.xlsx')
 
 MESES_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
@@ -63,10 +62,7 @@ def etiqueta_mes(ym):
 def ingresos_mensuales(interco='todo', excluir_canceladas=True):
     """Ingresos por mes, documento por documento, desde el ERP.
 
-    Hasta el 2026-09-25 esto leía `BASE_FACTURACION_CONSOLIDADA.xlsx`. Ese
-    archivo dejó de actualizarse y vive en `legacy/`: la fuente es el ERP.
-
-    Dos cosas cambian respecto a la versión anterior, y las dos son mejoras:
+    Dos decisiones que importan al leer el resultado:
 
     · **Intercompañía sale del registro configurado**, no de una expresión
       regular sobre el nombre del cliente. El criterio por nombre fallaba en

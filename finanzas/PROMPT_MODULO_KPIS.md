@@ -82,7 +82,7 @@ rellenarlos:
 | `analisis_vertical_horizontal.py` | Balance, Estado de Resultados, análisis vertical y horizontal. | Ya maneja los signos de partida doble y las variaciones con base cero o negativa. |
 | `razones_financieras.py` | Las razones del `Diccionario_KPIs` más liquidez. Saldos promedio, anualización, DuPont de 5 factores, semáforo. | **Buena parte de los KPIs principales ya está aquí.** Revísalo antes de escribir una fórmula. |
 | `precision_pronostico.py` | Los cinco métodos de pronóstico, backtesting walk-forward, MAPE/MPE/RSFE/MAD. | Alimenta la pestaña `Precision_Pronostico` directamente. |
-| `adaptador_formatos.py` | Resuelve encabezados en español/inglés, detecta fila de encabezado y orientación. | Úsalo para cualquier Excel que entre. No escribas otro parser. |
+| `adaptador_formatos.py` | Resuelve encabezados en español/inglés, detecta fila de encabezado y orientación. | Úsalo para cualquier tabla que entre. No escribas otro parser. |
 | `bitacora_actualizaciones.py` | Detecta cambios retroactivos a periodos ya cerrados. | Alimenta `Datos_Funcion`. Ver §5. |
 | `verificar_cuadre.py` | Identidad contable + articulación entre estados. Exit 1 si falla. | **Correr antes de publicar cualquier cosa.** |
 
@@ -178,8 +178,6 @@ reextraer nada.
 - **Correr `verificar_cuadre.py` antes de publicar.** Devuelve exit 1.
 - **Todo en español**, con el código preparado para i18n (diccionarios de
   términos, no cadenas incrustadas).
-- **No mencionar "CFA" ni al CFA Institute** en ningún entregable, aunque el
-  fundamento metodológico venga de ahí.
 - **Lo específico de un cliente vive en diccionarios editables, no en `if`.**
   Networks es *un* cliente; el diseño apunta a varios (ver el párrafo de
   multiempresa en `erp/registro_conectores.py`).

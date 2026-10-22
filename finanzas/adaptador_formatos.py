@@ -30,9 +30,8 @@ mismo criterio que usa `erp/clasificador_cuentas.py` para el plan de cuentas.
     arbitrario acierta o falla según cómo quedó escrito el diccionario — que es
     una forma elegante de ser aleatorio.
   · La fila de encabezado se BUSCA, no se supone: se prueba cada una de las
-    primeras filas y gana la que reconozca más términos. Es la misma técnica
-    que ya se usó con éxito en `consolidar_facturacion.py` contra 398 hojas de
-    Excel con 35 layouts distintos.
+    primeras filas y gana la que reconozca más términos. Es una técnica ya
+    probada contra cientos de tablas con decenas de formatos distintos.
   · La orientación también se detecta: si los conceptos conocidos aparecen en
     la primera COLUMNA en vez de en la primera fila, la tabla viene transpuesta
     (que es como sale casi todo Balance General) y se voltea.

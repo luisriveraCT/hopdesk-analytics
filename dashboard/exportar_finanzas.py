@@ -47,8 +47,6 @@ import analisis_vertical_horizontal as av       # noqa: E402
 import entradas_manuales as em                 # noqa: E402
 from erp import clasificador_cuentas as cl      # noqa: E402
 
-ANIO_EPOCH = 2020
-
 # Cuánto detalle se publica. Nivel 2 es el rubro ("Bancos", "Clientes
 # Nacionales"), que es a lo que alguien quiere bajar desde un total. El nivel 3
 # y más es el detalle de auxiliares: multiplica el tamaño por diez y para verlo

@@ -139,8 +139,7 @@ FACTURAS_CANONICO = {
 }
 # POR QUÉ `cancelada` NO ES UN CAMPO MÁS: en NG, 16 de 595 facturas están
 # canceladas. Sumarlas infla las ventas y el número resultante no coincide con
-# nada — ni con el Excel de facturación, ni con la contabilidad, ni con lo que
-# recuerda quien factura. Se extraen SIEMPRE (una factura cancelada es un hecho
+# nada — ni con la contabilidad ni con lo que recuerda quien factura. Se extraen SIEMPRE (una factura cancelada es un hecho
 # que existió y a veces hay que explicarlo), pero quien sume tiene que decidir
 # explícitamente si las incluye. Por eso el campo viaja en la forma canónica en
 # vez de filtrarse durante la extracción: filtrar aquí escondería la decisión.
