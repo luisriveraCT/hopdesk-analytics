@@ -233,15 +233,33 @@ Una hoja que parece guardar y no guarda es peor que una que pide un paso extra.
 
 Se fijan en la misma hoja, en la tabla **Metas del semáforo**: se escribe la
 meta (los porcentajes como porcentaje: 18 para 18%), se oprime **Guardar**, y
-Dirección e Indicadores se repintan contra ella. Valen para todo el grupo.
-Vaciar una celda quita la meta y el indicador se queda sin semáforo. Una meta
-absurda —1,900% en vez de 19%— se rechaza con su motivo.
+Dirección e Indicadores se repintan contra ella. Vaciar una celda quita la meta
+y el indicador se queda sin semáforo. Una meta absurda —1,900% en vez de 19%—
+se rechaza con su motivo.
+
+**Cada empresa y el Grupo tienen sus propias metas.** El selector de empresa de
+la hoja incluye **Grupo (consolidado)**, y **Aplicar a** decide a quién se
+escribe:
+
+| Aplicar a | Escribe en |
+|---|---|
+| Esta empresa | la empresa elegida, o el Grupo si ése es el elegido |
+| Selección | cada empresa marcada |
+| Todas | cada una de las empresas — **no** el Grupo |
+
+No hay herencia: lo que se ve es lo que vale, y **gana la última que se
+guardó**. "Todas" escribe la misma meta en cada empresa; si después cambias la
+de una, esa queda distinta. El Grupo se fija aparte porque el consolidado
+elimina lo intercompañía y su meta razonable suele ser otra.
 
 Solo se pueden fijar desde la aplicación. También por línea de comandos, por el
 mismo camino y con las mismas reglas:
 
 ```
-python finanzas/configuracion/configurar.py --politica metas.dso=50
+python finanzas/configuracion/configurar.py --politica metas.dso=50          todas las empresas
+python finanzas/configuracion/configurar.py --politica metas.dso@NCS=50      una empresa
+python finanzas/configuracion/configurar.py --politica metas.dso@GRUPO=60    el Grupo
+python finanzas/configuracion/configurar.py --politica                       ver la tabla
 ```
 
 ### También desde la línea de comandos

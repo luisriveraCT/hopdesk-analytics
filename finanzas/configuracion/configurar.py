@@ -47,7 +47,8 @@ sys.path.insert(0, AQUI)
 sys.path.insert(0, os.path.dirname(AQUI))
 
 from modelo import (Cliente, Empresa, ConexionERP, Retencion,  # noqa: E402
-                    PoliticaFinanciera, ErrorConfiguracion, RETENCION_TODO)
+                    PoliticaFinanciera, ErrorConfiguracion, RETENCION_TODO,
+                    CLAVE_GRUPO)
 import repositorio as repo                                      # noqa: E402
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import razones_financieras as rf_mod                            # noqa: E402
@@ -514,7 +515,10 @@ def sembrar_politica(cliente: Cliente, almacen) -> None:
     """
     pol = cliente.politica
     nuevos = [k for k in SEMILLA_SUPUESTOS if k not in pol.supuestos]
-    metas_nuevas = [k for k in SEMILLA_METAS if k not in pol.metas]
+    # Con metas por empresa ya fijadas, la semilla no toca metas: cada entidad
+    # tiene las suyas, y escribir en la forma común anterior no lo leería nadie.
+    metas_nuevas = ([] if pol.metas_por_entidad
+                    else [k for k in SEMILLA_METAS if k not in pol.metas])
     for k in nuevos:
         pol.supuestos[k] = SEMILLA_SUPUESTOS[k]
         pol.fuentes.setdefault(k, SEMILLA_FUENTES.get(k, ''))
@@ -567,12 +571,21 @@ def validar_meta(clave: str, valor) -> float:
     return v
 
 
-def cambiar_metas(almacen, cliente_id: str, cambios: dict):
-    """Aplica {indicador: valor | None} a las metas. None quita la meta.
+TODAS_LAS_EMPRESAS = '*'
 
-    Devuelve (aplicados, rechazados, metas_resultantes). Cada cambio se valida
-    por separado y se guardan los que pasan, igual que la hoja de captura: un
-    renglón mal escrito no debe tirar el trabajo de los otros.
+
+def cambiar_metas(almacen, cliente_id: str, cambios):
+    """Aplica una lista de {entidad, campo, valor | None} a las metas.
+
+    `entidad` son las iniciales de una empresa activa, CLAVE_GRUPO para el
+    consolidado, o '*' para TODAS LAS EMPRESAS (no el Grupo): "Todas" escribe
+    la misma meta en cada una, y después cualquiera se cambia sola — gana la
+    última modificación. `valor` None quita la meta. Por compatibilidad también
+    acepta el dict {campo: valor} de antes, que equivale a '*'.
+
+    Devuelve (aplicados, rechazados, metas_por_entidad resultantes). Cada
+    cambio se valida por separado y se guardan los que pasan, igual que la hoja
+    de captura: un renglón mal escrito no debe tirar el trabajo de los otros.
 
     SE ESCRIBE SOLO LO QUE CAMBIÓ, CON COMPARACIÓN DE VERSIÓN. No se carga el
     cliente, se modifica y se guarda entero —que es lo que hace guardar_cliente,
@@ -582,15 +595,33 @@ def cambiar_metas(almacen, cliente_id: str, cambios: dict):
     """
     from almacen import actualizar_con_reintento
 
-    validos, rechazados = {}, []
-    for clave, valor in (cambios or {}).items():
+    if isinstance(cambios, dict):
+        cambios = [{'entidad': TODAS_LAS_EMPRESAS, 'campo': k, 'valor': v}
+                   for k, v in cambios.items()]
+
+    def entidades_validas(datos):
+        emps = [e.get('iniciales') for e in (datos.get('empresas') or [])
+                if e.get('activa', True)]
+        return emps, set(emps) | {CLAVE_GRUPO}
+
+    actual, _ = almacen.leer(f'clientes/{cliente_id}/configuracion.json')
+    if not actual:
+        raise ErrorConfiguracion(f'No existe la configuración del cliente {cliente_id}.')
+    emps, validas = entidades_validas(actual)
+
+    validos, rechazados = [], []
+    for c in cambios or []:
+        ent, clave, valor = c.get('entidad'), c.get('campo'), c.get('valor')
         try:
-            validos[clave] = None if valor is None else validar_meta(clave, valor)
+            if ent != TODAS_LAS_EMPRESAS and ent not in validas:
+                raise ErrorConfiguracion(
+                    f'No existe la empresa {ent!r}. Las metas se fijan para '
+                    f'{", ".join(emps)}, para el Grupo o para todas.')
+            v = None if valor is None else validar_meta(clave, valor)
+            for e in (emps if ent == TODAS_LAS_EMPRESAS else [ent]):
+                validos.append((e, clave, v))
         except ErrorConfiguracion as e:
-            rechazados.append({'campo': clave, 'motivo': str(e)})
-    if not validos:
-        cli = repo.cargar_cliente(almacen, cliente_id)
-        return [], rechazados, dict(cli.politica.metas) if cli else {}
+            rechazados.append({'campo': clave, 'empresa': ent, 'motivo': str(e)})
 
     aplicados = []
 
@@ -600,26 +631,38 @@ def cambiar_metas(almacen, cliente_id: str, cambios: dict):
         aplicados.clear()
         d = dict(datos)
         pol = dict(d.get('politica') or {})
-        metas = dict(pol.get('metas') or {})
-        for clave, v in validos.items():
+        por_ent = {k: dict(v) for k, v in (pol.get('metas_por_entidad') or {}).items()}
+        if not por_ent:
+            # LA MIGRACIÓN, en la primera escritura por entidad: la meta común
+            # de antes se copia a cada empresa y al Grupo, y se vacía. Hasta
+            # aquí todos veían esa meta; desde aquí cada uno tiene la suya, y
+            # no queda una regla escondida que alguien deba recordar.
+            comun = dict(pol.get('metas') or {})
+            emps_act, _ = entidades_validas(d)
+            por_ent = {e: dict(comun) for e in emps_act + [CLAVE_GRUPO]}
+            pol['metas'] = {}
+        for ent, clave, v in validos:
+            metas = por_ent.setdefault(ent, {})
             antes = metas.get(clave)
             if v is None:
                 if clave in metas:
                     del metas[clave]
-                    aplicados.append(('borrado', clave, antes, None))
+                    aplicados.append(('borrado', ent, clave, antes, None))
             elif antes != v:
                 metas[clave] = v
                 aplicados.append(('cambio' if antes is not None else 'captura',
-                                  clave, antes, v))
-        pol['metas'] = metas
+                                  ent, clave, antes, v))
+        pol['metas_por_entidad'] = por_ent
         d['politica'] = pol
         Cliente.de_dict(d)          # que lo escrito siga siendo un cliente válido
         return d
 
-    actualizar_con_reintento(almacen, f'clientes/{cliente_id}/configuracion.json',
-                             transformar)
+    if validos:
+        actualizar_con_reintento(almacen, f'clientes/{cliente_id}/configuracion.json',
+                                 transformar)
     cli = repo.cargar_cliente(almacen, cliente_id)
-    return list(aplicados), rechazados, dict(cli.politica.metas)
+    ents = [e.iniciales for e in cli.empresas if e.activa] + [CLAVE_GRUPO]
+    return list(aplicados), rechazados, cli.politica.todas_las_metas(ents)
 
 
 def fijar_politica(cliente: Cliente, almacen, par: str = None) -> None:
@@ -645,13 +688,25 @@ def fijar_politica(cliente: Cliente, almacen, par: str = None) -> None:
         if grupo == 'metas':
             # Por el mismo camino que la aplicación: mismas reglas, escritura
             # con comparación de versión y asiento en la bitácora.
+            #   metas.dso=50         todas las empresas (no el Grupo)
+            #   metas.dso@NCS=50     una empresa
+            #   metas.dso@GRUPO=50   el grupo consolidado
             import bitacora_cambios as bc
+            clave, _, ent = clave.partition('@')
+            ent = ent.strip().upper()
+            ent = (CLAVE_GRUPO if ent in ('GRUPO', 'GROUP', CLAVE_GRUPO)
+                   else ent or TODAS_LAS_EMPRESAS)
             aplicados, rechazados, metas = cambiar_metas(
-                almacen, cliente.id, {clave: validar_meta(clave, valor)})
-            for acto, k, de, a in aplicados:
+                almacen, cliente.id,
+                [{'entidad': ent, 'campo': clave, 'valor': validar_meta(clave, valor)}])
+            if rechazados:
+                raise ErrorConfiguracion(rechazados[0]['motivo'])
+            for acto, e, k, de, a in aplicados:
                 bc.registrar(almacen, cliente, 'meta', getpass.getuser(),
-                             {'campo': k, 'de': de, 'a': a, 'tipo': acto}, origen='cli')
-            pol.metas.clear(); pol.metas.update(metas)
+                             {'campo': k, 'empresa': e, 'de': de, 'a': a,
+                              'tipo': acto}, origen='cli')
+            cliente.politica = repo.cargar_cliente(almacen, cliente.id).politica
+            pol = cliente.politica
         else:
             getattr(pol, grupo)[clave] = float(valor)
             # replace() y no un PoliticaFinanciera(...) nuevo con tres campos:
@@ -673,14 +728,24 @@ def fijar_politica(cliente: Cliente, almacen, par: str = None) -> None:
         print('    (ninguna — se usan las clásicas)')
     for k, v in sorted(pol.convenciones.items()):
         print(f'    {k:<18} {v}')
-    print('\n  Metas del semáforo')
-    if not pol.metas:
+    # Una columna por empresa y una para el Grupo: cada una tiene sus metas.
+    ents = [e.iniciales for e in cliente.empresas if e.activa] + [CLAVE_GRUPO]
+    metas = pol.todas_las_metas(ents)
+    print('\n  Metas del semáforo' + ('' if pol.metas_por_entidad else
+          '  (todavía una sola meta común para todos)'))
+    claves = sorted({k for m in metas.values() for k in m})
+    if not claves:
         print('    (ninguna — los indicadores se muestran sin color, que es '
               'correcto: no hay contra qué compararlos)')
-    for k, v in sorted(pol.metas.items()):
+    else:
+        print('    ' + f'{"":<24}' + ''.join(
+            f'{("GRUPO" if e == CLAVE_GRUPO else e):>10}' for e in ents))
+    for k in claves:
         cat = rf_mod.CATALOGO_KPIS.get(k, {})
-        direccion = 'mayor es mejor' if cat.get('mayor_mejor') else 'menor es mejor'
-        print(f'    {k:<24} {v:>9,.4f} {cat.get("unidad",""):<5} {direccion}')
+        direccion = 'mayor' if cat.get('mayor_mejor') else 'menor'
+        celdas = ''.join(f'{metas[e][k]:>10,.4f}' if k in metas[e] else f'{"—":>10}'
+                         for e in ents)
+        print(f'    {k:<24}{celdas}   {cat.get("unidad","")} · {direccion} es mejor')
 
 
 def publicar(cliente: Cliente, almacen) -> None:

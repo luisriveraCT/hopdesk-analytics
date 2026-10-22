@@ -71,6 +71,8 @@ Cómo se escriben las piezas (entre comillas invertidas):
 | Guardar | Guarda en el almacén (S3) al oprimir Guardar cuando la página corre en la aplicación —en Connect o con `actualizar.py --ver`—; si no, produce el archivo para aplicarlo | `enGuardar()` `enExportar()` `servidor/app.py` |
 | Lo guardado se ve al recargar | Al abrir, la página pide al servidor entradas, metas, bitácora e indicadores vigentes y se repinta con ellos | `enAplicarEstado()` `enRegistrarRespuesta()` |
 | Metas del semáforo | Fijarlas o quitarlas desde la hoja de captura, con validación, bitácora y escritura que no pisa a otros | `enTablaMetas()` `enCapturarMeta()` `t:en.metas.t` `finanzas/configuracion/configurar.py` |
+| Metas por empresa y del Grupo | Cada empresa y el Grupo con sus propias metas; "Todas" las escribe en cada empresa y gana la última guardada. Cada semáforo se pinta contra la meta de su empresa | `metasDe()` `enMetaEntidades()` `t:en.grupo.soloMetas` |
+| Bitácora en orden | Lo último arriba sin importar en qué máquina se escribió, y cada fecha en la hora local de quien mira | `enFechaBitacora()` `finanzas/bitacora_cambios.py` |
 | Bitácora de cambios | Quién tocó qué, cuándo y por qué; solo se agrega | `enPintarBitacora()` `finanzas/bitacora_cambios.py` |
 
 ## Para todo el tablero

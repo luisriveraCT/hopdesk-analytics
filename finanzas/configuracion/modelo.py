@@ -53,6 +53,10 @@ from typing import Dict, List, Optional, Any
 # configuración, hacia arriba o hacia abajo, o lo pone en TODO.
 RETENCION_DEFAULT_ANIOS = 7
 RETENCION_TODO = 'todo'
+# Cómo se llama el grupo consolidado como entidad: en las series de los
+# indicadores, en el tablero ("Grupo") y en las metas. Una sola clave para los
+# tres, para que ninguna capa tenga que traducir la de otra.
+CLAVE_GRUPO = '__CONSOLIDADO__'
 
 # RFC mexicano: 3 letras (moral) o 4 (física), fecha, homoclave.
 _RFC = re.compile(r'^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$')
@@ -295,6 +299,21 @@ class PoliticaFinanciera:
     # razones que dependen de él. Nadie revisa un indicador que nunca tuvo
     # valor.
     vocabulario_rubros: Dict[str, List[str]] = field(default_factory=dict)
+    # METAS POR EMPRESA Y PARA EL GRUPO: {entidad: {indicador: valor}}, donde
+    # la entidad son las iniciales de una empresa o CLAVE_GRUPO (el consolidado).
+    #
+    # Cada entidad guarda SUS metas, sin herencia: lo que se ve es lo que vale.
+    # "Todas" en la pantalla escribe la misma meta en cada empresa —no en el
+    # Grupo, que se fija aparte porque el consolidado elimina lo intercompañía
+    # y su meta razonable suele ser otra— y después cualquiera se cambia sola:
+    # gana la última modificación.
+    #
+    # `metas` (arriba) es la forma anterior: una sola meta para todos. Mientras
+    # este campo esté vacío, metas_de() la entrega a cualquier entidad, que es
+    # exactamente como se comportaba. La primera escritura por entidad
+    # (configurar.cambiar_metas) la copia a cada empresa y al Grupo y la vacía:
+    # desde ahí no queda una regla escondida que alguien tenga que recordar.
+    metas_por_entidad: Dict[str, Dict[str, float]] = field(default_factory=dict)
 
     def __post_init__(self):
         for campo in ('supuestos', 'metas'):
@@ -309,6 +328,27 @@ class PoliticaFinanciera:
                     raise ErrorConfiguracion(
                         f'La política financiera tiene un valor no numérico en '
                         f'{campo}[{k!r}]: {v!r}.')
+        for ent, d in list(self.metas_por_entidad.items()):
+            limpio = {}
+            for k, v in (d or {}).items():
+                if v is None:
+                    continue
+                try:
+                    limpio[k] = float(v)
+                except (TypeError, ValueError):
+                    raise ErrorConfiguracion(
+                        f'La meta {ent}/{k} no es numérica: {v!r}.')
+            self.metas_por_entidad[ent] = limpio
+
+    def metas_de(self, entidad: str) -> Dict[str, float]:
+        """Las metas de una empresa o del Grupo (CLAVE_GRUPO)."""
+        if self.metas_por_entidad:
+            return dict(self.metas_por_entidad.get(entidad, {}))
+        return dict(self.metas)
+
+    def todas_las_metas(self, entidades) -> Dict[str, Dict[str, float]]:
+        """{entidad: metas} para cada entidad pedida, como las ve la pantalla."""
+        return {e: self.metas_de(e) for e in entidades}
 
 
 @dataclass

@@ -70,6 +70,7 @@ from shiny import App, ui, reactive, Session   # noqa: E402
 import entradas_manuales as em                 # noqa: E402
 import bitacora_cambios as bc                  # noqa: E402
 import repositorio as repo                     # noqa: E402
+from modelo import CLAVE_GRUPO                 # noqa: E402
 
 # ---------------------------------------------------------------------------
 # De dónde sale la página
@@ -302,7 +303,6 @@ def recalcular_series(entradas_obj, cliente=None):
     pol = cliente.politica
     conv = ek.leer_convenciones(pol)
     supuestos = dict(pol.supuestos)
-    metas = dict(pol.metas)
     interco = base.get('interco') or {}
     grupo = base.get('clave_grupo')
 
@@ -310,7 +310,7 @@ def recalcular_series(entradas_obj, cliente=None):
     for clave, filas in (base.get('series') or {}).items():
         ic = {} if clave == grupo else interco.get(clave, {})
         ent = None if clave == grupo else entradas_obj
-        series[clave] = ek.procesar(filas, supuestos, metas, ic, conv,
+        series[clave] = ek.procesar(filas, supuestos, pol.metas_de(clave), ic, conv,
                                     ent, clave)
     return series
 
@@ -436,12 +436,14 @@ def estado_actual(almacen=None, cliente=None, entradas_obj=None):
         bitacora = bc.leer(almacen, cliente, ee.ASIENTOS_PUBLICADOS)
     except Exception:                                        # noqa: BLE001
         bitacora = None
-    return {'entradas': ent.entradas, 'metas': dict(cliente.politica.metas),
+    # Las metas de CADA empresa y del Grupo, igual que las publica kpis.json.
+    ents = [e.iniciales for e in cliente.empresas if e.activa] + [CLAVE_GRUPO]
+    return {'entradas': ent.entradas, 'metas': cliente.politica.todas_las_metas(ents),
             'series': series, 'bitacora': bitacora, 'bitacora_actos': bc.ACTOS}
 
 
 def aplicar_metas(cambios_metas, autor):
-    """Guarda {indicador: valor | None} en las metas del cliente.
+    """Guarda una lista de {entidad, campo, valor | None} en las metas.
 
     Las reglas y la escritura viven en configurar.cambiar_metas(), que es lo
     mismo que usa `configurar.py --politica metas.x=y`: una sola puerta.
@@ -450,9 +452,10 @@ def aplicar_metas(cambios_metas, autor):
     almacen = repo.almacen_por_defecto()
     cliente = repo.cliente_actual(almacen)
     aplicados, rechazados, _ = cfg.cambiar_metas(almacen, cliente.id, cambios_metas)
-    for acto, clave, de, a in aplicados:
+    for acto, entidad, clave, de, a in aplicados:
         bc.registrar(almacen, cliente, 'meta', autor,
-                     {'campo': clave, 'de': de, 'a': a, 'tipo': acto}, origen='tablero')
+                     {'campo': clave, 'empresa': entidad, 'de': de, 'a': a,
+                      'tipo': acto}, origen='tablero')
     return aplicados, rechazados
 
 

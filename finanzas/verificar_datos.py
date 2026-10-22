@@ -267,9 +267,16 @@ def pruebas_sobre_kpis():
     for clave, cat in d['catalogo'].items():
         check(f'{clave} viaja con familia', bool(cat.get('familia')))
         check(f'{clave} viaja con nombre legible', bool(cat.get('nombre')))
-    for clave in d['metas']:
-        check(f'la meta {clave} corresponde a un indicador real',
-              clave in rf.CATALOGO_KPIS)
+    # Las metas son por entidad: {empresa o grupo: {indicador: meta}}. Cada
+    # serie publicada trae su entrada (aunque vacía), y ninguna meta habla de
+    # un indicador que no existe o de una entidad sin serie.
+    for ent, ms in d['metas'].items():
+        check(f'las metas de {ent} son de una entidad con serie', ent in d['series'])
+        for clave in ms:
+            check(f'la meta {ent}/{clave} corresponde a un indicador real',
+                  clave in rf.CATALOGO_KPIS)
+    for ent in d['series']:
+        check(f'la serie {ent} trae su entrada de metas', ent in d['metas'])
 
     G = d['clave_grupo']
     for empresa, serie in d['series'].items():
@@ -434,9 +441,10 @@ def pruebas_sobre_kpis():
             # meses hay que comparar el acumulado, no el mes; un semáforo
             # guardado sería un segundo dato diciendo lo mismo de otra forma.
             check(f'{eti}: el archivo no trae semáforo precocido', 'sem' not in f)
-            for k in d['metas']:
+            metas_ent = d['metas'].get(empresa, {})
+            for k in metas_ent:
                 valor = r[k] if k in r else f.get(k)
-                est = rf.semaforo(k, valor, d['metas'])
+                est = rf.semaforo(k, valor, metas_ent)
                 check(f'{eti}: el semáforo de {k} es un estado válido o nada',
                       est in (None, 'Verde', 'Amarillo', 'Rojo'))
 

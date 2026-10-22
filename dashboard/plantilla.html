@@ -1543,7 +1543,12 @@ const ENTRADAS = __ENTRADAS_JSON__;
      enGuardar / enRegistrarRespuesta   guardar contra el servidor; al conectar
                                  pide 'estado_actual' (pedir_estado)
      enAplicarEstado(r)          repinta con lo que hay HOY en el almacén
-     enTablaMetas / enCapturarMeta   la tabla de metas del semáforo
+     metasDe(ent)                las metas de una empresa o del Grupo: el único
+                                 sitio que lee KPIS.metas
+     enTablaMetas / enCapturarMeta   la tabla de metas, para la empresa, la
+                                 selección, todas, o el Grupo
+     enMetaEntidades / enMetasParaEnviar   a quién se escribe, y el lote
+     enFechaBitacora(f)          la fecha de un asiento en la hora local
      enMetaFmt / enMetaEsFraccion    metas en %/pp se guardan como fracción
      enConstruir()               arma controles y dibuja
      ajRenderEntradas()          la puerta discreta, dentro de Ajustes
@@ -1980,7 +1985,7 @@ const I18N = {
     'th.mes.help':'El mes de la fecha del documento.',
     'th.pct.help':'Qué porcentaje del total de la tabla representa la fila.',
     'en.metas.t':'Metas del semáforo',
-    'en.metas.s':'Contra qué se pinta cada indicador en Dirección e Indicadores. Valen para todo el grupo: "Aplicar a" no les afecta. Vaciar una meta deja al indicador sin semáforo.',
+    'en.metas.s':'Contra qué se pinta cada indicador en Dirección e Indicadores. Cada empresa y el Grupo tienen sus propias metas: "Todas" escribe la misma en cada empresa (no en el Grupo), y después cualquiera se cambia sola — vale la última que se guardó. Vaciar una meta deja al indicador sin semáforo.',
     'en.metas.mayor':'Mayor es mejor: en verde si alcanza o supera la meta.',
     'en.metas.menor':'Menor es mejor: en verde si queda en la meta o por debajo.',
     'en.metas.sinsrv':'Las metas se fijan desde la aplicación: esta página no está conectada a ella.',
@@ -1989,6 +1994,9 @@ const I18N = {
     'en.metas.col.vigente':'Meta vigente',
     'en.metas.col.nueva':'Nueva meta',
     'en.metas.de':'Meta de {k}',
+    'en.metas.destino':'Se escribe en: {l}',
+    'en.metas.col.vigente.de':'Meta vigente · {e}',
+    'en.grupo.soloMetas':'Del Grupo solo se fijan metas: sus cifras se construyen con las de cada empresa, así que las entradas se capturan por empresa.',
     'nodata':'Sin datos con los filtros actuales'
   },
   en:{
@@ -2306,7 +2314,7 @@ const I18N = {
     'th.mes.help':'The month of the document date.',
     'th.pct.help':'What percentage of the table total the row represents.',
     'en.metas.t':'Traffic-light targets',
-    'en.metas.s':'What each indicator is measured against in Management and Indicators. They apply to the whole group: "Apply to" does not affect them. Clearing a target leaves the indicator without a traffic light.',
+    'en.metas.s':'What each indicator is measured against in Management and Indicators. Each company and the Group have their own targets: "All" writes the same one into every company (not the Group), and any of them can then be changed on its own — the last one saved wins. Clearing a target leaves the indicator without a traffic light.',
     'en.metas.mayor':'Higher is better: green when it meets or beats the target.',
     'en.metas.menor':'Lower is better: green when it is at or below the target.',
     'en.metas.sinsrv':'Targets are set from the application: this page is not connected to it.',
@@ -2315,6 +2323,9 @@ const I18N = {
     'en.metas.col.vigente':'Current target',
     'en.metas.col.nueva':'New target',
     'en.metas.de':'Target for {k}',
+    'en.metas.destino':'Writes to: {l}',
+    'en.metas.col.vigente.de':'Current target · {e}',
+    'en.grupo.soloMetas':'Only targets are set for the Group: its figures are built from each company\'s, so entries are captured per company.',
     'nodata':'No data for the current filters'
   }
 };
@@ -4490,8 +4501,8 @@ const GLOSARIO = [
     en:{t:'Net debt / EBITDA', d:'How many years of EBITDA it would take to repay debt, net of cash on hand. It is the leverage measure banks use. A negative value means there is more cash than debt.'}},
   {cat:'razones', es:{t:'Tasa efectiva de impuestos', d:'Impuesto a la utilidad (ISR y PTU) entre el resultado antes de impuestos, calculado del ERP por empresa y periodo. Solo se muestra cuando la base la hace interpretable: con utilidad cercana a cero sale fuera de rango —una empresa del grupo dio 206%— y es aritméticamente correcta pero inservible.'},
     en:{t:'Effective tax rate', d:'Income tax (ISR and statutory profit sharing) over pre-tax income, computed from the ERP per company and period. Shown only when the base makes it interpretable: with near-zero profit it lands out of range — one group company came out at 206% — arithmetically correct and useless.'}},
-  {cat:'razones', es:{t:'Meta y semáforo', d:'Verde cumple la meta, amarillo queda dentro del 10% y rojo se aleja más. Cada estado lleva además una forma (▲ ● ▼) para que no dependa solo del color. Las metas son del CLIENTE: se fijan en la hoja de captura (Ajustes → Hoja de captura → Metas del semáforo), se guardan al oprimir Guardar y quedan en la bitácora con nombre. Sin meta no se pinta semáforo, en vez de comparar contra el objetivo de alguien más.'},
-    en:{t:'Target and traffic light', d:'Green meets the target, amber falls within 10% and red is further off. Each state also carries a shape (▲ ● ▼) so it never depends on color alone. Targets belong to the CLIENT: they are set on the capture sheet (Settings → Capture sheet → Traffic-light targets), saved when you press Save, and logged with a name. Without a target there is no traffic light, rather than comparing against someone else\'s goal.'}},
+  {cat:'razones', es:{t:'Meta y semáforo', d:'Verde cumple la meta, amarillo queda dentro del 10% y rojo se aleja más. Cada estado lleva además una forma (▲ ● ▼) para que no dependa solo del color. Cada empresa y el Grupo tienen sus propias metas: se fijan en la hoja de captura (Ajustes → Abrir la hoja de captura → Metas del semáforo), donde «Todas» escribe la misma en cada empresa y después cualquiera se cambia sola. Se guardan al oprimir Guardar y quedan en la bitácora con nombre. Sin meta no se pinta semáforo, en vez de comparar contra el objetivo de alguien más.'},
+    en:{t:'Target and traffic light', d:'Green meets the target, amber falls within 10% and red is further off. Each state also carries a shape (▲ ● ▼) so it never depends on color alone. Each company and the Group have their own targets: they are set on the capture sheet (Settings → Open the manual entry sheet → Traffic-light targets), where «All» writes the same one into every company and any of them can then be changed on its own. They are saved when you press Save and logged with a name. Without a target there is no traffic light, rather than comparing against someone else\'s goal.'}},
 
   {cat:'siglas', es:{t:'MXN', d:'Pesos mexicanos.'}, en:{t:'MXN', d:'Mexican pesos.'}},
   {cat:'siglas', es:{t:'USD', d:'Dólares estadounidenses.'}, en:{t:'USD', d:'US dollars.'}},
@@ -5514,8 +5525,17 @@ function kpFmt(clave, v){
 function kpForma(estado){
   return estado === 'Verde' ? '▲' : estado === 'Rojo' ? '▼' : estado === 'Amarillo' ? '●' : '';
 }
-function kpTextoMeta(clave){
-  const meta = (KPIS.metas || {})[clave];
+/* LAS METAS SON DE CADA EMPRESA Y DEL GRUPO: KPIS.metas = {entidad: {indicador:
+   meta}}. Este es el único sitio que las lee; todo semáforo dice de qué
+   entidad es. Un kpis.json anterior traía una sola meta común —{indicador:
+   meta}— y se entiende igual: vale para todas. */
+function metasDe(ent){
+  const m = KPIS.metas || {};
+  const plano = Object.values(m).some(v => typeof v === 'number');
+  return (plano ? m : m[ent]) || {};
+}
+function kpTextoMeta(clave, ent){
+  const meta = metasDe(ent)[clave];
   if (meta === undefined || meta === null) return t('kp.sinmeta');
   return t(kpCat(clave).mayor_mejor ? 'kp.meta.mayor' : 'kp.meta.menor',
            {v: kpFmt(clave, meta)});
@@ -5542,11 +5562,11 @@ function kpValor(fila, clave, base){
   const v = r[k];
   return (v === undefined || v === null) ? null : v;
 }
-function kpEstado(fila, clave, base){
+function kpEstado(fila, clave, base, ent){
   // El semáforo se recalcula en pantalla y no viene precocido en los datos,
   // porque aquél se pintaría siempre contra el valor del mes. Con base de doce
   // meses hay que comparar el acumulado contra la misma meta.
-  const meta = (KPIS.metas || {})[clave];
+  const meta = metasDe(ent)[clave];
   const v = kpValor(fila, clave, base);
   if (meta === undefined || meta === null || v === null || !isFinite(v)) return '';
   // La holgura viene de la configuración del cliente, igual que las metas. Si
@@ -5586,7 +5606,7 @@ function kpAvisosDe(clave, periodo, base){
     if (s.findIndex(f => f.periodo === periodo) < 11)
       out.push(t('kp.aviso.sinttm'));
   }
-  if (!Object.keys(KPIS.metas || {}).length) out.push(t('kp.aviso.sinmetas'));
+  if (!Object.keys(metasDe(clave)).length) out.push(t('kp.aviso.sinmetas'));
   if (!(KPIS.supuestos || {}).beta) out.push(t('kp.aviso.sinsupuestos'));
   return out.concat(KPIS.avisos || []);
 }
@@ -5625,7 +5645,7 @@ function kpSemPintar(){
   const {empresa: c, periodo: p, base} = KP;
   const fila = kpFila(c, p);
   const cont = document.getElementById('kpSem');
-  const metas = Object.keys(KPIS.metas || {});
+  const metas = Object.keys(metasDe(c));
   if (!fila || !metas.length){
     cont.innerHTML = `<p class="note" style="padding:16px">${t('kp.sem.vacio')}</p>`;
     return;
@@ -5633,7 +5653,7 @@ function kpSemPintar(){
   // Solo los que de verdad se pudieron calcular. Un semáforo apagado en una
   // rejilla de doce llena la pantalla de huecos sin decir nada.
   const filas = metas
-    .map(k => ({k, v: kpValor(fila, k, base), e: kpEstado(fila, k, base)}))
+    .map(k => ({k, v: kpValor(fila, k, base), e: kpEstado(fila, k, base, c)}))
     .filter(x => x.v !== null && isFinite(x.v));
   if (!filas.length){
     cont.innerHTML = `<p class="note" style="padding:16px">${t('kp.sem.vacio')}</p>`;
@@ -5643,7 +5663,7 @@ function kpSemPintar(){
     <div class="sem" data-e="${x.e}">
       <span class="f" aria-hidden="true">${kpForma(x.e)}</span>
       <span class="b"><span class="k">${ajEsc(kpCat(x.k).nombre || x.k)}</span>
-        <span class="m">${ajEsc(kpTextoMeta(x.k))}</span></span>
+        <span class="m">${ajEsc(kpTextoMeta(x.k, c))}</span></span>
       <span class="v">${kpFmt(x.k, x.v)}</span>
     </div>`).join('');
 }
@@ -5735,7 +5755,7 @@ function kpComparativo(){
     h += `<tr class="${esGrupo ? 'tot' : ''}"><td>${ajEsc(esGrupo ? kpNombre(c) : c)}</td>
           <td class="num">${fzMoneda(ing)}</td>` +
       cols.map(k => {
-        const v = kpValor(fila, k, base), e = kpEstado(fila, k, base);
+        const v = kpValor(fila, k, base), e = kpEstado(fila, k, base, c);
         const col = e === 'Verde' ? 'var(--sem-ok)' : e === 'Rojo' ? 'var(--sem-bad)'
                   : e === 'Amarillo' ? 'var(--sem-warn)' : '';
         return `<td class="num"${col ? ` style="color:${col}"` : ''}>${
@@ -5748,7 +5768,7 @@ function kpComparativo(){
 }
 
 /* --- Indicadores: todas las razones por familia -------------------------- */
-function tfTablaFamilia(fam, fila, filaPrev, base){
+function tfTablaFamilia(fam, fila, filaPrev, base, ent){
   let h = `<section class="card"><div class="card-h"><div class="t">
       <h2>${ajEsc(fam.nombre)}</h2><p>${ajEsc(fam.sub)}</p>
     </div><div class="card-tools"></div></div>
@@ -5759,9 +5779,9 @@ function tfTablaFamilia(fam, fila, filaPrev, base){
   for (const k of fam.claves){
     const v = kpValor(fila, k, base);
     if (v === null || v === undefined || !isFinite(v)) continue;
-    const e = kpEstado(fila, k, base);
+    const e = kpEstado(fila, k, base, ent);
     const vp = filaPrev ? kpValor(filaPrev, k, base) : null;
-    const meta = (KPIS.metas || {})[k];
+    const meta = metasDe(ent)[k];
     h += `<tr>
       <td class="e" data-e="${e}" aria-hidden="true">${kpForma(e)}</td>
       <td>${ajEsc(kpCat(k).nombre || k)}</td>
@@ -5924,7 +5944,7 @@ function tfConstruir(){
   // "variación" resultante es casi toda el mismo dato.
   const filaPrev = i >= 12 ? s[i - 12] : null;
   document.getElementById('tfRazones').innerHTML = fila
-    ? kpFamilias().map(f => tfTablaFamilia(f, fila, filaPrev, TF.base)).join('')
+    ? kpFamilias().map(f => tfTablaFamilia(f, fila, filaPrev, TF.base, TF.empresa)).join('')
     : `<p class="note" style="padding:18px">${t('kp.sindatos')}</p>`;
   tfDupont(fila);
   tfWacc(fila);
@@ -6139,7 +6159,7 @@ function enAutomatico(campo){
  *    · que la columna Calculado sigue siendo la de la empresa mostrada, porque
  *      en captura múltiple es la única cifra de la pantalla que no viaja. */
 function enNotaDestino(){
-  const emp = EN.empresa || '—';
+  const emp = EN.empresa ? (enEsGrupo() ? kpNombre(EN.empresa) : EN.empresa) : '—';
   if (EN.destino === 'todas'){
     const propias = enEmpresasConCaptura();
     return t('en.dest.d.todas')
@@ -6156,8 +6176,15 @@ function enNotaDestino(){
 }
 
 function enPintarDestino(){
-  document.getElementById('enDestino').querySelectorAll('button').forEach(b =>
-    b.setAttribute('aria-pressed', String(b.dataset.v === EN.destino)));
+  // Con el Grupo elegido solo hay un destino posible: el propio Grupo.
+  // "Selección" y "Todas" son de empresas, y dejarlos activos invitaría a
+  // creer que escribirían en el consolidado.
+  const grupo = enEsGrupo();
+  if (grupo) EN.destino = 'empresa';
+  document.getElementById('enDestino').querySelectorAll('button').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.v === EN.destino));
+    b.disabled = grupo && b.dataset.v !== 'empresa';
+  });
   document.getElementById('enSelFila').hidden = EN.destino !== 'seleccion';
   const burbujas = document.getElementById('enSelEmpresas');
   burbujas.innerHTML = (ENTRADAS.empresas || []).map(e =>
@@ -6254,8 +6281,9 @@ function enRenglon(campo){
 
 function enPintarTablas(){
   const cont = document.getElementById('enTablas');
-  const grupos = ENTRADAS.grupos || [];
-  cont.innerHTML = grupos.map(g => {
+  const grupos = enEsGrupo() ? [] : (ENTRADAS.grupos || []);
+  cont.innerHTML = (enEsGrupo() ? `<p class="note" style="padding:12px 4px">${
+    t('en.grupo.soloMetas')}</p>` : '') + grupos.map(g => {
     const campos = Object.keys(ENTRADAS.campos)
       .filter(k => enCampo(k).grupo === g.id);
     if (!campos.length) return '';
@@ -6320,7 +6348,13 @@ function enPintarTablas(){
      · Se mandan en su unidad INTERNA (18% viaja como 0.18), que es como se
        guardan. Lo que en pantalla se escribe en porcentaje se convierte aquí,
        una sola vez. */
-const EN_ALMACEN_METAS = 'metasPendientes';
+/* Los pendientes de metas son {"entidad|indicador": valor | null}. La entidad
+   son unas iniciales, la clave del Grupo, o '*' = TODAS LAS EMPRESAS (no el
+   Grupo). La llave cambió de forma al llegar las metas por empresa; por eso el
+   almacén del navegador tiene otro nombre y un pendiente de la forma vieja no
+   se aplica a ciegas a una empresa que nadie eligió. */
+const EN_ALMACEN_METAS = 'metasPendientes.v2';
+const EN_TODAS = '*';
 EN.metas = {};
 function enCargarMetasPendientes(){
   try { EN.metas = JSON.parse(localStorage.getItem(EN_ALMACEN_METAS) || '{}') || {}; }
@@ -6340,54 +6374,107 @@ function enMetaFmt(k, v){
   const n = enMetaEsFraccion(k) ? v * EN_FACTOR_PCT : v;
   return String(Math.round(n * 10000) / 10000);
 }
+const enEsGrupo = () => !!KPIS.clave_grupo && EN.empresa === KPIS.clave_grupo;
+const enNombreEntidad = e => e === EN_TODAS ? t('en.dest.todas') : kpNombre(e);
+
+/* A qué entidades va lo que se escriba en la tabla de metas. El Grupo solo se
+   fija a sí mismo: "Todas" y "Selección" son de empresas. */
+function enMetaEntidades(){
+  if (enEsGrupo()) return [EN.empresa];
+  if (EN.destino === 'todas') return [EN_TODAS];
+  if (EN.destino === 'seleccion'){
+    const sel = enSeleccion();
+    if (sel.length) return sel;
+  }
+  return [EN.empresa];
+}
+/* Lo pendiente que la celda debe enseñar: el de la entidad mostrada, o el de
+   "Todas" si lo hay y se está escribiendo para todas. */
+function enMetaPendiente(k){
+  const llaves = [`${EN.empresa}|${k}`];
+  if (!enEsGrupo()) llaves.unshift(`${EN_TODAS}|${k}`);
+  for (const ll of llaves)
+    if (Object.prototype.hasOwnProperty.call(EN.metas, ll)) return {v: EN.metas[ll]};
+  return null;
+}
+
 function enTablaMetas(){
   const cat = KPIS.catalogo || {};
   const claves = Object.keys(cat);
-  if (!claves.length) return '';
-  const metas = KPIS.metas || {}, srv = enHayServidor();
+  if (!claves.length || !EN.empresa) return '';
+  const metas = metasDe(EN.empresa), srv = enHayServidor();
   const hayPct = claves.some(enMetaEsFraccion);
   const filas = claves.map(k => {
     const c = cat[k], vig = metas[k];
-    const pend = Object.prototype.hasOwnProperty.call(EN.metas, k) ? EN.metas[k] : undefined;
+    const pend = enMetaPendiente(k);
     // Con los montos ocultos, una meta en dinero tampoco se escribe a ciegas.
     const oculta = DISCRETO && c.monetario;
-    const valor = pend !== undefined ? (pend === null ? '' : enMetaFmt(k, pend)) : enMetaFmt(k, vig);
+    const valor = pend ? (pend.v === null ? '' : enMetaFmt(k, pend.v)) : enMetaFmt(k, vig);
     const sentido = t(c.mayor_mejor ? 'en.metas.mayor' : 'en.metas.menor');
     const titulo = !srv ? t('en.metas.sinsrv') : oculta ? t('en.oculto') : t('en.metas.vaciar');
     return `<tr>
       <td><span class="cam">${ajEsc(c.nombre || k)}</span>${
-        pend !== undefined ? `<span class="epend">${t('en.marca.pend')}</span>` : ''}
+        pend ? `<span class="epend">${t('en.marca.pend')}</span>` : ''}
         <span class="pista">${ajEsc(sentido)}</span></td>
       <td class="uni">${ajEsc(c.unidad || '')}</td>
       <td class="num">${vig === undefined ? '—' : ajEsc(oculta ? MASCARA : enMetaFmt(k, vig))}</td>
-      <td><input class="ecelda emeta ${pend !== undefined ? 'edit' : ''}" data-meta="${ajEsc(k)}"
+      <td><input class="ecelda emeta ${pend ? 'edit' : ''}" data-meta="${ajEsc(k)}"
             inputmode="decimal" value="${ajEsc(oculta && valor !== '' ? MASCARA : valor)}"
             ${!srv || oculta ? 'disabled' : ''} title="${ajEsc(titulo)}"></td>
     </tr>`;
   }).join('');
+  // Dicho arriba de la tabla, y con nombres: a quién se le va a escribir.
+  const destino = t('en.metas.destino', {l: enMetaEntidades().map(enNombreEntidad).join(', ')});
   return `<table class="etab etab-metas">
-    <caption><b>${t('en.metas.t')}</b><span>${t('en.metas.s')}</span>${
+    <caption><b>${t('en.metas.t')}</b><span>${t('en.metas.s')}</span>
+      <span class="epct">${ajEsc(destino)}</span>${
       hayPct ? `<span class="epct">${t('en.unidad.pct')}</span>` : ''}${
       srv ? '' : `<span class="epct">${t('en.metas.sinsrv')}</span>`}</caption>
     <thead><tr><th>${t('en.metas.col.ind')}</th><th>${t('en.col.unidad')}</th>
-      <th class="num">${t('en.metas.col.vigente')}</th><th>${t('en.metas.col.nueva')}</th></tr></thead>
+      <th class="num">${ajEsc(t('en.metas.col.vigente.de', {e: kpNombre(EN.empresa)}))}</th>
+      <th>${t('en.metas.col.nueva')}</th></tr></thead>
     <tbody>${filas}</tbody></table>`;
 }
+
 function enCapturarMeta(k, bruto){
-  const txt = (bruto || '').trim(), vig = (KPIS.metas || {})[k];
-  if (txt === ''){
-    // Vaciar quita la meta: el indicador se queda sin semáforo, que es mejor
-    // que compararlo contra un objetivo que nadie fijó.
-    if (vig === undefined) delete EN.metas[k]; else EN.metas[k] = null;
-  } else {
+  const txt = (bruto || '').trim();
+  let v;
+  if (txt !== ''){
     const escrito = Number(txt.replace(/,/g, ''));
     if (!isFinite(escrito)){ toast(t('en.nonumero')); enPintar(); return; }
-    const v = enMetaEsFraccion(k) ? escrito / EN_FACTOR_PCT : escrito;
-    if (vig !== undefined && Math.abs(v - vig) < 1e-12) delete EN.metas[k];
-    else EN.metas[k] = v;
+    v = enMetaEsFraccion(k) ? escrito / EN_FACTOR_PCT : escrito;
+  }
+  for (const e of enMetaEntidades()){
+    const ll = `${e}|${k}`;
+    if (e === EN_TODAS){
+      // GANA LA ÚLTIMA MODIFICACIÓN: fijar "Todas" descarta lo que estuviera
+      // pendiente para empresas sueltas en este indicador. Lo que se escriba
+      // para una empresa DESPUÉS sí queda encima: en el lote, "Todas" va
+      // primero (ver enLotePendiente).
+      for (const otra of Object.keys(EN.metas))
+        if (otra.endsWith(`|${k}`) && !otra.startsWith(`${KPIS.clave_grupo}|`)) delete EN.metas[otra];
+      EN.metas[ll] = txt === '' ? null : v;
+      continue;
+    }
+    const vig = metasDe(e)[k];
+    if (txt === ''){
+      // Vaciar quita la meta: el indicador se queda sin semáforo, que es mejor
+      // que compararlo contra un objetivo que nadie fijó.
+      if (vig === undefined) delete EN.metas[ll]; else EN.metas[ll] = null;
+    } else if (vig !== undefined && Math.abs(v - vig) < 1e-12) delete EN.metas[ll];
+    else EN.metas[ll] = v;
   }
   enGuardarMetasPendientes();
   enPintar();
+}
+
+/* Los pendientes como los espera el servidor: [{entidad, campo, valor}], con
+   "Todas" primero para que una empresa escrita después quede encima. */
+function enMetasParaEnviar(){
+  return Object.entries(EN.metas)
+    .map(([ll, valor]) => { const i = ll.indexOf('|');
+      return {entidad: ll.slice(0, i), campo: ll.slice(i + 1), valor}; })
+    .sort((a, b) => (b.entidad === EN_TODAS) - (a.entidad === EN_TODAS));
 }
 
 /* Lo que hay hoy en el almacén, para repintar con la verdad: lo manda el
@@ -6450,6 +6537,15 @@ function enCapturar(campo, bruto){
   enPintar();
 }
 
+/* La fecha de un asiento en la hora de quien mira. Los asientos nuevos traen
+   su zona (UTC); los anteriores no, y se enseñan tal como se escribieron. */
+function enFechaBitacora(f){
+  if (!f) return '';
+  if (!/(Z|[+-]\d\d:\d\d)$/.test(f)) return f;
+  const d = new Date(f);
+  return isNaN(d) ? f : d.toLocaleString(LANG === 'es' ? 'es-MX' : 'en-US',
+                                         {dateStyle: 'short', timeStyle: 'short'});
+}
 function enPintarBitacora(){
   const tab = document.getElementById('enBitacora');
   const asientos = ENTRADAS.bitacora || [];
@@ -6473,7 +6569,9 @@ function enPintarBitacora(){
       : ajEsc(esMeta ? enMetaFmt(d.campo, v) + (enMetaEsFraccion(d.campo) ? ' ' + enMetaCat(d.campo).unidad : '')
                      : String(v));
     if (d.campo){
-      if (esMeta) partes.push(`<b>${ajEsc(t('en.metas.de', {k: enMetaCat(d.campo).nombre || d.campo}))}</b>`);
+      if (esMeta) partes.push(`<b>${ajEsc(t('en.metas.de', {k: enMetaCat(d.campo).nombre || d.campo}))}</b>`
+        + (d.empresa ? ` <span class="pista" style="display:inline">[${ajEsc(
+            d.empresa === KPIS.clave_grupo ? kpNombre(d.empresa) : d.empresa)}]</span>` : ''));
       else {
         const c = enCampo(d.campo);
         partes.push(`<b>${ajEsc(c.etiqueta || d.campo)}</b>`
@@ -6485,7 +6583,7 @@ function enPintarBitacora(){
       partes.push(`${fmtV(d.de)} → ${fmtV(d.a)}`);
     if (d.n) partes.push(t('en.bit.ncambios', {n: d.n}));
     if (d.motivo) partes.push(`<i>${ajEsc(d.motivo)}</i>`);
-    h += `<tr><td>${ajEsc(a.fecha || '')}</td>
+    h += `<tr><td>${ajEsc(enFechaBitacora(a.fecha))}</td>
       <td>${ajEsc(actos[a.acto] || a.acto || '')}
         <span class="qui">· ${ajEsc(a.autor || '')}</span><br>${partes.join(' · ')}</td></tr>`;
   }
@@ -6535,8 +6633,8 @@ function enLotePendiente(){
      lleven cosas distintas. */
   const cambios = Object.values(EN.cambios);
   // Las metas solo viajan al servidor (ver METAS DEL SEMÁFORO).
-  const metas = enHayServidor() ? EN.metas : {};
-  if (!cambios.length && !Object.keys(metas).length){ toast(t('en.nada')); return null; }
+  const metas = enHayServidor() ? enMetasParaEnviar() : [];
+  if (!cambios.length && !metas.length){ toast(t('en.nada')); return null; }
   const sinMotivo = cambios.filter(c => !c.borrar && enEsSobrescritura(c.campo)
                                      && !(c.motivo || '').trim());
   if (sinMotivo.length){ toast(t('en.faltamotivo', {n: sinMotivo.length})); return null; }
@@ -6544,7 +6642,7 @@ function enLotePendiente(){
     c.borrar ? c : Object.assign({}, c, {valor: enAMostrado(c.campo, c.valor),
                                          unidad: enCampo(c.campo).unidad})));
   return {generado: new Date().toISOString(), cliente: ENTRADAS.cliente,
-          cambios: paraEnviar, metas: Object.assign({}, metas)};
+          cambios: paraEnviar, metas: metas};
 }
 
 function enGuardar(){
@@ -6683,11 +6781,16 @@ function enConstruir(){
       `<p class="note" style="padding:18px">${t('en.sindatos')}</p>`;
     return;
   }
-  const emps = ENTRADAS.empresas || [];
+  // El Grupo entra al selector como una empresa más, igual que en Dirección:
+  // tiene sus propias metas. Las entradas, en cambio, se capturan por empresa
+  // (el consolidado se construye de ellas), así que con el Grupo elegido la
+  // hoja enseña solo sus metas.
+  const emps = (ENTRADAS.empresas || []).concat(KPIS.clave_grupo ? [KPIS.clave_grupo] : []);
   if (!emps.includes(EN.empresa)) EN.empresa = emps[0] || null;
   const selE = document.getElementById('enEmpresa');
   selE.innerHTML = emps.map(e =>
-    `<option value="${ajEsc(e)}"${e === EN.empresa ? ' selected' : ''}>${ajEsc(e)}</option>`).join('');
+    `<option value="${ajEsc(e)}"${e === EN.empresa ? ' selected' : ''}>${
+      ajEsc(e === KPIS.clave_grupo ? kpNombre(e) : e)}</option>`).join('');
   selE.onchange = () => { EN.empresa = selE.value; enConstruir(); };
 
   const pers = (KPIS.periodos || []).slice().reverse();

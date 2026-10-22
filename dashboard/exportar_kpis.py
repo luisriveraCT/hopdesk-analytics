@@ -64,8 +64,9 @@ import entradas_manuales as em          # noqa: E402
 
 # Clave con la que viaja el grupo consolidado. Se distingue de unas iniciales de
 # empresa por los guiones bajos: ninguna empresa real puede llamarse así, porque
-# el modelo solo admite letras y dígitos en las iniciales.
-CLAVE_GRUPO = '__CONSOLIDADO__'
+# el modelo solo admite letras y dígitos en las iniciales. Es la misma que usan
+# las metas del Grupo: se declara una vez, en el modelo.
+from modelo import CLAVE_GRUPO          # noqa: E402
 
 # Campos derivados que se publican por periodo. Se enumeran en vez de volcar
 # todo el diccionario para que el archivo no crezca con campos intermedios que
@@ -464,14 +465,16 @@ def main():
     cliente = repo.cliente_actual(repo.almacen_por_defecto())
     pol = cliente.politica
     supuestos = dict(pol.supuestos)
-    metas = dict(pol.metas)
+    # Las metas son de cada empresa y del Grupo (ver PoliticaFinanciera.
+    # metas_por_entidad). Se resuelven más abajo, cuando ya se sabe qué series hay.
+    hay_metas = bool(pol.metas_por_entidad or pol.metas)
     print(f'cliente: {cliente.nombre} · norma: {cliente.normas}')
     if not supuestos:
         print('  AVISO: sin supuestos de costo de capital. El WACC, el ROIC '
               'contra WACC y el EVA no se van a poder calcular.')
         print('  Se llenan con: python finanzas/configuracion/configurar.py '
               '--sembrar-politica')
-    if not metas:
+    if not hay_metas:
         print('  AVISO: sin metas configuradas. Los indicadores salen sin '
               'semáforo — no hay contra qué compararlos.')
 
@@ -525,7 +528,7 @@ def main():
         'empresas': empresas,
         'nombres': fin.get('nombres', {}),
         'periodos': fin.get('periodos', []),
-        'metas': metas,
+        'metas': {},          # {entidad: {indicador: meta}}; se llena abajo
         'supuestos': supuestos,
         'fuentes': dict(pol.fuentes),
         'catalogo': rz.CATALOGO_KPIS,
@@ -545,7 +548,9 @@ def main():
         # los estados de las empresas, que sí las llevan. Aplicárselas otra vez
         # sumaría dos veces la misma corrección.
         ent_serie = None if clave == CLAVE_GRUPO else entradas
-        salida['series'][clave] = procesar(filas, supuestos, metas, ic, conv,
+        metas_ent = pol.metas_de(clave)
+        salida['metas'][clave] = metas_ent
+        salida['series'][clave] = procesar(filas, supuestos, metas_ent, ic, conv,
                                            ent_serie, clave)
 
     # --- Avisos que el tablero muestra arriba, no escondidos en un log -------
@@ -638,7 +643,7 @@ def main():
     with open(ruta_base, 'w', encoding='utf-8') as f:
         json.dump({'series': crudas, 'empresas': empresas,
                    'clave_grupo': CLAVE_GRUPO, 'interco': interco,
-                   'metas': metas, 'convenciones': convenciones_pub,
+                   'metas': salida['metas'], 'convenciones': convenciones_pub,
                    'norma': cliente.normas},
                   f, ensure_ascii=False, separators=(',', ':'))
     print(f'base_financiera.json: {os.path.getsize(ruta_base) / 1024:.0f} KB '

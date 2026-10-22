@@ -395,6 +395,19 @@ las de la publicación anterior: la cifra estaba guardada y la pantalla decía l
 contrario hasta el siguiente `actualizar.py`. Ahora, al conectarse, la página
 le pide al servidor el estado vigente.
 
+### 3.21 🟡 La bitácora ordenaba mal según dónde se escribía
+
+Los asientos se fechaban con la hora local, sin zona, y se ordenaban como texto.
+La aplicación en Connect escribía en UTC y la laptop en hora de México, seis
+horas atrás: una captura hecha en la laptop quedaba **debajo** de otra más vieja
+hecha en Connect, y la bitácora dejaba de decir qué pasó último.
+
+Ahora se fechan en UTC con la zona escrita, y para ordenar lo anterior se
+interpreta cada fecha sin zona según dónde se escribió.
+
+**La regla:** una fecha que se va a comparar con otra lleva su zona. "La hora"
+no existe; existe la hora de una máquina.
+
 ## 4. Lo que las pruebas vigilan
 
 **21,000+ pruebas**, en dos clases:

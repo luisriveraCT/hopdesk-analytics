@@ -80,7 +80,34 @@ class ActoDesconocido(ValueError):
 
 
 def _ahora() -> str:
-    return dt.datetime.now().isoformat(timespec='seconds')
+    """El instante en UTC, CON la zona escrita (…+00:00).
+
+    Antes era la hora local sin zona, y cada máquina tiene la suya: la
+    aplicación en Connect escribía en UTC y la laptop en hora de México, seis
+    horas atrás. Ordenada como texto, una captura hecha en la laptop quedaba
+    DEBAJO de otra más vieja hecha en Connect, y la bitácora dejaba de decir
+    qué pasó último —que es justo lo que se le pregunta—."""
+    return dt.datetime.now(dt.timezone.utc).isoformat(timespec='seconds')
+
+
+# Las fechas que se escribieron SIN zona, antes de corregir _ahora(). No se
+# reescriben —la bitácora solo se agrega—; para ordenarlas se interpretan según
+# dónde se escribieron: en la laptop (línea de comandos, o la app corriendo en
+# local, que firma "(local)") era hora de México; en Connect, UTC. México no
+# tiene horario de verano desde 2022, así que el desfase es fijo.
+_DESFASE_LAPTOP = dt.timedelta(hours=-6)
+
+
+def _instante(a: Dict) -> dt.datetime:
+    """Cuándo ocurrió un asiento, en UTC, para poder ordenar sin mezclar zonas."""
+    try:
+        f = dt.datetime.fromisoformat(a.get('fecha') or '')
+    except ValueError:
+        return dt.datetime.min.replace(tzinfo=dt.timezone.utc)
+    if f.tzinfo is None:
+        laptop = a.get('origen') == 'cli' or (a.get('autor') or '').endswith('(local)')
+        f = f.replace(tzinfo=dt.timezone(_DESFASE_LAPTOP) if laptop else dt.timezone.utc)
+    return f.astimezone(dt.timezone.utc)
 
 
 def _ruta(cliente) -> str:
@@ -137,7 +164,7 @@ def leer(almacen, cliente, limite: Optional[int] = None,
         a_norm = autor.strip().lower()
         asientos = [a for a in asientos
                     if a_norm in (a.get('autor') or '').lower()]
-    asientos.sort(key=lambda a: a.get('fecha') or '', reverse=True)
+    asientos.sort(key=_instante, reverse=True)
     return asientos[:limite] if limite else asientos
 
 
