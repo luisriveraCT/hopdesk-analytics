@@ -358,6 +358,22 @@ extranjera que local = documento × tipo de cambio, con los tres datos traídos
 del ERP por separado. En la primera corrida encontró capturas reales con el tipo
 de cambio mal escrito en SAP.
 
+### 3.18 🟠 La "Base" salía corta por lo retenido
+
+La base antes de impuestos se calculaba como `DocTotal − VatSum`. Pero en SAP
+`DocTotal` es **neto de retenciones**: es lo que se paga o se cobra, ya
+descontados el ISR y el IVA retenidos (`WTAmount`). En toda factura con retención
+—honorarios, arrendamiento, fletes— la Base quedaba corta exactamente por lo
+retenido: 87,697 compras y 8,463 ventas solo de NCS. En toda la historia, 80 M
+en ventas y 43 M en compras.
+
+Se encontró al preguntar qué significaba la columna. Se confirmó contra la suma
+de las líneas del documento: líneas por 64,000 → `DocTotal` 71,680, `VatSum`
+10,240, `WTAmount` 2,560 → 71,680 − 10,240 + 2,560 = 64,000.
+
+**La regla:** antes de restar dos campos del ERP, confirma qué incluye cada uno.
+"Total" en un ERP rara vez es solo "subtotal más IVA".
+
 ## 4. Lo que las pruebas vigilan
 
 **21,000+ pruebas**, en dos clases:

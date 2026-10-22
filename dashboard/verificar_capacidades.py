@@ -41,6 +41,8 @@ def main():
             return re.search(r'function\s+' + n + r'\s*\(|(?:const|let)\s+' + n + r'\s*=', html)
         if pieza.startswith('#'):
             return f'id="{pieza[1:]}"' in html
+        if pieza.startswith('css:'):
+            return (pieza[4:] + '{') in html
         if pieza.startswith('t:'):
             return all(pieza[2:] in claves for claves in idiomas.values()) and idiomas
         return os.path.exists(os.path.join(RAIZ, pieza))

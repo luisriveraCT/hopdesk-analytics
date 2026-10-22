@@ -344,6 +344,43 @@ th,td{padding:5px 10px;text-align:left;white-space:nowrap;border-bottom:1px soli
 th{position:sticky;top:0;background:var(--surface-2);font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);z-index:1;cursor:pointer}
 td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
 tbody tr:hover{background:var(--surface-2)}
+/* UN TEXTO LARGO SE CORTA CON "…", NUNCA SE ENCIMA. En la tabla de detalle
+   (anchos fijos, para poder virtualizarla) un proveedor largo se escribía
+   encima de la columna de al lado. En las demás tablas no se encimaba, pero
+   ensanchaba la tabla y obligaba a desplazarse de lado por un solo nombre.
+   El tope es generoso para no quitar lectura, y el valor entero no se pierde:
+   pasar el cursor por la celda lo muestra en la barra de .peek, con su botón
+   de copiar. Los números no se cortan: una cifra a medias es una cifra mala. */
+main td{overflow:hidden;text-overflow:ellipsis}
+main td:not(.num){max-width:22em}
+.vwrap td:not(.num){max-width:none}
+/* Las tarjetas son angostas (media pantalla): con 22em la columna de la
+   derecha se salía de la caja. */
+.tablebox td:not(.num){max-width:16em}
+/* La excepción: una celda que trae una NOTA en prosa (el origen de un insumo
+   del costo de capital, la pista de un campo de captura) se lee entera y baja
+   de renglón. Cortar una explicación con "…" es dejarla sin decir. */
+main td:has(.nota, .pista){white-space:normal;text-overflow:clip}
+main td.num{overflow:visible}
+/* Ayuda de una columna: el encabezado se subraya punteado, que es la seña
+   convencional de "aquí hay una explicación", sin agregar otro botón "?" a
+   cada columna. */
+th[data-help]{text-decoration:underline dotted var(--axis);text-underline-offset:3px}
+/* La barra con el valor completo de una celda. Aparece DEBAJO de la celda, no
+   encima, para no tapar el texto que se está leyendo; y desaparece en cuanto se
+   oprime el botón del ratón en otro lado, para que seleccionar varias celdas
+   arrastrando siga funcionando igual que siempre. */
+.peek{position:fixed;z-index:61;display:none;align-items:center;gap:8px;max-width:min(560px,92vw);
+  padding:5px 6px 5px 10px;background:var(--surface-3);border:1px solid var(--line);border-radius:7px;
+  box-shadow:0 4px 14px rgba(0,0,0,.14);font-size:12px;color:var(--fg)}
+.peek[data-open="1"]{display:flex}
+.peek-v{white-space:normal;overflow-wrap:anywhere;user-select:text}
+.peek-c{flex:none;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;
+  border:1px solid var(--line);border-radius:5px;background:var(--surface-2);color:var(--muted);cursor:pointer;padding:0}
+.peek-c:hover,.peek-c:focus-visible{color:var(--accent);border-color:var(--accent)}
+.peek-c svg{width:14px;height:14px}
+.peek-c[data-ok="1"]{color:var(--sem-ok);border-color:var(--sem-ok)}
+@media print{.peek{display:none!important}}
 .chip{display:inline-block;padding:1px 6px;border-radius:999px;font-size:10px;font-weight:600;border:1px solid var(--line)}
 .chip-ic{background:var(--accent-soft);color:var(--accent);border-color:transparent}
 .chip-cn{background:transparent;color:var(--crit);border-color:var(--crit)}
@@ -981,6 +1018,7 @@ tr.esob .ecelda{border-color:var(--sem-bad);background:rgba(220,38,38,.09);
 </main>
 
 <div class="tip" id="tip"></div>
+<div class="peek" id="peek" role="tooltip"><span class="peek-v" id="peekV"></span><button class="peek-c" id="peekC" type="button"></button></div>
 <div class="toast" id="toast"></div>
 <div class="copybox" id="copybox"><div>
   <b data-i18n="copy.title">Copia el contenido y pégalo en Excel</b>
@@ -1422,7 +1460,11 @@ const ENTRADAS = __ENTRADAS_JSON__;
                                  la barra de arriba; se llaman igual y no son
                                  lo mismo
      sincronizarMetricaGlobal()  refleja el estado real (o mixto) en ese control
-     tipShow / tipHide / bindTip / helpTipShow   tooltips
+     tipShow / tipHide / bindTip / helpTipShow   tooltips (helpTipShow sirve a
+                                 los "?" y a los encabezados con data-help)
+     ayudaDeColumna(etiqueta)    la ayuda '<th.x>.help' de una columna de tarjeta
+     peekMostrar / peekOcultar   el valor completo de una celda, con copiar; no
+                                 estorba la selección de varias celdas
      renderGlosario / openGlosario / closeGlosario / bindGlosario
      setLang()                   cambia idioma y vuelve a armar todo. Es también
                                  el camino del arranque y del cambio de tipo
@@ -1622,8 +1664,8 @@ const I18N = {
     'k.total':'Facturación total','k.base':'Base sin IVA','k.n':'Facturas','k.ticket':'Factura promedio',
     'k.ic':'Intercompañía','k.usd':'Facturado en USD','k.tc':'Tipo de cambio prom.','k.cn':'Canceladas',
     'k.cov':'cobertura','k.ofTotal':'del total','k.wavg':'ponderado','k.rows':'con dato',
-    'k.help.total':'Suma del Total MXN (incluye IVA y demás impuestos) de todas las facturas que pasan los filtros activos, sumando factura por factura — nunca un total ya hecho.',
-    'k.help.base':'Suma del Subtotal (el monto antes de impuestos) de las facturas que pasan los filtros activos.',
+    'k.help.total':'Suma del Total MXN de las facturas que pasan los filtros activos, factura por factura — nunca un total ya hecho. Es lo que se cobra: con IVA y ya descontadas las retenciones de ISR e IVA.',
+    'k.help.base':'Suma de la Base: el monto de las facturas antes de impuestos y antes de retenciones, después de descuentos.',
     'k.help.n':'Número de facturas que pasan los filtros activos — cada renglón de la tabla de detalle cuenta como una factura, incluidas las de $0 si no excluiste canceladas.',
     'k.help.ticket':'Facturación total entre número de facturas del periodo/filtros actuales. Se distorsiona fácilmente por outliers — revisa el histograma de "Tamaño de factura" antes de usarlo como referencia típica.',
     'k.help.ic':'% del Total MXN facturado a otra empresa del grupo (Intercompañía) — ver glosario "Intercompañía" para el criterio exacto de clasificación.',
@@ -1871,7 +1913,7 @@ const I18N = {
     'compra.q.ph':'Proveedor, RFC, folio, folio del proveedor, monto…',
     'compra.k.total':'Compras totales',
     'compra.k.usd':'Comprado en USD',
-    'compra.k.help.total':'Suma del Total MXN (incluye IVA y demás impuestos) de todas las facturas de proveedores que pasan los filtros activos, sumando factura por factura — nunca un total ya hecho.',
+    'compra.k.help.total':'Suma del Total MXN de las facturas de proveedores que pasan los filtros activos, factura por factura — nunca un total ya hecho. Es lo que se paga: con IVA y ya descontadas las retenciones de ISR e IVA que se le hacen al proveedor.',
     'compra.k.help.ticket':'Compras totales entre número de facturas del periodo/filtros actuales. Se distorsiona fácilmente por outliers — revisa el histograma de "Tamaño de factura" antes de usarlo como referencia típica.',
     'compra.k.help.ic':'% del Total MXN comprado a otra empresa del grupo (Intercompañía) — ver glosario "Intercompañía" para el criterio exacto de clasificación.',
     'compra.k.help.usd':'Suma de los dólares de las facturas de proveedores emitidas en USD, tal como los registra el ERP en la moneda del documento. No es una conversión del Total MXN.',
@@ -1893,6 +1935,33 @@ const I18N = {
     'compra.serie.pronNota':'Valor estimado, no son compras reales. Extiende "Hasta" para ver más meses de pronóstico; cambia el método en Ajustes.',
     'compra.aj.fue.filas':'Facturas de compra en la base',
     'compra.foot':'Fuente: ERP (SAP Business One), extraído el {fecha} · {rows} facturas de proveedores vigentes · Los totales se calculan sumando documentos individuales; las canceladas quedan fuera salvo que el filtro de Canceladas las incluya, y sus documentos de cancelación no se publican. Intercompañía se determina por el registro de RFC y códigos de socio configurado, no por el nombre. {nodate} facturas sin fecha quedan fuera de las gráficas.',
+    'peek.copiar':'Copiar',
+    'th.empresa.help':'La empresa del grupo que emitió la factura.',
+    'compra.th.empresa.help':'La empresa del grupo que recibió la factura del proveedor: la que compra y la que paga.',
+    'th.fecha.help':'Fecha del documento en el ERP, que es la contable. No es la fecha en que se capturó ni la de vencimiento.',
+    'th.folio.help':'Número del documento en el ERP (DocNum), único dentro de cada empresa. No es el folio fiscal (UUID) del CFDI.',
+    'th.ref.help':'La referencia que el cliente le dio a la operación, como su orden de compra (NumAtCard en el ERP). Puede venir vacía. Se puede buscar.',
+    'compra.th.ref.help':'El folio de la factura del proveedor (NumAtCard en el ERP): el número que el proveedor menciona cuando pregunta por un pago. Se puede buscar.',
+    'th.cliente.help':'A quién se le facturó, con el nombre más frecuente con que aparece en el ERP: las variantes de un mismo cliente se juntan. También se puede buscar por su RFC.',
+    'compra.th.cliente.help':'Quién emitió la factura, con el nombre más frecuente con que aparece en el ERP: las variantes de un mismo proveedor se juntan. También se puede buscar por su RFC.',
+    'th.concepto.help':'Descripción de lo facturado, de las líneas del documento.',
+    'th.localidad.help':'Sede de la operación registrada en la factura.',
+    'th.estatus.help':'Vigente o cancelada, según el ERP. Las canceladas solo aparecen si el filtro Canceladas las incluye.',
+    'th.situacion.help':'Abierta: el ERP todavía tiene saldo por cobrar de esta factura. Cerrada: ya no — se cobró o se cerró contra otro documento. Es el estado del día de la extracción, no en tiempo real.',
+    'compra.th.situacion.help':'Abierta: el ERP todavía tiene saldo por pagar de esta factura. Cerrada: ya no — se pagó o se cerró contra otro documento. Es el estado del día de la extracción, no en tiempo real.',
+    'th.base.help':'Lo que valen los conceptos de la factura antes de IVA y antes de retenciones, ya con descuentos, en pesos. Base + IVA − retenciones = Total MXN. No es lo que se cobra o paga: eso es el Total MXN.',
+    'th.total.help':'Lo que se cobra o se paga, en pesos: con IVA y ya descontadas las retenciones de ISR e IVA. En una factura en dólares, es su equivalente en pesos al tipo de cambio de ese día (ver T.C.).',
+    'th.tc.help':'Pesos por dólar que el ERP aplicó a esta factura ese día. Solo aparece en facturas en dólares.',
+    'th.usd.help':'Los dólares de la factura tal como se emitió, en la moneda del documento. Vacío si la factura es en pesos o en otra moneda.',
+    'th.tipo.help':'Intercompañía si la contraparte es una empresa del grupo según el registro configurado (por RFC o código de socio, nunca por el nombre); Terceros si no.',
+    'th.periodo.help':'El mes, trimestre o año de la fila, según la granularidad elegida en la tarjeta.',
+    'th.monto.help':'La métrica elegida en la tarjeta: Total MXN, Base, número de facturas o dólares. Cambia con la fila MONTOS de los filtros o con los Ajustes de la tarjeta.',
+    'th.share.help':'Participación: qué porcentaje del total de la tabla representa la fila.',
+    'th.n.help':'Cuántas facturas forman la fila.',
+    'th.rango.help':'El rango de monto (Total MXN) en que cae cada factura.',
+    'th.plaza.help':'Sede de la operación registrada en la factura.',
+    'th.mes.help':'El mes de la fecha del documento.',
+    'th.pct.help':'Qué porcentaje del total de la tabla representa la fila.',
     'nodata':'Sin datos con los filtros actuales'
   },
   en:{
@@ -1911,8 +1980,8 @@ const I18N = {
     'k.total':'Total billed','k.base':'Net of VAT','k.n':'Invoices','k.ticket':'Average invoice',
     'k.ic':'Intercompany','k.usd':'Billed in USD','k.tc':'Avg. exchange rate','k.cn':'Cancelled',
     'k.cov':'coverage','k.ofTotal':'of total','k.wavg':'weighted','k.rows':'with data',
-    'k.help.total':'Sum of Total MXN (tax-included) for every invoice passing the active filters, added invoice by invoice — never a pre-computed total.',
-    'k.help.base':'Sum of the Subtotal (the pre-tax amount) for invoices passing the active filters.',
+    'k.help.total':'Sum of Total MXN for the invoices passing the active filters, invoice by invoice — never a pre-computed total. It is what gets collected: VAT included, ISR and VAT withholdings already deducted.',
+    'k.help.base':'Sum of the Net amount: the invoices\' value before taxes and before withholdings, after discounts.',
     'k.help.n':'Count of invoices passing the active filters — every row in the detail table counts as one invoice, including $0 ones if cancelled invoices aren\'t excluded.',
     'k.help.ticket':'Total billed divided by invoice count for the current period/filters. Easily skewed by outliers — check the "Invoice size" histogram before treating it as a typical value.',
     'k.help.ic':'% of Total MXN billed to another group company (Intercompany) — see the glossary entry "Intercompany" for the exact classification rule.',
@@ -2160,7 +2229,7 @@ const I18N = {
     'compra.q.ph':'Supplier, tax ID, invoice no., supplier invoice no., amount…',
     'compra.k.total':'Total purchases',
     'compra.k.usd':'Purchased in USD',
-    'compra.k.help.total':'Sum of Total MXN (tax-included) for every supplier invoice passing the active filters, added invoice by invoice — never a pre-computed total.',
+    'compra.k.help.total':'Sum of Total MXN for the supplier invoices passing the active filters, invoice by invoice — never a pre-computed total. It is what gets paid: VAT included, the ISR and VAT withheld from the supplier already deducted.',
     'compra.k.help.ticket':'Total purchases divided by invoice count for the current period/filters. Easily skewed by outliers — check the "Invoice size" histogram before treating it as a typical value.',
     'compra.k.help.ic':'% of Total MXN purchased from another group company (Intercompany) — see the "Intercompany" glossary entry for the exact classification rule.',
     'compra.k.help.usd':'Sum of the dollars on supplier invoices issued in USD, as the ERP records them in the document currency. Not a conversion of Total MXN.',
@@ -2182,6 +2251,33 @@ const I18N = {
     'compra.serie.pronNota':'Estimated value, not actual purchases. Extend "To" to see more forecast months; change the method in Settings.',
     'compra.aj.fue.filas':'Purchase invoices in the base',
     'compra.foot':'Source: ERP (SAP Business One), extracted on {fecha} · {rows} active supplier invoices · Totals are computed by summing individual documents; cancelled invoices are excluded unless the Cancelled filter includes them, and their cancellation documents are not published. Intercompany is determined by the configured registry of tax IDs and partner codes, not by name. {nodate} invoices without a date are excluded from charts.',
+    'peek.copiar':'Copy',
+    'th.empresa.help':'The group company that issued the invoice.',
+    'compra.th.empresa.help':'The group company that received the supplier invoice: the one that buys and pays.',
+    'th.fecha.help':'Document date in the ERP, which is the accounting date. Not the capture date nor the due date.',
+    'th.folio.help':'Document number in the ERP (DocNum), unique within each company. Not the CFDI tax folio (UUID).',
+    'th.ref.help':'The reference the client gave the transaction, such as its purchase order (NumAtCard in the ERP). May be empty. Searchable.',
+    'compra.th.ref.help':'The supplier\'s own invoice number (NumAtCard in the ERP): the number the supplier quotes when asking about a payment. Searchable.',
+    'th.cliente.help':'Who was billed, under the most frequent name it has in the ERP: variants of the same client are merged. Its tax ID (RFC) is also searchable.',
+    'compra.th.cliente.help':'Who issued the invoice, under the most frequent name it has in the ERP: variants of the same supplier are merged. Its tax ID (RFC) is also searchable.',
+    'th.concepto.help':'Description of what was billed, from the document lines.',
+    'th.localidad.help':'Operating site recorded on the invoice.',
+    'th.estatus.help':'Active or cancelled, per the ERP. Cancelled invoices only show if the Cancelled filter includes them.',
+    'th.situacion.help':'Open: the ERP still carries a balance to collect on this invoice. Closed: it does not — collected, or closed against another document. Status as of the extraction date, not real time.',
+    'compra.th.situacion.help':'Open: the ERP still carries a balance to pay on this invoice. Closed: it does not — paid, or closed against another document. Status as of the extraction date, not real time.',
+    'th.base.help':'What the invoice lines are worth before VAT and before withholdings, discounts applied, in pesos. Net + VAT − withholdings = Total MXN. Not what is collected or paid: that is Total MXN.',
+    'th.total.help':'What is collected or paid, in pesos: VAT included, ISR and VAT withholdings deducted. On a dollar invoice, its peso equivalent at that day\'s rate (see FX).',
+    'th.tc.help':'Pesos per dollar the ERP applied to this invoice that day. Only on dollar invoices.',
+    'th.usd.help':'The invoice dollars as issued, in the document currency. Empty if the invoice is in pesos or another currency.',
+    'th.tipo.help':'Intercompany if the counterparty is a group company per the configured registry (by tax ID or partner code, never by name); Third parties otherwise.',
+    'th.periodo.help':'The row\'s month, quarter or year, per the granularity chosen on the card.',
+    'th.monto.help':'The measure chosen on the card: Total MXN, Net, invoice count or dollars. Changes with the AMOUNTS filter row or the card\'s Settings.',
+    'th.share.help':'Share: what percentage of the table total the row represents.',
+    'th.n.help':'How many invoices make up the row.',
+    'th.rango.help':'The amount band (Total MXN) each invoice falls into.',
+    'th.plaza.help':'Operating site recorded on the invoice.',
+    'th.mes.help':'The month of the document date.',
+    'th.pct.help':'What percentage of the table total the row represents.',
     'nodata':'No data for the current filters'
   }
 };
@@ -2741,12 +2837,81 @@ function helpTipShow(btn){
   if (y + r.height > innerHeight - 8) y = r0.top - r.height - 7;
   TIP.style.left = Math.max(8, x) + 'px'; TIP.style.top = Math.max(8, y) + 'px';
 }
-document.addEventListener('mouseover', e => { const b = e.target.closest('.help'); if (b) helpTipShow(b); });
-document.addEventListener('mouseout', e => { const b = e.target.closest('.help');
-  if (b && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.help'))) tipHide(); });
+// Lo mismo sirve a los botones "?" y a los encabezados de columna con
+// data-help: un solo mecanismo de ayuda, no dos que se comporten distinto.
+const CON_AYUDA = '.help, th[data-help]';
+document.addEventListener('mouseover', e => { const b = e.target.closest(CON_AYUDA); if (b) helpTipShow(b); });
+document.addEventListener('mouseout', e => { const b = e.target.closest(CON_AYUDA);
+  if (b && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(CON_AYUDA))) tipHide(); });
 document.addEventListener('focusin', e => { const b = e.target.closest('.help'); if (b) helpTipShow(b); });
 document.addEventListener('focusout', e => { if (e.target.closest && e.target.closest('.help')) tipHide(); });
 addEventListener('scroll', () => { if (TIP.classList.contains('tip-help')) tipHide(); }, {passive:true, capture:true});
+
+/* ---- el valor completo de una celda, con su botón de copiar ----------------
+   Una celda cortada con "…" esconde el final de un nombre o de un folio. Al
+   dejar el cursor quieto sobre CUALQUIER celda de cualquier tabla, aparece
+   debajo una barra con el valor completo y un botón para copiarlo — útil aun
+   sin corte: copiar un folio de proveedor para pegarlo en un correo.
+
+   LO QUE NO PUEDE ROMPER: seleccionar varias celdas arrastrando, que es como
+   se copian bloques a Excel. Por eso:
+     · no aparece mientras haya un botón del ratón oprimido (e.buttons);
+     · se va en cuanto se oprime el ratón fuera de ella, antes de que empiece
+       la selección;
+     · el botón de copiar cancela su mousedown, así que oprimirlo no borra una
+       selección que ya estaba hecha;
+     · aparece debajo de la celda, no encima: no tapa lo que se está leyendo.
+   La espera (PEEK_ESPERA_MS) evita que parpadee al recorrer la tabla. */
+const PEEK = document.getElementById('peek'), PEEK_V = document.getElementById('peekV'),
+      PEEK_C = document.getElementById('peekC');
+const ICONO_COPIA_PEEK = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="7" y="7" width="9" height="10" rx="1.3"/><path d="M13 7V4.3A1.3 1.3 0 0 0 11.7 3H4.3A1.3 1.3 0 0 0 3 4.3v8.4A1.3 1.3 0 0 0 4.3 14H7" stroke-linecap="round"/></svg>';
+const ICONO_LISTO_PEEK = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4.5 10.5 8.2 14 15.5 6.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const PEEK_ESPERA_MS = 450;
+let peekCelda = null, peekTimer = 0, peekCierre = 0;
+
+function peekTexto(td){
+  // Una celda con controles (la hoja de captura) no es un valor que leer.
+  if (!td || td.querySelector('input, select, textarea, button')) return '';
+  const v = (td.innerText || '').replace(/\s+/g, ' ').trim();
+  return v === '—' || v === MASCARA ? '' : v;
+}
+function peekMostrar(td){
+  const v = peekTexto(td);
+  if (!v) return;
+  peekCelda = td;
+  PEEK_V.textContent = v;
+  PEEK_C.innerHTML = ICONO_COPIA_PEEK; PEEK_C.dataset.ok = '0';
+  PEEK_C.title = t('peek.copiar'); PEEK_C.setAttribute('aria-label', t('peek.copiar'));
+  PEEK.dataset.open = '1';
+  const r = td.getBoundingClientRect(), p = PEEK.getBoundingClientRect();
+  let x = Math.min(r.left, innerWidth - p.width - 8), y = r.bottom + 3;
+  if (y + p.height > innerHeight - 8) y = r.top - p.height - 3;
+  PEEK.style.left = Math.max(8, x) + 'px'; PEEK.style.top = Math.max(8, y) + 'px';
+}
+function peekOcultar(){
+  clearTimeout(peekTimer); clearTimeout(peekCierre);
+  PEEK.dataset.open = '0'; peekCelda = null;
+}
+document.addEventListener('mouseover', e => {
+  if (e.target.closest('#peek')){ clearTimeout(peekCierre); return; }
+  const td = e.target.closest('main td');
+  if (td === peekCelda) { clearTimeout(peekCierre); return; }
+  clearTimeout(peekTimer);
+  if (!td || e.buttons){ if (peekCelda) peekCierre = setTimeout(peekOcultar, 160); return; }
+  if (peekCelda) peekOcultar();
+  peekTimer = setTimeout(() => peekMostrar(td), PEEK_ESPERA_MS);
+});
+document.addEventListener('mousedown', e => {
+  if (!e.target.closest('#peek')) peekOcultar();
+}, true);
+addEventListener('scroll', () => { if (peekCelda || peekTimer) peekOcultar(); }, {passive:true, capture:true});
+addEventListener('keydown', e => { if (e.key === 'Escape') peekOcultar(); });
+PEEK_C.addEventListener('mousedown', e => e.preventDefault());
+PEEK_C.addEventListener('click', () => {
+  copyText(PEEK_V.textContent);
+  PEEK_C.innerHTML = ICONO_LISTO_PEEK; PEEK_C.dataset.ok = '1';
+  setTimeout(peekOcultar, 900);
+});
 
 /* ====================== pronóstico ======================
    5 métodos básicos de pronóstico de series de tiempo. Cada uno recibe
@@ -3215,7 +3380,7 @@ function rowCells(i){
 function renderTableHead(){
   document.getElementById('mthead').innerHTML = columnasTabla().map(c=>{
     const act = S.local.tabla.sort===c.k ? (S.local.tabla.dir>0?' ▲':' ▼') : '';
-    return `<th class="${c.num?'num':''}" style="width:${c.w}px" data-k="${c.k}">${t(c.l)}${act}</th>`;
+    return `<th class="${c.num?'num':''}" style="width:${c.w}px" data-k="${c.k}" data-help="${c.l}.help">${t(c.l)}${act}</th>`;
   }).join('');
 }
 function renderTableBody(){
@@ -4025,12 +4190,25 @@ function buildCardChrome(){
       S.local[c.key][s.dataset.ctl] = isNaN(+s.value) ? s.value : +s.value; render(); };
   }
 }
+/* La ayuda de una columna de tarjeta, buscada por su etiqueta. Las tablas de
+   las tarjetas nacen de las llaves de sus filas, que ya vienen traducidas
+   ("Monto", "Part."), así que se busca qué encabezado th.* se ve así y si
+   tiene su '.help'. Es la misma ayuda que la columna de la tabla de detalle:
+   una columna se explica una sola vez. Las que no tengan, no llevan. */
+function ayudaDeColumna(etiqueta){
+  for (const k in I18N.es){
+    if (/^th\.\w+$/.test(k) && t(k) === etiqueta && t(k + '.help') !== k + '.help') return k + '.help';
+  }
+  return '';
+}
 function fillCardTable(key, card){
   const rows = LAST[key] || [];
   const box = card.querySelector('.tablebox');
   if (!rows.length){ box.innerHTML = `<p class="note">${t('nodata')}</p>`; return; }
   const cols = Object.keys(rows[0]);
-  box.innerHTML = '<table><thead><tr>'+cols.map((c,i)=>`<th class="${i?'num':''}">${c}</th>`).join('')+
+  box.innerHTML = '<table><thead><tr>'+cols.map((c,i)=>{
+      const ayuda = ayudaDeColumna(c);
+      return `<th class="${i?'num':''}"${ayuda ? ` data-help="${ayuda}"` : ''}>${c}</th>`; }).join('')+
     '</tr></thead><tbody>'+rows.map(r=>'<tr>'+cols.map((c,i)=>{
       const v = r[c]; const isNum = typeof v === 'number';
       // En modo discreto se enmascara la celda SALVO que la columna sea de
@@ -4162,18 +4340,20 @@ const GLOSARIO = [
   {cat:'empresas', es:{t:'NOS — Networks Outsourcing Services', d:'Aparece como contraparte de otras empresas del grupo, pero no está en el registro intercompañía de la configuración: sus facturas cuentan como de terceros mientras no se dé de alta ahí.'},
     en:{t:'NOS — Networks Outsourcing Services', d:'Shows up as a counterparty of other group companies, but is not in the intercompany registry of the configuration: its invoices count as third-party until it is registered there.'}},
 
-  {cat:'financieros', es:{t:'Subtotal', d:'Monto antes de impuestos: el total del documento menos sus impuestos (DocTotal − VatSum en el ERP), en moneda local.'},
-    en:{t:'Subtotal', d:'Pre-tax amount: the document total minus its taxes (DocTotal − VatSum in the ERP), in local currency.'}},
-  {cat:'financieros', es:{t:'Base sin IVA', d:'Es el Subtotal: el monto de la factura antes de impuestos. El ERP lo trae en todas las facturas.'},
-    en:{t:'Net of VAT', d:'The Subtotal: the invoice amount before taxes. The ERP provides it for every invoice.'}},
+  {cat:'financieros', es:{t:'Subtotal', d:'Monto antes de impuestos y antes de retenciones, ya con los descuentos aplicados, en moneda local. El ERP no lo guarda en la cabecera: es el total del documento menos el IVA más lo retenido (DocTotal − VatSum + WTAmount), que es igual a la suma de sus conceptos.'},
+    en:{t:'Subtotal', d:'Amount before taxes and before withholdings, discounts already applied, in local currency. The ERP does not store it in the header: it is the document total minus VAT plus what was withheld (DocTotal − VatSum + WTAmount), which equals the sum of its lines.'}},
+  {cat:'financieros', es:{t:'Base sin IVA', d:'Es el Subtotal: lo que valen los conceptos de la factura antes de IVA y antes de retenciones. Base + IVA − retenciones = Total MXN. Si lo que buscas es cuánto se cobra o se paga, es el Total MXN.'},
+    en:{t:'Net of VAT', d:'The Subtotal: what the invoice lines are worth before VAT and before withholdings. Net + VAT − withholdings = Total MXN. If you want how much is collected or paid, that is Total MXN.'}},
   {cat:'financieros', es:{t:'IVA 16%', d:'Impuesto al Valor Agregado, tasa general.'},
     en:{t:'IVA 16% (VAT 16%)', d:'Value-added tax, general rate.'}},
-  {cat:'financieros', es:{t:'Total MXN', d:'Monto final de la factura en pesos, con todos los impuestos, tal como lo guarda el ERP en moneda local (DocTotal) — también en las facturas emitidas en dólares. Es el monto que usa el tablero para todas las sumas.'},
-    en:{t:'Total MXN', d:'Final invoice amount in pesos, tax-included, as the ERP stores it in local currency (DocTotal) — dollar invoices included. This is the amount the dashboard uses for every total.'}},
+  {cat:'financieros', es:{t:'Total MXN', d:'Lo que se cobra o se paga por la factura, en pesos: con IVA y ya descontadas las retenciones de ISR e IVA. Es el total del documento en moneda local del ERP (DocTotal), también en las facturas emitidas en dólares. Es el monto que usa el tablero para todas las sumas.'},
+    en:{t:'Total MXN', d:'What is collected or paid for the invoice, in pesos: VAT included, ISR and VAT withholdings already deducted. It is the document total in the ERP\'s local currency (DocTotal), dollar invoices included. This is the amount the dashboard uses for every total.'}},
   {cat:'financieros', es:{t:'Tipo de Cambio', d:'Tasa MXN/USD que el ERP aplicó a la propia factura (DocRate) — no es una tasa oficial de referencia (Banxico, DOF, etc.). Las facturas en otras monedas, como euros, no entran en este promedio.'},
     en:{t:'Exchange rate', d:'MXN/USD rate the ERP applied to the invoice itself (DocRate) — not an official reference rate (Banxico, DOF, etc.). Invoices in other currencies, such as euros, are not part of this average.'}},
   {cat:'financieros', es:{t:'Total USD / Dólares', d:'Los dólares de las facturas emitidas en USD, en la moneda del documento (DocTotalFC en el ERP). El ERP guarda cada importe tres veces: en moneda local (DocTotal, los pesos que suma el Total MXN), en la moneda del documento y en la de sistema. No es una conversión del Total MXN.'},
     en:{t:'Total USD / Dólares', d:'The dollars on invoices issued in USD, in the document currency (DocTotalFC in the ERP). The ERP stores each amount three times: in local currency (DocTotal, the pesos Total MXN adds up), in the document currency and in the system currency. Not a conversion of Total MXN.'}},
+  {cat:'financieros', es:{t:'Retenciones (ISR e IVA retenidos)', d:'Impuestos que quien paga se queda para enterarlos al SAT en nombre de quien cobra —típico en honorarios, arrendamiento a personas físicas y fletes—. Se restan del total: por eso en una factura con retención el Total MXN es menor que Base + IVA. El ERP las guarda en WTAmount.'},
+    en:{t:'Withholdings (ISR and VAT withheld)', d:'Taxes the payer keeps to pay to the tax authority (SAT) on behalf of the payee —typical in professional fees, leases from individuals and freight—. They are subtracted from the total: that is why on an invoice with withholding, Total MXN is lower than Net + VAT. The ERP stores them in WTAmount.'}},
   {cat:'financieros', es:{t:'No. Factura / Folio', d:'Número del documento en el ERP (DocNum). No es el folio fiscal del CFDI.'},
     en:{t:'Invoice no. / Folio', d:'Document number in the ERP (DocNum). It is not the tax folio of the CFDI.'}},
   {cat:'financieros', es:{t:'RFC', d:'Registro Federal de Contribuyentes de la contraparte, tal como está en el maestro de socios del ERP.'},

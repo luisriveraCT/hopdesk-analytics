@@ -449,7 +449,7 @@ def homologar(crudo: List[Dict], que: str, empresa: str = '') -> List[Dict]:
 # necesitan, porque multiplican el volumen por el número de renglones.
 CAMPOS_FACTURA = ['DocEntry', 'DocNum', 'DocDate', 'CardCode', 'CardName',
                   'FederalTaxID', 'DocTotal', 'VatSum', 'DocCurrency', 'DocRate',
-                  'DocTotalFc', 'VatSumFc', 'DocTotalSys',
+                  'DocTotalFc', 'VatSumFc', 'DocTotalSys', 'WTAmount', 'WTAmountFC',
                   'CancelStatus', 'Cancelled', 'DocumentStatus',
                   'CreationDate', 'NumAtCard', 'Series']
 
@@ -466,6 +466,15 @@ CAMPOS_FACTURA = ['DocEntry', 'DocNum', 'DocDate', 'CardCode', 'CardName',
 # era de 19 veces y nada lo delataba, porque un monto en la columna equivocada
 # se ve idéntico a uno bueno. Lo que lo destapó fue dividir DocTotal entre
 # DocRate: salían 775.00, 1,106.00, 2,212.00 — así se ve una tarifa en dólares.
+#
+# DOCTOTAL ES NETO DE RETENCIONES. Es lo que de verdad se paga o se cobra: el
+# subtotal, más el IVA, MENOS el ISR y el IVA retenidos (WTAmount). Por eso la
+# base antes de impuestos NO es DocTotal − VatSum: así salía corta justo por lo
+# retenido, en 87,697 compras y 8,463 ventas de NCS. Verificado contra la suma
+# de las líneas del documento: una compra con líneas por 64,000 trae DocTotal
+# 71,680, VatSum 10,240 y WTAmount 2,560 → 71,680 − 10,240 + 2,560 = 64,000.
+# La cabecera no tiene un campo de subtotal; se arma con estos tres, que sí
+# vienen del ERP, y descontando ya cualquier descuento global del documento.
 #
 # En este SAP la moneda local y la de sistema son la misma (lo declara
 # CompanyService_GetAdminInfo: LocalCurrency = SystemCurrency = MXP, y en los
@@ -506,6 +515,7 @@ def homologar_facturas(crudo: List[Dict], tipo: str, empresa: str = '') -> List[
         fecha = (d.get('DocDate') or '')[:10]
         total = _num(d.get('DocTotal'))
         iva = _num(d.get('VatSum'))
+        retenido = _num(d.get('WTAmount'))   # ver "DOCTOTAL ES NETO DE RETENCIONES"
         # En un documento en moneda local (DocRate 1), DocTotalFc viene en cero:
         # su importe en la moneda del documento ES el local. Fuera de ese caso
         # se toma DocTotalFc tal cual, aunque venga en cero: caer al importe
@@ -523,8 +533,9 @@ def homologar_facturas(crudo: List[Dict], tipo: str, empresa: str = '') -> List[
             'contraparte': (d.get('CardName') or '').strip(),
             'contraparte_id': (d.get('CardCode') or '').strip(),
             'rfc': (d.get('FederalTaxID') or '').strip(),
-            'subtotal': round(total - iva, 2),
+            'subtotal': round(total - iva + retenido, 2),
             'impuestos': round(iva, 2),
+            'retenciones': round(retenido, 2),
             'total': round(total, 2),
             'moneda': d.get('DocCurrency') or '',
             'tipo_cambio': _num(d.get('DocRate')) or None,

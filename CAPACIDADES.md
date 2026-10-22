@@ -22,6 +22,7 @@ Cómo se escriben las piezas (entre comillas invertidas):
 | `nombre()` | que la función exista en `dashboard/plantilla.html` |
 | `#id` | que el elemento con ese `id` exista en la plantilla |
 | `t:clave` | que el texto exista en los dos idiomas |
+| `css:selector` | que la regla de estilo exista en la plantilla |
 | `ruta/archivo.py` | que el archivo exista en el repositorio |
 
 ---
@@ -81,6 +82,9 @@ Cómo se escriben las piezas (entre comillas invertidas):
 | Dos idiomas | Español e inglés completos, sin mezclar | `setLang()` `t()` `#langEs` `#langEn` `dashboard/verificar_idiomas.py` |
 | Glosario | Todo término, sigla y criterio, buscable, en los dos idiomas | `renderGlosario()` `#gmodal` `#btnGlosario` |
 | Ayuda en cada tarjeta | El botón "?" junto a cada título | `helpTipShow()` |
+| Ayuda en cada columna | Al pasar el cursor por un encabezado (subrayado punteado), qué contiene la columna y la duda más probable | `ayudaDeColumna()` `t:th.base.help` `t:th.total.help` |
+| Textos largos sin encimarse | Toda celda de texto se corta con "…" en vez de pisar la columna de al lado; los números nunca se cortan | `css:main td` `css:main td.num` |
+| Valor completo y copiar | Al dejar el cursor sobre cualquier celda de cualquier tabla, el valor entero con un botón de copiar. No estorba seleccionar varias celdas arrastrando | `peekMostrar()` `peekOcultar()` `#peek` `t:peek.copiar` |
 | Ajustes | Configuración del cliente, bitácora de actualizaciones del ERP y fuentes de los datos | `ajRenderConfig()` `ajRenderBitacora()` `ajRenderFuentes()` `#btnAjustes` |
 | Tema claro y oscuro | Sigue al del sistema | `cssv()` |
 | Sin terceros | Librerías y tipografías servidas desde el mismo almacén; el navegador no le pide nada a nadie más | `dashboard/estaticos/lib/exceljs.min.js` |
