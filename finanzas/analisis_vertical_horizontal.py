@@ -104,6 +104,31 @@ def analisis_horizontal(serie: List[Dict], campos: List[str],
 # ---------------------------------------------------------------------------
 # Armado de estados financieros desde saldos canónicos
 # ---------------------------------------------------------------------------
+def tasa_efectiva_de(impuesto, resultado_antes_impuestos, banda_tasa=None):
+    """(tasa, confiable) de un periodo: un mes, o un trimestre ya sumado.
+
+    Vive aparte para que el mes y cualquier periodo agregado la calculen con la
+    MISMA regla. Una copia de esto en otro archivo es como un día el trimestre
+    acaba con una tasa que el mes no reconocería.
+
+    Se devuelve None y no cero cuando el resultado antes de impuestos es
+    negativo o insignificante: una tasa calculada sobre una base negativa sale
+    con el signo invertido y se presenta sola en una junta.
+
+    Una tasa aritméticamente correcta puede no ser utilizable. En México lo
+    normal ronda 35-45% (ISR 30% más PTU 10% sobre una base distinta); fuera de
+    esa banda suele significar que la base es diminuta frente al impuesto —se
+    vio 206% en una empresa con utilidad casi nula— o que hubo un ajuste de
+    ejercicios anteriores. El número se entrega igual, pero marcado.
+    """
+    if impuesto is None or resultado_antes_impuestos is None:
+        return None, False
+    tasa = (impuesto / resultado_antes_impuestos
+            if resultado_antes_impuestos > UMBRAL_BASE_INSIGNIFICANTE else None)
+    lo, hi = banda_tasa or BANDA_TASA_EFECTIVA
+    return tasa, tasa is not None and lo <= tasa <= hi
+
+
 def estado_resultados(saldos: List[Dict], cuentas: Dict[str, Dict],
                       anio: int, mes: int, banda_tasa=None) -> Dict:
     """Estado de Resultados del mes, armado desde los saldos canónicos.
@@ -180,16 +205,8 @@ def estado_resultados(saldos: List[Dict], cuentas: Dict[str, Dict],
     # negativo o insignificante: una tasa calculada sobre una base negativa sale
     # con el signo invertido y se presenta sola en una junta. Preferimos decir
     # "no es interpretable" a entregar un número que engaña.
-    tasa_efectiva = (tot['IMPUESTO'] / resultado_antes_impuestos
-                     if resultado_antes_impuestos > UMBRAL_BASE_INSIGNIFICANTE else None)
-    # Una tasa aritméticamente correcta puede no ser utilizable. En México lo
-    # normal ronda 35-45% (ISR 30% más PTU 10% sobre una base distinta); fuera
-    # de esa banda suele significar que la base es diminuta frente al impuesto
-    # —se vio 206% en una empresa con utilidad casi nula— o que hubo un ajuste
-    # de ejercicios anteriores. El número se entrega igual, pero marcado: quien
-    # lo use en un WACC tiene que saber que no puede tomarlo tal cual.
-    lo, hi = banda_tasa or BANDA_TASA_EFECTIVA
-    tasa_confiable = tasa_efectiva is not None and lo <= tasa_efectiva <= hi
+    tasa_efectiva, tasa_confiable = tasa_efectiva_de(
+        tot['IMPUESTO'], resultado_antes_impuestos, banda_tasa)
     return {
         'anio': anio, 'mes': mes,
         'ingresos': ingresos,

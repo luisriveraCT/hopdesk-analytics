@@ -381,6 +381,64 @@ th[data-help]{text-decoration:underline dotted var(--axis);text-underline-offset
 .peek-c svg{width:14px;height:14px}
 .peek-c[data-ok="1"]{color:var(--sem-ok);border-color:var(--sem-ok)}
 @media print{.peek{display:none!important}}
+
+/* ---- Análisis avanzado -----------------------------------------------------
+   Denso a propósito: es la pantalla de quien analiza, no la de quien presenta.
+   La letra de las tablas y los resultados es más chica que en el resto del
+   tablero para que quepan los indicadores, la gráfica y los coeficientes a la
+   vez, sin desplazarse. Lo que hay que leer de un vistazo —el resumen— sí va
+   en tamaño normal. */
+.anbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 16px;
+  background:var(--surface-3);border-bottom:1px solid var(--line);position:sticky;top:41px;z-index:30}
+.anbar .bub{padding:2px 8px;font-size:11px}
+.anp{width:52px;min-width:0;text-align:center;padding:3px 4px}
+.anp[aria-invalid="true"]{border-color:var(--crit);color:var(--crit)}
+.anchk{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-2);cursor:pointer}
+.anmeses{padding:8px 16px;background:var(--surface-2);border-bottom:1px solid var(--line);
+  display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;max-height:160px;overflow:auto}
+.anmeses label{display:inline-flex;gap:3px;align-items:center;font-family:var(--mono)}
+.anmeses b{flex-basis:100%;font-size:10px;color:var(--muted);margin-top:4px}
+.anlayout{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:12px;padding:12px 16px}
+@media (max-width:900px){.anlayout{grid-template-columns:1fr}}
+.anlista{font-size:11px;max-height:calc(100vh - 150px);overflow:auto;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--radius)}
+.anlista table{font-size:11px}
+.anlista th,.anlista td{padding:3px 6px}
+.anlista caption{text-align:left;padding:7px 8px 3px;font-size:10px;font-weight:600;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.anlista tr.sel td{background:var(--accent-soft)}
+.anlista td.ind{cursor:pointer;max-width:12em}
+.anlista td.ind:hover{color:var(--accent)}
+.anlista input{width:54px;font:inherit;font-family:var(--mono);text-align:right;padding:1px 3px;
+  border:1px solid var(--line);border-radius:4px;background:var(--surface-3);color:var(--fg)}
+.anlista input.edit{border-color:var(--accent);background:var(--accent-soft)}
+.anmain{min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px}
+.antitulo h2{font-size:14px;font-weight:600}
+.antitulo p{margin:1px 0 6px;font-size:11px;color:var(--muted)}
+.anresumen{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.anresumen .ch{border:1px solid var(--line);border-radius:7px;padding:4px 8px;background:var(--surface-2);font-size:11.5px}
+.anresumen .ch b{font-family:var(--mono);font-weight:600}
+.anresumen .ch small{display:block;font-size:9.5px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.ancapas{display:flex;flex-wrap:wrap;gap:5px 8px;align-items:center;font-size:11px;margin:4px 0}
+.ancapas .capa{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;
+  padding:1px 8px;cursor:pointer;background:var(--surface-2);color:var(--ink-2)}
+.ancapas .capa[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.ancapas .capa i{width:14px;height:0;border-top:2px solid var(--cc);display:inline-block}
+.ancapas .capa i.pun{border-top-style:dashed}
+.ancapas .capa i.ban{height:7px;border:0;background:var(--cc);opacity:.35}
+.ancapas input,.ancapas select{font:inherit;font-size:11px;padding:0 3px;width:46px;border:1px solid var(--line);
+  border-radius:4px;background:var(--surface-3);color:var(--fg)}
+.ancapas select{width:auto}
+.ancapas .capagrp{display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
+.anplot{min-height:320px}
+.anresultados{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px;margin-top:8px;font-size:10.5px}
+.anresultados details{border:1px solid var(--line-2);border-radius:6px;background:var(--surface-2);padding:4px 7px}
+.anresultados summary{cursor:pointer;font-weight:600;font-size:11px}
+.anresultados table{font-size:10.5px;margin-top:3px}
+.anresultados th,.anresultados td{padding:2px 5px}
+.anresultados td.sig{color:var(--accent);font-weight:600}
+.anresultados p{margin:4px 0 2px;color:var(--ink-2);line-height:1.35}
+.anvacio{padding:30px;text-align:center;color:var(--muted);font-size:12px}
 .chip{display:inline-block;padding:1px 6px;border-radius:999px;font-size:10px;font-weight:600;border:1px solid var(--line)}
 .chip-ic{background:var(--accent-soft);color:var(--accent);border-color:transparent}
 .chip-cn{background:transparent;color:var(--crit);border-color:var(--crit)}
@@ -534,7 +592,10 @@ th[data-help]{text-decoration:underline dotted var(--axis);text-underline-offset
    lado de los selectores y partidas a la mitad se leen como si fueran otra
    cosa. flex-basis:100% las baja enteras. */
 .efila{flex-basis:100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.efila[hidden]{display:none}
+/* El atributo hidden pierde contra cualquier clase que fije display (flex,
+   grid), y el elemento se queda a la vista. Esta regla lo hace valer siempre,
+   para todas las clases presentes y futuras. */
+[hidden]{display:none!important}
 .edest{flex-basis:100%;font-size:11px;color:var(--muted);line-height:1.45}
 .edest b{color:var(--ink-2);font-weight:600}
 .ecandado{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);
@@ -950,6 +1011,8 @@ tr.esob .ecelda{border-color:var(--sem-bad);background:rgba(220,38,38,.09);
       <button data-v="ttm" aria-pressed="true" data-i18n="kp.b.ttm">Últimos 12 meses</button>
       <button data-v="mes" aria-pressed="false" data-i18n="kp.b.mes">Solo el mes</button>
     </div>
+    <span style="flex:1"></span>
+    <button class="tbtn" id="tfAvanzado" data-i18n="an.abrir">Avanzado</button>
   </div>
   <div id="tfAviso"></div>
   <div class="grid2" id="tfRazones"></div>
@@ -967,6 +1030,53 @@ tr.esob .ecelda{border-color:var(--sem-bad);background:rgba(220,38,38,.09);
         <p data-i18n="tf.wacc.s">Qué se observa y qué es un juicio</p>
       </div><div class="card-tools"></div></div>
       <div class="tblwrap"><table class="kptab" id="tfWacc"></table></div>
+    </section>
+  </div>
+</div>
+
+<!-- ======================= ANÁLISIS AVANZADO ===========================
+     Se abre con el botón Avanzado de Indicadores, o con #analisis en la
+     dirección —que es como se deja abierto en una segunda ventana mientras en
+     la otra se fijan las metas—. Ocupa la pestaña entera por su escala: a la
+     izquierda todos los indicadores en tablas compactas, a la derecha el
+     análisis del elegido. Las metas se pueden fijar ahí mismo.
+     ==================================================================== -->
+<div id="panelAnalisis" hidden>
+  <div class="anbar">
+    <button class="tbtn" id="anVolver" data-i18n="an.volver">← Indicadores</button>
+    <span class="flabel" data-i18n="an.entidades">Empresas</span>
+    <div class="bubbles" id="anEntidades"></div>
+    <span class="flabel" data-i18n="an.periodicidad">Periodicidad</span>
+    <input class="txtin anp" id="anP" type="number" min="1" max="12" step="1" value="12" inputmode="numeric">
+    <button class="help" type="button" data-help="an.periodicidad.help">?</button>
+    <div class="seg" id="anBase" role="group">
+      <button data-v="ttm" aria-pressed="true" data-i18n="an.base.ttm">12 m móviles</button>
+      <button data-v="mes" aria-pressed="false" data-i18n="an.base.periodo">Por periodo</button>
+    </div>
+    <span class="flabel" data-i18n="an.ventana">Periodo</span>
+    <div class="seg" id="anVentana" role="group">
+      <button data-v="12">12 m</button><button data-v="24">24 m</button>
+      <button data-v="36" aria-pressed="true">36 m</button>
+      <button data-v="all" data-i18n="f.p.todo">Todo</button>
+      <button data-v="custom" data-i18n="an.ventana.custom">Elegir…</button>
+    </div>
+    <label class="anchk"><input type="checkbox" id="anDudosos">
+      <span id="anDudososTxt" data-i18n="an.dudosos">Incluir dudosos</span></label>
+    <button class="help" type="button" data-help="an.dudosos.help">?</button>
+    <span style="flex:1"></span>
+    <span class="hint" id="anPend"></span>
+    <button class="tbtn" id="anGuardar" data-i18n="en.guardar">Guardar</button>
+    <button class="tbtn" id="anReset" data-i18n="an.reset">Restablecer</button>
+  </div>
+  <div class="anmeses" id="anMeses" hidden></div>
+  <div class="anlayout">
+    <aside class="anlista" id="anLista"></aside>
+    <section class="anmain">
+      <div class="antitulo"><h2 id="anTitulo"></h2><p id="anSub"></p></div>
+      <div class="anresumen" id="anResumen"></div>
+      <div class="ancapas" id="anCapas"></div>
+      <div class="plot anplot" id="anPlot"></div>
+      <div class="anresultados" id="anResultados"></div>
     </section>
   </div>
 </div>
@@ -1553,6 +1663,27 @@ const ENTRADAS = __ENTRADAS_JSON__;
      enConstruir()               arma controles y dibuja
      ajRenderEntradas()          la puerta discreta, dentro de Ajustes
 
+   ANÁLISIS DE INDICADORES  (prefijo an; pestaña Avanzado, #analisis)
+     AN / AN_DEF                 la elección vigente y la de fábrica; se
+                                 recuerda con recordar('analisis', AN)
+     anSerie(ent, kpi)           la serie de una entidad: mensual (doce meses
+                                 móviles o el mes) o KPIS.periodicas[p], que el
+                                 servidor calcula con las mismas fórmulas
+     anSerieCompleta()           toda la historia, para elegir periodos
+     anPuntos / anAnalizar       lo que entra a la estadística (sin dudosos,
+                                 salvo que se pidan) y todos los cálculos
+     anCuantil                   cuantil tipo 7 (el de R y numpy por omisión)
+     anMCO / anTheilSen          tendencia: mínimos cuadrados con valor p de la
+                                 t, y Theil-Sen con IC y Mann-Kendall
+     anPT / anPZ                 valores p de la t de Student y de la normal
+     anMediaMovil                SMA o EMA
+     anTicks(lo, hi, n)          marcas del eje; la última ALCANZA el máximo
+     anBarra / anPintarMeses     la barra de herramientas y la lista de periodos
+     anPintarLista()             los 31 indicadores, con meta arriba; metas
+                                 editables para las entidades vistas
+     anPintarResumen / anPintarCapas / anGrafica / anPintarResultados
+     anPintarCuerpo / anPintar   redibuja el cuerpo, o todo
+
    ============================================================================
    INSTRUCCIONES PARA DESARROLLO FUTURO — LECTURA OBLIGATORIA
    ============================================================================
@@ -1997,6 +2128,99 @@ const I18N = {
     'en.metas.destino':'Se escribe en: {l}',
     'en.metas.col.vigente.de':'Meta vigente · {e}',
     'en.grupo.soloMetas':'Del Grupo solo se fijan metas: sus cifras se construyen con las de cada empresa, así que las entradas se capturan por empresa.',
+    'an.titulo':'Análisis de indicadores',
+    'an.abrir':'Avanzado',
+    'an.volver':'← Indicadores',
+    'an.entidades':'Empresas',
+    'an.periodicidad':'Periodicidad',
+    'an.periodicidad.help':'Cuántos datos por año: 12 = mensual, 6 = bimestral, 4 = trimestral, 3 = cuatrimestral, 2 = semestral, 1 = anual. Un número más chico suaviza la serie. Cada periodo se calcula con sus propias cifras —el margen de un año es el EBITDA del año entre los ingresos del año—, no promediando meses.',
+    'an.p.invalida':'La periodicidad tiene que repartir el año en partes iguales: {l}.',
+    'an.base.ttm':'12 m móviles',
+    'an.base.periodo':'Por periodo',
+    'an.base.solo12':'Solo con periodicidad 12: con periodos más largos, cada dato ya es el periodo entero.',
+    'an.ventana':'Periodo',
+    'an.ventana.custom':'Elegir…',
+    'an.dudosos':'Incluir dudosos',
+    'an.dudosos.n':'Incluir dudosos ({n})',
+    'an.dudosos.help':'Meses que no cerraron (sin depreciación del mes), afectados por el cierre anual del ERP, o periodos incompletos (el año en curso). Se excluyen por omisión porque deforman la estadística; incluirlos sirve para ver cómo se expresa un error de captura. En la gráfica salen como puntos huecos.',
+    'an.reset':'Restablecer',
+    'an.pend':'{n} meta(s) sin guardar',
+    'an.lista.conmeta':'Con meta',
+    'an.lista.sinmeta':'Sin meta',
+    'an.lista.ind':'Indicador',
+    'an.lista.meta':'Meta',
+    'an.lista.varias':'varias',
+    'an.lista.meta.help':'Se escribe en: {l}. Los porcentajes se escriben como porcentaje (18 = 18%). Vacía la celda para quitar la meta y oprime Guardar.',
+    'an.sub.ttm':'Mensual, doce meses móviles',
+    'an.sub.mes':'Mensual, el dato del mes',
+    'an.sub.p':'{p} periodo(s) por año',
+    'an.per.b':'B{n} {a}',
+    'an.per.t':'T{n} {a}',
+    'an.per.c':'C{n} {a}',
+    'an.per.s':'S{n} {a}',
+    'an.vacio':'Sin datos para este indicador con la selección actual.',
+    'an.t.dudoso':'dudoso',
+    'an.r.ultimo':'Último',
+    'an.r.mediana':'Mediana',
+    'an.r.rango':'Rango típico P25–P75',
+    'an.r.tendencia':'Tendencia / año',
+    'an.r.meta':'Meta',
+    'an.r.cumple':'se cumplió {ok} de {n}',
+    'an.r.fuera':'Fuera de control',
+    'an.capas':'Capas',
+    'an.capas.help':'Prende y apaga lo que se dibuja sobre la misma gráfica. Cada capa guarda sus parámetros al apagarse. Pasa el cursor por la gráfica para ver el valor de cada fecha.',
+    'an.c.serie':'Serie',
+    'an.c.serie.help':'El indicador en cada periodo.',
+    'an.c.media':'Media móvil',
+    'an.c.media.help':'SMA: promedio simple de los últimos n periodos. EMA: promedio exponencial, que pesa más lo reciente (α más alto = más reciente).',
+    'an.c.banda':'Banda P25–P75',
+    'an.c.banda.help':'Donde cae la mitad central de los periodos: el rango típico. Fuera de la banda está la cuarta parte más alta y la más baja.',
+    'an.c.percentil':'Percentil',
+    'an.c.percentil.help':'Una línea en el percentil que elijas: P90 es el valor que solo el 10% de los periodos supera.',
+    'an.c.tendencia':'Tendencia',
+    'an.c.tendencia.help':'Recta de mínimos cuadrados. Su pendiente y su valor p están abajo.',
+    'an.c.robusta':'Tendencia robusta',
+    'an.c.robusta.help':'Theil-Sen: la mediana de las pendientes entre todos los pares de puntos. Un mes extremo no la arrastra.',
+    'an.c.meta':'Meta',
+    'an.c.meta.help':'La meta de cada empresa vista.',
+    'an.c.control':'Control',
+    'an.c.control.help':'Límites a ±kσ de la mediana, con σ robusta (1.4826 × MAD). Los periodos fuera se marcan con un círculo: son los que vale la pena investigar.',
+    'an.c.ventana':'Periodos de la media',
+    'an.c.rango':'Fuera de rango: entre {a} y {b}.',
+    'an.b.est':'Estadística',
+    'an.b.tend':'Tendencia',
+    'an.b.media':'Media móvil',
+    'an.b.ctrl':'Control',
+    'an.b.meta':'Meta y cumplimiento',
+    'an.e.media':'Media',
+    'an.e.desv':'Desviación estándar',
+    'an.e.min':'Mínimo',
+    'an.e.mediana':'Mediana (P50)',
+    'an.e.max':'Máximo',
+    'an.t.pend':'Pendiente MCO / año',
+    'an.t.ee':'Error estándar',
+    'an.t.p':'Valor p',
+    'an.t.ic':'IC 95%',
+    'an.t.sen':'Pendiente Theil-Sen / año',
+    'an.t.sen.ic':'IC 95% Theil-Sen',
+    'an.t.mk':'Mann-Kendall',
+    'an.t.mk.p':'Valor p Mann-Kendall',
+    'an.m.tipo':'Tipo',
+    'an.m.ultimo':'Último valor',
+    'an.k.centro':'Centro (mediana)',
+    'an.k.lo':'Límite inferior',
+    'an.k.hi':'Límite superior',
+    'an.k.fuera':'Periodos fuera',
+    'an.mt.cumple':'Periodos que la cumplen',
+    'an.mt.dif':'Mediana − meta',
+    'an.n.est':'Lo típico es {med}; la mitad de los periodos cae entre {lo} y {hi}.',
+    'an.n.tend.sube':'Hay tendencia al alza ({b} por año, valor p {p}): no es ruido.',
+    'an.n.tend.baja':'Hay tendencia a la baja ({b} por año, valor p {p}): no es ruido.',
+    'an.n.tend.no':'No se distingue una tendencia del ruido (valor p {p}).',
+    'an.n.pocos':'Muy pocos periodos para una tendencia.',
+    'an.n.ctrl':'Fuera de ±{k}σ robusta de la mediana es raro para este indicador: un periodo así merece revisarse.',
+    'an.n.meta':'Con la meta vigente, {ok} de {n} periodos la habrían cumplido.',
+    'an.n.sinmeta':'Sin meta para comparar.',
     'nodata':'Sin datos con los filtros actuales'
   },
   en:{
@@ -2326,6 +2550,99 @@ const I18N = {
     'en.metas.destino':'Writes to: {l}',
     'en.metas.col.vigente.de':'Current target · {e}',
     'en.grupo.soloMetas':'Only targets are set for the Group: its figures are built from each company\'s, so entries are captured per company.',
+    'an.titulo':'Indicator analysis',
+    'an.abrir':'Advanced',
+    'an.volver':'← Indicators',
+    'an.entidades':'Companies',
+    'an.periodicidad':'Periodicity',
+    'an.periodicidad.help':'Data points per year: 12 = monthly, 6 = bimonthly, 4 = quarterly, 3 = four-monthly, 2 = half-yearly, 1 = yearly. A smaller number smooths the series. Each period is computed from its own figures —a year\'s margin is that year\'s EBITDA over that year\'s revenue—, not by averaging months.',
+    'an.p.invalida':'Periodicity must split the year into equal parts: {l}.',
+    'an.base.ttm':'Rolling 12 m',
+    'an.base.periodo':'Per period',
+    'an.base.solo12':'Only with periodicity 12: with longer periods each point already is the whole period.',
+    'an.ventana':'Window',
+    'an.ventana.custom':'Pick…',
+    'an.dudosos':'Include doubtful',
+    'an.dudosos.n':'Include doubtful ({n})',
+    'an.dudosos.help':'Months that did not close (no depreciation for the month), affected by the ERP\'s year-end closing, or incomplete periods (the current year). Excluded by default because they distort the statistics; including them helps see how a capture error shows up. They appear as hollow points on the chart.',
+    'an.reset':'Reset',
+    'an.pend':'{n} unsaved target(s)',
+    'an.lista.conmeta':'With a target',
+    'an.lista.sinmeta':'Without a target',
+    'an.lista.ind':'Indicator',
+    'an.lista.meta':'Target',
+    'an.lista.varias':'mixed',
+    'an.lista.meta.help':'Writes to: {l}. Percentages are typed as percentages (18 = 18%). Clear the cell to remove the target, then press Save.',
+    'an.sub.ttm':'Monthly, rolling twelve months',
+    'an.sub.mes':'Monthly, the month\'s own figure',
+    'an.sub.p':'{p} period(s) per year',
+    'an.per.b':'B{n} {a}',
+    'an.per.t':'Q{n} {a}',
+    'an.per.c':'F{n} {a}',
+    'an.per.s':'H{n} {a}',
+    'an.vacio':'No data for this indicator with the current selection.',
+    'an.t.dudoso':'doubtful',
+    'an.r.ultimo':'Latest',
+    'an.r.mediana':'Median',
+    'an.r.rango':'Typical range P25–P75',
+    'an.r.tendencia':'Trend / year',
+    'an.r.meta':'Target',
+    'an.r.cumple':'met {ok} of {n}',
+    'an.r.fuera':'Out of control',
+    'an.capas':'Layers',
+    'an.capas.help':'Turn what is drawn on the same chart on and off. Each layer keeps its settings when turned off. Hover over the chart to see each date\'s values.',
+    'an.c.serie':'Series',
+    'an.c.serie.help':'The indicator in each period.',
+    'an.c.media':'Moving average',
+    'an.c.media.help':'SMA: simple average of the last n periods. EMA: exponential average, weighting recent periods more (higher α = more recent).',
+    'an.c.banda':'P25–P75 band',
+    'an.c.banda.help':'Where the middle half of periods falls: the typical range. Outside it are the top and bottom quarters.',
+    'an.c.percentil':'Percentile',
+    'an.c.percentil.help':'A line at the percentile you choose: P90 is the value only 10% of periods exceed.',
+    'an.c.tendencia':'Trend',
+    'an.c.tendencia.help':'Least-squares line. Its slope and p-value are below.',
+    'an.c.robusta':'Robust trend',
+    'an.c.robusta.help':'Theil-Sen: the median of the slopes between every pair of points. One extreme month does not drag it.',
+    'an.c.meta':'Target',
+    'an.c.meta.help':'The target of each company shown.',
+    'an.c.control':'Control',
+    'an.c.control.help':'Limits at ±kσ from the median, with robust σ (1.4826 × MAD). Periods outside are circled: those are the ones worth investigating.',
+    'an.c.ventana':'Periods in the average',
+    'an.c.rango':'Out of range: between {a} and {b}.',
+    'an.b.est':'Statistics',
+    'an.b.tend':'Trend',
+    'an.b.media':'Moving average',
+    'an.b.ctrl':'Control',
+    'an.b.meta':'Target and attainment',
+    'an.e.media':'Mean',
+    'an.e.desv':'Standard deviation',
+    'an.e.min':'Minimum',
+    'an.e.mediana':'Median (P50)',
+    'an.e.max':'Maximum',
+    'an.t.pend':'OLS slope / year',
+    'an.t.ee':'Standard error',
+    'an.t.p':'p-value',
+    'an.t.ic':'95% CI',
+    'an.t.sen':'Theil-Sen slope / year',
+    'an.t.sen.ic':'Theil-Sen 95% CI',
+    'an.t.mk':'Mann-Kendall',
+    'an.t.mk.p':'Mann-Kendall p-value',
+    'an.m.tipo':'Type',
+    'an.m.ultimo':'Latest value',
+    'an.k.centro':'Center (median)',
+    'an.k.lo':'Lower limit',
+    'an.k.hi':'Upper limit',
+    'an.k.fuera':'Periods outside',
+    'an.mt.cumple':'Periods meeting it',
+    'an.mt.dif':'Median − target',
+    'an.n.est':'The typical value is {med}; half the periods fall between {lo} and {hi}.',
+    'an.n.tend.sube':'There is an upward trend ({b} per year, p-value {p}): it is not noise.',
+    'an.n.tend.baja':'There is a downward trend ({b} per year, p-value {p}): it is not noise.',
+    'an.n.tend.no':'No trend can be told apart from noise (p-value {p}).',
+    'an.n.pocos':'Too few periods for a trend.',
+    'an.n.ctrl':'Beyond ±{k} robust σ from the median is rare for this indicator: such a period deserves a look.',
+    'an.n.meta':'With the current target, {ok} of {n} periods would have met it.',
+    'an.n.sinmeta':'No target to compare against.',
     'nodata':'No data for the current filters'
   }
 };
@@ -3753,6 +4070,7 @@ const HOJAS = {
   finanzas:    {panel: 'panelFinanzas',    tit: 'tab.finanzas'},
   direccion:   {panel: 'panelDireccion',   tit: 'tab.direccion'},
   indicadores: {panel: 'panelIndicadores', tit: 'tab.indicadores'},
+  analisis:    {panel: 'panelAnalisis',    tit: 'an.titulo'},
   entradas:    {panel: 'panelEntradas',    tit: 'aj.ent.title'}
 };
 
@@ -4370,6 +4688,7 @@ const GLOSARIO_CATS = [
   {k:'estados', es:'Estados financieros', en:'Financial statements'},
   {k:'razones', es:'Razones e indicadores', en:'Ratios and metrics'},
   {k:'captura', es:'Hoja de captura', en:'Capture sheet'},
+  {k:'analisis', es:'Análisis de indicadores', en:'Indicator analysis'},
   {k:'siglas', es:'Siglas generales', en:'General acronyms'},
 ];
 const GLOSARIO = [
@@ -4512,6 +4831,31 @@ const GLOSARIO = [
   {cat:'siglas', es:{t:'RFC', d:'Registro Federal de Contribuyentes.'}, en:{t:'RFC', d:'Mexican federal taxpayer ID.'}},
   {cat:'siglas', es:{t:'SAP', d:'Sistema ERP donde se registra la contabilidad del grupo; algunas facturas citan su estatus de sincronización con SAP.'},
     en:{t:'SAP', d:'ERP system where the group\'s accounting is recorded; some invoices reference their SAP sync status.'}},
+
+  {cat:'analisis', es:{t:'Periodicidad', d:'Cuántos datos por año: 12 mensual, 6 bimestral, 4 trimestral, 3 cuatrimestral, 2 semestral, 1 anual. Cada periodo se calcula con sus propias cifras: los flujos (ventas, EBITDA) se suman dentro del periodo y los saldos (deuda, capital) se toman al cierre; nunca se promedian los meses.'},
+    en:{t:'Periodicity', d:'Data points per year: 12 monthly, 6 bimonthly, 4 quarterly, 3 four-monthly, 2 half-yearly, 1 yearly. Each period is computed from its own figures: flows (sales, EBITDA) are summed within the period and balances (debt, equity) are taken at the close; months are never averaged.'}},
+  {cat:'analisis', es:{t:'Meses dudosos', d:'Meses que no cerraron (sin depreciación registrada), meses afectados por el cierre anual del ERP y periodos incompletos. Se excluyen de la estadística por omisión y se pueden volver a incluir; en la gráfica salen como puntos huecos.'},
+    en:{t:'Doubtful months', d:'Months that did not close (no depreciation recorded), months affected by the ERP\'s year-end closing, and incomplete periods. Excluded from the statistics by default and can be included again; they appear as hollow points on the chart.'}},
+  {cat:'analisis', es:{t:'Mediana', d:'El valor del medio cuando los periodos se ordenan: la mitad queda arriba y la mitad abajo. A diferencia de la media, un mes extremo no la mueve.'},
+    en:{t:'Median', d:'The middle value when periods are sorted: half are above and half below. Unlike the mean, one extreme month does not move it.'}},
+  {cat:'analisis', es:{t:'Cuartiles y percentiles (P25, P75, Pn)', d:'Pn es el valor que solo el (100 − n)% de los periodos supera. P25 y P75 encierran la mitad central: el rango típico. Se calculan como en R y numpy por omisión (tipo 7, con interpolación).'},
+    en:{t:'Quartiles and percentiles (P25, P75, Pn)', d:'Pn is the value only (100 − n)% of periods exceed. P25 and P75 enclose the middle half: the typical range. Computed as R and numpy do by default (type 7, interpolated).'}},
+  {cat:'analisis', es:{t:'Media móvil (SMA / EMA)', d:'SMA: el promedio simple de los últimos n periodos. EMA: promedio exponencial, en el que cada periodo pesa α y lo anterior (1 − α); con α más alto, sigue más de cerca lo reciente.'},
+    en:{t:'Moving average (SMA / EMA)', d:'SMA: the simple average of the last n periods. EMA: exponential average, where each period weighs α and the previous (1 − α); a higher α follows recent periods more closely.'}},
+  {cat:'analisis', es:{t:'Tendencia MCO', d:'La recta de mínimos cuadrados ordinarios. Su pendiente se expresa por año; el error estándar mide qué tan incierta es, y el IC 95% es el rango donde probablemente está la pendiente real.'},
+    en:{t:'OLS trend', d:'The ordinary least-squares line. Its slope is expressed per year; the standard error measures how uncertain it is, and the 95% CI is the range where the true slope probably lies.'}},
+  {cat:'analisis', es:{t:'Valor p', d:'La probabilidad de ver una pendiente así de grande si en realidad no hubiera tendencia. Por debajo de 0.05 se considera que la tendencia no es ruido; arriba, no se puede distinguir del ruido.'},
+    en:{t:'p-value', d:'The probability of seeing a slope this large if there were really no trend. Below 0.05 the trend is considered not to be noise; above it, it cannot be told apart from noise.'}},
+  {cat:'analisis', es:{t:'R²', d:'Qué fracción de la variación de la serie explica la recta de tendencia: 0 nada, 1 todo. Un R² bajo con valor p bajo es una tendencia real pero pequeña frente al ruido.'},
+    en:{t:'R²', d:'What fraction of the series\' variation the trend line explains: 0 none, 1 all. A low R² with a low p-value is a real trend that is small next to the noise.'}},
+  {cat:'analisis', es:{t:'Tendencia robusta (Theil-Sen)', d:'La mediana de las pendientes entre todos los pares de periodos. Un mes extremo no la arrastra, como sí arrastra a la recta de mínimos cuadrados.'},
+    en:{t:'Robust trend (Theil-Sen)', d:'The median of the slopes between every pair of periods. One extreme month does not drag it, as it does the least-squares line.'}},
+  {cat:'analisis', es:{t:'Mann-Kendall', d:'Prueba de tendencia que solo mira si cada periodo es mayor o menor que los anteriores, no cuánto. Su valor p acompaña a la tendencia robusta.'},
+    en:{t:'Mann-Kendall', d:'A trend test that only looks at whether each period is higher or lower than the earlier ones, not by how much. Its p-value goes with the robust trend.'}},
+  {cat:'analisis', es:{t:'Límites de control (MAD)', d:'Bandas a ±k σ de la mediana, con σ robusta = 1.4826 × MAD (la mediana de las distancias a la mediana). Un periodo fuera de ellas es raro para ese indicador y merece revisarse.'},
+    en:{t:'Control limits (MAD)', d:'Bands at ±k σ from the median, with robust σ = 1.4826 × MAD (the median of distances to the median). A period outside them is rare for that indicator and deserves a look.'}},
+  {cat:'analisis', es:{t:'Cumplimiento de meta', d:'Cuántos de los periodos vistos habrían alcanzado la meta vigente, según si el indicador es mejor cuando sube o cuando baja.'},
+    en:{t:'Target attainment', d:'How many of the periods shown would have met the current target, depending on whether the indicator is better higher or lower.'}},
 ];
 
 function glosarioNorm(s){ return strip(s).toLowerCase(); }
@@ -5928,6 +6272,11 @@ function kpConstruir(){
 }
 
 function tfConstruir(){
+  // Avanzado abre el análisis con la empresa que se está viendo aquí.
+  document.getElementById('tfAvanzado').onclick = () => {
+    if (TF.empresa) AN.ents = [TF.empresa];
+    anRecordar(); activarPestana('analisis');
+  };
   if (!kpHay()){
     document.getElementById('tfRazones').innerHTML =
       `<p class="note" style="padding:18px">${t('kp.sindatos')}</p>`;
@@ -6489,12 +6838,14 @@ function enAplicarEstado(r){
   if (r.entradas) ENTRADAS.entradas = r.entradas;
   if (r.metas) KPIS.metas = r.metas;
   if (r.series) KPIS.series = r.series;
+  if (r.periodicas) KPIS.periodicas = r.periodicas;
   if (r.bitacora_actos) ENTRADAS.bitacora_actos = r.bitacora_actos;
   if (r.bitacora){ ENTRADAS.bitacora = r.bitacora; enPintarBitacora(); }
   const abierta = PESTANA;
   if (abierta === 'direccion') kpConstruir();
   else if (abierta === 'indicadores') tfConstruir();
   else if (abierta === 'entradas') enPintar();
+  else if (abierta === 'analisis') anPintar();
 }
 
 function enCapturar(campo, bruto){
@@ -6757,6 +7108,8 @@ function enRegistrarRespuesta(){
       // enviar dejaría a alguien sin su captura si la escritura falla.
       EN.cambios = {}; enGuardarPendientes();
       EN.metas = {}; enGuardarMetasPendientes();
+      // Las otras ventanas abiertas de la app se enteran (ver DOS VENTANAS).
+      try { localStorage.setItem('estadoCambio', String(Date.now())); } catch (e) {}
       toast(t(r.series ? 'en.guardado.recalc' : 'en.guardado',
               {n: r.aplicados, a: r.autor || ''}));
       enPintar();
@@ -6836,6 +7189,625 @@ function enConstruir(){
   enPintarBitacora();
 }
 
+/* ============================================================================
+   ANÁLISIS AVANZADO  (prefijo an)
+   ----------------------------------------------------------------------------
+   Una pestaña entera para leer un indicador en el tiempo y fijar su meta con
+   esa lectura a la vista. A la izquierda, todos los indicadores en tablas
+   compactas —los que tienen meta arriba—; a la derecha, el elegido: resumen,
+   gráfica con capas que se prenden y se apagan, y los resultados de cada
+   herramienta con sus coeficientes.
+
+   DE DÓNDE SALEN LOS NÚMEROS. Periodicidad 12 es la serie mensual de siempre
+   (KPIS.series), en su versión de doce meses móviles cuando el indicador la
+   tiene. Cualquier otra periodicidad sale de KPIS.periodicas, que se calcula
+   en Python juntando las cifras del periodo y pasándolas por las MISMAS
+   fórmulas: aquí no se promedia ni se recalcula ninguna razón. Lo que sí se
+   calcula aquí es estadística sobre la serie ya hecha —mediana, cuartiles,
+   tendencia, control—, que no depende de cómo se construyó el indicador.
+
+   MESES DUDOSOS: los que no cerraron, los arrasados por el cierre anual y los
+   periodos incompletos. Se excluyen por omisión y se pueden volver a incluir:
+   el gerente a veces necesita justo ver cómo se ve una cifra mal capturada.
+   Cuando entran, se dibujan huecos para que nunca se confundan con los demás.
+   ========================================================================== */
+const AN_PERIODICIDADES = [12, 6, 4, 3, 2, 1];
+const AN_DEF = {ents: null, kpi: null, p: 12, base: 'ttm', ventana: '36', meses: null,
+  dudosos: false,
+  capas: {serie: true, media: true, banda: true, tendencia: false, robusta: false,
+          meta: true, control: false, percentil: false},
+  par: {media: 'sma', ventanaMedia: 3, alpha: 0.3, percentil: 90, k: 3}};
+const AN = JSON.parse(JSON.stringify(AN_DEF));
+(function(){
+  const g = recordado('analisis');
+  if (g && typeof g === 'object') for (const k of Object.keys(AN_DEF))
+    if (g[k] !== undefined) AN[k] = (typeof AN_DEF[k] === 'object' && AN_DEF[k] && !Array.isArray(AN_DEF[k]))
+      ? Object.assign({}, AN_DEF[k], g[k]) : g[k];
+})();
+const anRecordar = () => recordar('analisis', AN);
+
+/* ---- estadística: funciones puras, sin pantalla --------------------------- */
+const anOrden = a => a.slice().sort((x, y) => x - y);
+function anCuantil(ord, q){                 // tipo 7, el de Excel y R por omisión
+  if (!ord.length) return null;
+  const h = (ord.length - 1) * q, lo = Math.floor(h);
+  return ord[lo] + (h - lo) * ((ord[Math.min(lo + 1, ord.length - 1)]) - ord[lo]);
+}
+const anMedia = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
+function anDesv(a){
+  if (a.length < 2) return null;
+  const m = anMedia(a);
+  return Math.sqrt(a.reduce((s, x) => s + (x - m) ** 2, 0) / (a.length - 1));
+}
+function anMAD(a){
+  const ord = anOrden(a), med = anCuantil(ord, .5);
+  return anCuantil(anOrden(a.map(x => Math.abs(x - med))), .5);
+}
+/* Distribuciones para los valores p. La t de Student por la beta incompleta
+   regularizada (fracción continua de Lentz); la normal por erf. Precisión
+   sobrada para leer un valor p con tres decimales. */
+function anLnGamma(z){
+  const c = [76.18009172947146, -86.50532032941677, 24.01409824083091,
+             -1.231739572450155, .1208650973866179e-2, -.5395239384953e-5];
+  let x = z, y = z, tmp = x + 5.5; tmp -= (x + .5) * Math.log(tmp);
+  let ser = 1.000000000190015;
+  for (const ci of c) ser += ci / ++y;
+  return -tmp + Math.log(2.5066282746310005 * ser / x);
+}
+function anBetaCF(a, b, x){
+  let c = 1, d = 1 - (a + b) * x / (a + 1); d = 1 / (Math.abs(d) < 1e-30 ? 1e-30 : d);
+  let h = d;
+  for (let m = 1; m <= 200; m++){
+    const m2 = 2 * m;
+    let aa = m * (b - m) * x / ((a + m2 - 1) * (a + m2));
+    d = 1 + aa * d; c = 1 + aa / c; d = 1 / (Math.abs(d) < 1e-30 ? 1e-30 : d); h *= d * c;
+    aa = -(a + m) * (a + b + m) * x / ((a + m2) * (a + m2 + 1));
+    d = 1 + aa * d; c = 1 + aa / c; d = 1 / (Math.abs(d) < 1e-30 ? 1e-30 : d);
+    const del = d * c; h *= del;
+    if (Math.abs(del - 1) < 3e-12) break;
+  }
+  return h;
+}
+function anBetaInc(a, b, x){
+  if (x <= 0) return 0; if (x >= 1) return 1;
+  const bt = Math.exp(anLnGamma(a + b) - anLnGamma(a) - anLnGamma(b) + a * Math.log(x) + b * Math.log(1 - x));
+  return x < (a + 1) / (a + b + 2) ? bt * anBetaCF(a, b, x) / a : 1 - bt * anBetaCF(b, a, 1 - x) / b;
+}
+const anPT = (t, gl) => anBetaInc(gl / 2, .5, gl / (gl + t * t));      // dos colas
+function anErf(x){
+  const s = Math.sign(x); x = Math.abs(x);
+  const t = 1 / (1 + .3275911 * x);
+  const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - .284496736) * t + .254829592) * t * Math.exp(-x * x);
+  return s * y;
+}
+const anPZ = z => 2 * (1 - .5 * (1 + anErf(Math.abs(z) / Math.SQRT2)));
+function anTCrit(gl){                        // t al 97.5% por bisección
+  let lo = 0, hi = 50;
+  for (let i = 0; i < 60; i++){ const m = (lo + hi) / 2; if (anPT(m, gl) > .05) lo = m; else hi = m; }
+  return (lo + hi) / 2;
+}
+/* Mínimos cuadrados de y contra x (x en AÑOS, para que la pendiente sea "por año"). */
+function anMCO(x, y){
+  const n = x.length; if (n < 3) return null;
+  const mx = anMedia(x), my = anMedia(y);
+  let sxx = 0, sxy = 0, syy = 0;
+  for (let i = 0; i < n; i++){ sxx += (x[i] - mx) ** 2; sxy += (x[i] - mx) * (y[i] - my); syy += (y[i] - my) ** 2; }
+  if (!sxx) return null;
+  const b = sxy / sxx, a = my - b * mx;
+  const sse = y.reduce((s, yi, i) => s + (yi - a - b * x[i]) ** 2, 0);
+  const gl = n - 2, se = Math.sqrt(sse / gl / sxx), tt = se ? b / se : Infinity;
+  const tc = anTCrit(gl);
+  return {a, b, se, t: tt, p: se ? anPT(tt, gl) : 0, r2: syy ? 1 - sse / syy : 1,
+          lo: b - tc * se, hi: b + tc * se, n};
+}
+/* Theil-Sen (mediana de las pendientes entre pares) con su intervalo, y la
+   prueba de Mann-Kendall para la tendencia. A diferencia de la recta de
+   mínimos cuadrados, un mes extremo no la arrastra. */
+function anTheilSen(x, y){
+  const n = x.length; if (n < 3) return null;
+  const pend = []; let S = 0;
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++){
+    if (x[j] !== x[i]) pend.push((y[j] - y[i]) / (x[j] - x[i]));
+    S += Math.sign(y[j] - y[i]);
+  }
+  const ord = anOrden(pend), b = anCuantil(ord, .5);
+  const a = anCuantil(anOrden(y.map((yi, i) => yi - b * x[i])), .5);
+  const varS = n * (n - 1) * (2 * n + 5) / 18;
+  const z = S > 0 ? (S - 1) / Math.sqrt(varS) : S < 0 ? (S + 1) / Math.sqrt(varS) : 0;
+  const ca = 1.96 * Math.sqrt(varS), N = ord.length;
+  const r1 = Math.max(0, Math.round((N - ca) / 2) - 1), r2 = Math.min(N - 1, Math.round((N + ca) / 2));
+  return {a, b, lo: ord[r1], hi: ord[r2], S, z, p: anPZ(z), n};
+}
+function anMediaMovil(v, tipo, w, alpha){
+  const out = [];
+  if (tipo === 'ema'){
+    let e = null;
+    for (const x of v){ e = e === null ? x : alpha * x + (1 - alpha) * e; out.push(e); }
+    return out;
+  }
+  for (let i = 0; i < v.length; i++)
+    out.push(i + 1 < w ? null : anMedia(v.slice(i + 1 - w, i + 1)));
+  return out;
+}
+
+/* ---- los datos ------------------------------------------------------------ */
+function anEntidades(){
+  const l = (KPIS.empresas || []).filter(e => (KPIS.series || {})[e]);
+  if (KPIS.clave_grupo && (KPIS.series || {})[KPIS.clave_grupo]) l.push(KPIS.clave_grupo);
+  return l;
+}
+const anEsGrupo = e => e === KPIS.clave_grupo;
+const anColor = e => anEsGrupo(e) ? cssv('--ink') : empColor(Math.max(0, (KPIS.empresas || []).indexOf(e)));
+const anNombre = e => anEsGrupo(e) ? t('fz.consolidado') : e;
+function anUsaTTM(k){ return AN.p === 12 && AN.base === 'ttm' && !!kpCat(k).ttm; }
+
+/* Etiqueta de un periodo: "2026-09", "T3 2026", "S1 2026", "2025"… */
+function anEtiqueta(f){
+  if (AN.p === 12) return f.periodo;
+  if (AN.p === 1) return String(f.anio);
+  const pre = {6: 'an.per.b', 4: 'an.per.t', 3: 'an.per.c', 2: 'an.per.s'}[AN.p];
+  return t(pre, {n: f.idx, a: f.anio});
+}
+/* La serie de una entidad para el indicador: [{llave, etiqueta, fin, v, dudoso}],
+   ya recortada a la ventana. `fin` es el último mes del periodo (AAAA-MM). */
+function anSerie(ent, k){
+  const crudo = AN.p === 12 ? ((KPIS.series || {})[ent] || [])
+              : (((KPIS.periodicas || {})[ent] || {})[String(AN.p)] || []);
+  const kk = anUsaTTM(k) ? kpCat(k).ttm : k;
+  let s = crudo.map(f => {
+    const v = (f.r || {})[kk];
+    return {llave: f.periodo, etiqueta: anEtiqueta(f), fin: f.ultimo_mes || f.periodo,
+            v: (v === undefined || v === null || !isFinite(v)) ? null : v,
+            dudoso: !!(f.mes_incompleto || f.es_cierre_anual || f.completo === false)};
+  });
+  if (AN.ventana === 'custom' && Array.isArray(AN.meses))
+    s = s.filter(x => AN.meses.includes(x.llave));
+  else if (AN.ventana !== 'all'){
+    const ult = s.length ? s[s.length - 1].fin : null;
+    if (ult){
+      const [a, m] = ult.split('-').map(Number), lim = a * 12 + m - (+AN.ventana);
+      s = s.filter(x => { const [aa, mm] = x.fin.split('-').map(Number); return aa * 12 + mm > lim; });
+    }
+  }
+  return s;
+}
+/* Los puntos que entran a la estadística: con dato y, salvo que se pidan,
+   sin dudosos. La posición x va en AÑOS desde el primero, para que las
+   pendientes se lean "por año" sea cual sea la periodicidad. */
+function anPuntos(serie){
+  return serie.map((x, i) => Object.assign({i, x: i / AN.p}, x))
+              .filter(x => x.v !== null && (AN.dudosos || !x.dudoso));
+}
+function anAnalizar(ent, k){
+  const serie = anSerie(ent, k), pts = anPuntos(serie);
+  const v = pts.map(p => p.v), ord = anOrden(v);
+  const est = v.length ? {n: v.length, media: anMedia(v), mediana: anCuantil(ord, .5),
+    desv: anDesv(v), min: ord[0], max: ord[ord.length - 1], p25: anCuantil(ord, .25),
+    p75: anCuantil(ord, .75), px: anCuantil(ord, AN.par.percentil / 100), mad: anMAD(v)} : null;
+  const mco = anMCO(pts.map(p => p.x), v), ts = anTheilSen(pts.map(p => p.x), v);
+  const mm = anMediaMovil(v, AN.par.media, Math.max(2, +AN.par.ventanaMedia || 3), +AN.par.alpha || .3);
+  let control = null;
+  if (est && est.mad !== null){
+    const s = 1.4826 * est.mad, kk = +AN.par.k || 3;
+    control = {centro: est.mediana, lo: est.mediana - kk * s, hi: est.mediana + kk * s,
+               fuera: pts.filter(p => s && (p.v < est.mediana - kk * s || p.v > est.mediana + kk * s))};
+  }
+  const meta = metasDe(ent)[k];
+  let cumple = null;
+  if (meta !== undefined && pts.length){
+    const ok = pts.filter(p => kpCat(k).mayor_mejor ? p.v >= meta : p.v <= meta).length;
+    cumple = {ok, n: pts.length};
+  }
+  return {ent, serie, pts, est, mco, ts, mm, control, meta, cumple,
+          dudosos: serie.filter(x => x.dudoso && x.v !== null).length};
+}
+
+/* ---- la barra ------------------------------------------------------------- */
+function anBarra(){
+  const ents = anEntidades();
+  if (!Array.isArray(AN.ents) || !AN.ents.length || AN.ents.some(e => !ents.includes(e)))
+    AN.ents = [ents[0]];
+  const cont = document.getElementById('anEntidades');
+  cont.innerHTML = ents.map(e => `<button class="bub" data-v="${ajEsc(e)}" aria-pressed="${
+    AN.ents.includes(e)}" style="--bc:${anColor(e)}" title="${ajEsc(kpNombre(e))}"><i></i>${
+    ajEsc(anNombre(e))}</button>`).join('');
+  cont.querySelectorAll('button').forEach(b => b.onclick = () => {
+    const e = b.dataset.v;
+    // El Grupo va solo: prenderlo apaga las empresas, y prender una empresa
+    // apaga al Grupo. Juntos no se comparan —el consolidado ya las contiene—.
+    if (anEsGrupo(e)) AN.ents = [e];
+    else {
+      const sin = AN.ents.filter(x => !anEsGrupo(x));
+      AN.ents = sin.includes(e) ? sin.filter(x => x !== e) : sin.concat([e]);
+      if (!AN.ents.length) AN.ents = [e];
+    }
+    anRecordar(); anPintar();
+  });
+  const inp = document.getElementById('anP');
+  inp.value = AN.p;
+  inp.setAttribute('aria-invalid', 'false');
+  inp.onchange = () => {
+    const n = Math.round(+inp.value);
+    if (!AN_PERIODICIDADES.includes(n)){
+      inp.setAttribute('aria-invalid', 'true');
+      toast(t('an.p.invalida', {l: AN_PERIODICIDADES.join(', ')}));
+      return;
+    }
+    AN.p = n; if (AN.ventana === 'custom') AN.meses = null;
+    anRecordar(); anPintar();
+  };
+  document.querySelectorAll('#anBase button').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.v === AN.base));
+    b.disabled = AN.p !== 12;
+    b.title = AN.p !== 12 ? t('an.base.solo12') : '';
+    b.onclick = () => { AN.base = b.dataset.v; anRecordar(); anPintar(); };
+  });
+  document.querySelectorAll('#anVentana button').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.v === AN.ventana));
+    b.onclick = () => {
+      AN.ventana = b.dataset.v;
+      if (AN.ventana === 'custom' && !Array.isArray(AN.meses))
+        AN.meses = anSerieCompleta().map(x => x.llave).slice(-24);
+      anRecordar(); anPintar();
+    };
+  });
+  const chk = document.getElementById('anDudosos');
+  chk.checked = !!AN.dudosos;
+  chk.onchange = () => { AN.dudosos = chk.checked; anRecordar(); anPintar(); };
+  document.getElementById('anVolver').onclick = () => activarPestana('indicadores');
+  document.getElementById('anReset').onclick = () => {
+    Object.assign(AN, JSON.parse(JSON.stringify(AN_DEF))); anRecordar(); anPintar();
+  };
+  document.getElementById('anGuardar').onclick = () => enGuardar();
+  anPintarMeses();
+}
+/* Toda la serie sin recortar, para el selector de periodos específicos. */
+function anSerieCompleta(){
+  const ent = AN.ents[0], v = AN.ventana, m = AN.meses;
+  AN.ventana = 'all'; const s = anSerie(ent, AN.kpi); AN.ventana = v; AN.meses = m;
+  return s;
+}
+function anPintarMeses(){
+  const caja = document.getElementById('anMeses');
+  caja.hidden = AN.ventana !== 'custom';
+  if (caja.hidden) return;
+  const todos = anSerieCompleta(), sel = new Set(AN.meses || []);
+  let h = `<button class="minibtn" data-a="todos">${t('f.todas')}</button>`
+        + `<button class="minibtn" data-a="ninguno">${t('f.ninguna')}</button>`, anio = null;
+  for (const x of todos){
+    const a = x.fin.slice(0, 4);
+    if (a !== anio){ h += `<b>${a}</b>`; anio = a; }
+    h += `<label><input type="checkbox" data-k="${ajEsc(x.llave)}"${sel.has(x.llave) ? ' checked' : ''}>${ajEsc(x.etiqueta)}</label>`;
+  }
+  caja.innerHTML = h;
+  caja.querySelectorAll('input').forEach(i => i.onchange = () => {
+    const s = new Set(AN.meses || []);
+    if (i.checked) s.add(i.dataset.k); else s.delete(i.dataset.k);
+    AN.meses = todos.map(x => x.llave).filter(k => s.has(k));
+    anRecordar(); anPintarCuerpo();
+  });
+  caja.querySelectorAll('button').forEach(b => b.onclick = () => {
+    AN.meses = b.dataset.a === 'todos' ? todos.map(x => x.llave) : [];
+    anRecordar(); anPintar();
+  });
+}
+
+/* ---- la lista compacta, con las metas editables ---------------------------- */
+function anValorUltimo(ent, k){
+  const pts = anPuntos(anSerie(ent, k));
+  return pts.length ? pts[pts.length - 1].v : null;
+}
+function anEstado(v, meta, k){
+  if (v === null || meta === undefined) return '';
+  const banda = Math.abs(meta) * (KPIS.holgura_semaforo || 0);
+  if (kpCat(k).mayor_mejor) return v >= meta ? 'Verde' : v >= meta - banda ? 'Amarillo' : 'Rojo';
+  return v <= meta ? 'Verde' : v <= meta + banda ? 'Amarillo' : 'Rojo';
+}
+function anPintarLista(){
+  const cat = KPIS.catalogo || {}, claves = Object.keys(cat);
+  if (!claves.includes(AN.kpi)) AN.kpi = claves.find(k => metasDe(AN.ents[0])[k] !== undefined) || claves[0];
+  const conMeta = claves.filter(k => AN.ents.some(e => metasDe(e)[k] !== undefined));
+  const sinMeta = claves.filter(k => !conMeta.includes(k));
+  const srv = enHayServidor();
+  const cab = `<thead><tr><th>${t('an.lista.ind')}</th>${AN.ents.map(e =>
+    `<th class="num" style="color:${anColor(e)}">${ajEsc(anNombre(e))}</th>`).join('')}<th class="num">${t('an.lista.meta')}</th></tr></thead>`;
+  const fila = k => {
+    const metas = AN.ents.map(e => metasDe(e)[k]);
+    const iguales = metas.every(m => m === metas[0]);
+    // Lo pendiente (aún sin guardar) para estas empresas, si todas lo tienen igual.
+    const pend = AN.ents.map(e => EN.metas[`${e}|${k}`]);
+    const hayPend = pend.some(x => x !== undefined);
+    const mostrado = hayPend ? (pend[0] === null ? '' : enMetaFmt(k, pend[0]))
+                   : (iguales && metas[0] !== undefined ? enMetaFmt(k, metas[0]) : '');
+    const oculta = DISCRETO && kpCat(k).monetario;
+    return `<tr class="${k === AN.kpi ? 'sel' : ''}">
+      <td class="ind" data-k="${ajEsc(k)}">${ajEsc(cat[k].nombre || k)}</td>${AN.ents.map(e => {
+        const v = anValorUltimo(e, k), est = anEstado(v, metasDe(e)[k], k);
+        const col = est === 'Verde' ? 'var(--sem-ok)' : est === 'Rojo' ? 'var(--sem-bad)'
+                  : est === 'Amarillo' ? 'var(--sem-warn)' : '';
+        return `<td class="num"${col ? ` style="color:${col}"` : ''}>${v === null ? '—'
+          : (est ? kpForma(est) + ' ' : '') + kpFmt(k, v)}</td>`; }).join('')}
+      <td class="num"><input class="anmeta ${hayPend ? 'edit' : ''}" data-k="${ajEsc(k)}" inputmode="decimal"
+        value="${ajEsc(oculta && mostrado !== '' ? MASCARA : mostrado)}"
+        placeholder="${iguales ? '' : ajEsc(t('an.lista.varias'))}"
+        ${!srv || oculta ? 'disabled' : ''} title="${ajEsc(!srv ? t('en.metas.sinsrv')
+          : t('an.lista.meta.help', {l: AN.ents.map(anNombre).join(', ')}))}"></td></tr>`;
+  };
+  const tabla = (tit, ks) => ks.length ? `<table><caption>${ajEsc(tit)}</caption>${cab}<tbody>${
+    ks.map(fila).join('')}</tbody></table>` : '';
+  const lista = document.getElementById('anLista');
+  lista.innerHTML = tabla(t('an.lista.conmeta'), conMeta) + tabla(t('an.lista.sinmeta'), sinMeta);
+  lista.querySelectorAll('td.ind').forEach(td => td.onclick = () => {
+    AN.kpi = td.dataset.k; anRecordar(); anPintar(); });
+  lista.querySelectorAll('input.anmeta').forEach(inp => inp.onchange = () => {
+    // La misma regla que la hoja de captura: escribe en cada empresa vista,
+    // vaciar quita la meta, y lo pendiente espera a Guardar.
+    const k = inp.dataset.k, txt = inp.value.trim();
+    let v;
+    if (txt !== ''){
+      const n = Number(txt.replace(/,/g, ''));
+      if (!isFinite(n)){ toast(t('en.nonumero')); anPintar(); return; }
+      v = enMetaEsFraccion(k) ? n / EN_FACTOR_PCT : n;
+    }
+    for (const e of AN.ents){
+      const ll = `${e}|${k}`, vig = metasDe(e)[k];
+      if (txt === '') { if (vig === undefined) delete EN.metas[ll]; else EN.metas[ll] = null; }
+      else if (vig !== undefined && Math.abs(v - vig) < 1e-12) delete EN.metas[ll];
+      else EN.metas[ll] = v;
+    }
+    enGuardarMetasPendientes(); anPintar();
+  });
+  const n = Object.keys(EN.metas || {}).length;
+  document.getElementById('anPend').textContent = n ? t('an.pend', {n}) : '';
+  document.getElementById('anGuardar').disabled = !n || !srv;
+}
+
+/* ---- resumen, capas, gráfica y resultados ----------------------------------- */
+const anFmtP = p => p === null || p === undefined ? '—' : p < .001 ? '<0.001' : p.toFixed(3);
+function anFmtPend(k, b){            // pendiente por año en la unidad del indicador
+  if (b === null || b === undefined || !isFinite(b)) return '—';
+  const u = kpCat(k).unidad;
+  if (u === '%' || u === 'pp') return (b >= 0 ? '+' : '') + (b * 100).toFixed(2) + ' pp';
+  return (b >= 0 ? '+' : '') + kpFmt(k, b).replace(/^\+?/, '');
+}
+function anPintarResumen(res){
+  const k = AN.kpi;
+  document.getElementById('anResumen').innerHTML = res.map(r => {
+    const e = r.est; if (!e) return '';
+    const ult = r.pts.length ? r.pts[r.pts.length - 1] : null;
+    const tend = r.ts ? `${anFmtPend(k, r.ts.b)} · p ${anFmtP(r.ts.p)}` : '—';
+    const pref = res.length > 1 ? `<i style="color:${anColor(r.ent)}">${ajEsc(anNombre(r.ent))}</i> ` : '';
+    const ch = (tit, val) => `<span class="ch"><small>${pref}${ajEsc(tit)}</small><b>${val}</b></span>`;
+    return ch(t('an.r.ultimo'), ult ? kpFmt(k, ult.v) : '—')
+      + ch(t('an.r.mediana'), kpFmt(k, e.mediana))
+      + ch(t('an.r.rango'), `${kpFmt(k, e.p25)} – ${kpFmt(k, e.p75)}`)
+      + ch(t('an.r.tendencia'), tend)
+      + ch(t('an.r.meta'), r.meta === undefined ? '—'
+          : `${kpFmt(k, r.meta)} · ${r.cumple ? t('an.r.cumple', {ok: r.cumple.ok, n: r.cumple.n}) : ''}`)
+      + (AN.capas.control && r.control ? ch(t('an.r.fuera'), String(r.control.fuera.length)) : '');
+  }).join('');
+}
+const AN_CAPAS = [
+  {k: 'serie', cc: '--accent', cls: ''}, {k: 'media', cc: '--s3', cls: 'pun'},
+  {k: 'banda', cc: '--accent', cls: 'ban'}, {k: 'percentil', cc: '--s4', cls: 'pun'},
+  {k: 'tendencia', cc: '--s2', cls: ''}, {k: 'robusta', cc: '--s2', cls: 'pun'},
+  {k: 'meta', cc: '--sem-ok', cls: ''}, {k: 'control', cc: '--crit', cls: 'pun'}];
+function anPintarCapas(){
+  const c = document.getElementById('anCapas'), P = AN.par;
+  const extra = {
+    media: ` <select data-p="media"><option value="sma"${P.media === 'sma' ? ' selected' : ''}>SMA</option>`
+      + `<option value="ema"${P.media === 'ema' ? ' selected' : ''}>EMA</option></select>`
+      + (P.media === 'sma' ? ` <input data-p="ventanaMedia" type="number" min="2" max="36" value="${P.ventanaMedia}" title="${ajEsc(t('an.c.ventana'))}">`
+                           : ` <input data-p="alpha" type="number" min="0.05" max="0.95" step="0.05" value="${P.alpha}" title="α">`),
+    percentil: ` P<input data-p="percentil" type="number" min="1" max="99" value="${P.percentil}">`,
+    control: ` ±<input data-p="k" type="number" min="1" max="5" step="0.5" value="${P.k}">σ`};
+  // Cada capa va junto con sus parámetros en un grupo que no se parte: si la
+  // fila se acaba, baja entera, en vez de dejar "σ" solo en la línea de abajo.
+  c.innerHTML = `<span class="flabel">${t('an.capas')}</span>` + AN_CAPAS.map(x =>
+    `<span class="capagrp"><span class="capa" role="button" tabindex="0" data-c="${x.k}" aria-pressed="${!!AN.capas[x.k]}"
+       style="--cc:${cssv(x.cc)}" title="${ajEsc(t('an.c.' + x.k + '.help'))}"><i class="${x.cls}"></i>${
+       ajEsc(t('an.c.' + x.k))}</span>${extra[x.k] || ''}</span>`).join('')
+    + `<button class="help" type="button" data-help="an.capas.help">?</button>`;
+  c.querySelectorAll('.capa').forEach(b => {
+    const f = () => { AN.capas[b.dataset.c] = !AN.capas[b.dataset.c]; anRecordar(); anPintarCuerpo(); };
+    b.onclick = f; b.onkeydown = e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); f(); } };
+  });
+  c.querySelectorAll('[data-p]').forEach(i => i.onchange = () => {
+    const k = i.dataset.p;
+    if (k === 'media'){ P.media = i.value; }
+    else {
+      const n = +i.value, lim = {ventanaMedia: [2, 36], alpha: [.05, .95], percentil: [1, 99], k: [1, 5]}[k];
+      // Un parámetro fuera de rango se dice en el control mismo y no se aplica:
+      // calcular con él daría un resultado que parece válido.
+      if (!isFinite(n) || n < lim[0] || n > lim[1]){
+        i.setAttribute('aria-invalid', 'true'); i.style.borderColor = 'var(--crit)';
+        toast(t('an.c.rango', {a: lim[0], b: lim[1]})); return;
+      }
+      P[k] = n;
+    }
+    anRecordar(); anPintarCuerpo();
+  });
+}
+function anTicks(lo, hi, n){
+  if (!(hi > lo)){ const d = Math.abs(lo) || 1; lo -= d * .1; hi += d * .1; }
+  const raw = (hi - lo) / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), nr = raw / mag;
+  const st = (nr <= 1 ? 1 : nr <= 2 ? 2 : nr <= 2.5 ? 2.5 : nr <= 5 ? 5 : 10) * mag;
+  // El último tick es el primer múltiplo que alcanza el máximo, no el último
+  // que queda debajo: si no, lo más alto (una meta, un mes extremo) se dibuja
+  // fuera de la gráfica.
+  const a = Math.floor(lo / st + 1e-9), b = Math.ceil(hi / st - 1e-9);
+  const out = []; for (let i = a; i <= b; i++) out.push(+(i * st).toFixed(12));
+  return out;
+}
+function anGrafica(res){
+  const host = document.getElementById('anPlot'), k = AN.kpi;
+  // El eje x es la unión de los periodos de todas las entidades vistas.
+  const llaves = [], etiq = {};
+  for (const r of res) for (const x of r.serie) if (!(x.llave in etiq)){ llaves.push(x.llave); etiq[x.llave] = x.etiqueta; }
+  llaves.sort((a, b) => (res[0].serie.find(x => x.llave === a) || {}).fin > (res[0].serie.find(x => x.llave === b) || {}).fin ? 1 : -1);
+  if (!llaves.length || !res.some(r => r.pts.length)){
+    host.innerHTML = `<div class="anvacio">${t('an.vacio')}</div>`; return; }
+  const W = Math.max(480, host.clientWidth || 800), H = 320, mL = 64, mR = 16, mT = 10, mB = 30;
+  const iw = W - mL - mR, ih = H - mT - mB, n = llaves.length;
+  const X = i => mL + (n === 1 ? iw / 2 : i * iw / (n - 1));
+  const vals = [];
+  for (const r of res){
+    for (const x of r.serie) if (x.v !== null && (AN.dudosos || !x.dudoso)) vals.push(x.v);
+    if (AN.capas.meta && r.meta !== undefined) vals.push(r.meta);
+    if (AN.capas.control && r.control){ vals.push(r.control.lo, r.control.hi); }
+  }
+  const tk = anTicks(Math.min(...vals), Math.max(...vals), 5);
+  const y0 = tk[0], y1 = tk[tk.length - 1], Y = v => mT + ih - (v - y0) / ((y1 - y0) || 1) * ih;
+  const svg = svgRoot(host, W, H), C = n => cssv(n), mono = C('--mono');
+  for (const v of tk){
+    el('line', {x1: mL, x2: W - mR, y1: Y(v), y2: Y(v), stroke: C('--grid'), 'stroke-width': 1}, svg);
+    el('text', {x: mL - 6, y: Y(v) + 3, 'text-anchor': 'end', 'font-size': 10, fill: C('--muted'),
+                'font-family': mono}, svg).textContent = kpFmt(k, v);
+  }
+  const paso = Math.max(1, Math.ceil(n / 12));
+  llaves.forEach((l, i) => { if (i % paso === 0 || i === n - 1)
+    el('text', {x: X(i), y: H - 10, 'text-anchor': 'middle', 'font-size': 10, fill: C('--muted'),
+                'font-family': mono}, svg).textContent = etiq[l]; });
+  for (const r of res){
+    const col = anColor(r.ent);
+    const idx = l => llaves.indexOf(l);
+    const e = r.est;
+    if (AN.capas.banda && e) el('rect', {x: mL, width: iw, y: Y(e.p75), height: Math.max(1, Y(e.p25) - Y(e.p75)),
+      fill: col, opacity: .09}, svg);
+    if (AN.capas.percentil && e) el('line', {x1: mL, x2: W - mR, y1: Y(e.px), y2: Y(e.px), stroke: C('--s4'),
+      'stroke-dasharray': '2 3', 'stroke-width': 1.4}, svg);
+    if (AN.capas.control && r.control) for (const v of [r.control.lo, r.control.hi])
+      el('line', {x1: mL, x2: W - mR, y1: Y(v), y2: Y(v), stroke: C('--crit'), 'stroke-dasharray': '5 4', 'stroke-width': 1.2}, svg);
+    if (AN.capas.meta && r.meta !== undefined)
+      el('line', {x1: mL, x2: W - mR, y1: Y(r.meta), y2: Y(r.meta), stroke: C('--sem-ok'), 'stroke-width': 1.8}, svg);
+    const linea = (pts, attrs) => { if (pts.length < 2) return;
+      el('path', Object.assign({d: pts.map((p, j) => (j ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(''),
+        fill: 'none'}, attrs), svg); };
+    if (AN.capas.serie){
+      linea(r.serie.filter(x => x.v !== null && (AN.dudosos || !x.dudoso)).map(x => [X(idx(x.llave)), Y(x.v)]),
+            {stroke: col, 'stroke-width': 2});
+      for (const x of r.serie) if (x.v !== null && (AN.dudosos || !x.dudoso))
+        el('circle', {cx: X(idx(x.llave)), cy: Y(x.v), r: x.dudoso ? 3.6 : 2.4,
+          fill: x.dudoso ? C('--surface') : col, stroke: col, 'stroke-width': x.dudoso ? 1.6 : 0}, svg);
+    }
+    if (AN.capas.media) linea(r.pts.map((p, j) => r.mm[j] === null ? null : [X(idx(p.llave)), Y(r.mm[j])]).filter(Boolean),
+      {stroke: C('--s3'), 'stroke-width': 1.6, 'stroke-dasharray': '6 3'});
+    const recta = (m, attrs) => { if (!m || !r.pts.length) return;
+      const a = r.pts[0], z = r.pts[r.pts.length - 1];
+      el('line', Object.assign({x1: X(idx(a.llave)), y1: Y(m.a + m.b * a.x), x2: X(idx(z.llave)), y2: Y(m.a + m.b * z.x)}, attrs), svg); };
+    if (AN.capas.tendencia) recta(r.mco, {stroke: C('--s2'), 'stroke-width': 1.6});
+    if (AN.capas.robusta) recta(r.ts, {stroke: C('--s2'), 'stroke-width': 1.6, 'stroke-dasharray': '2 3'});
+    if (AN.capas.control && r.control) for (const p of r.control.fuera)
+      el('circle', {cx: X(idx(p.llave)), cy: Y(p.v), r: 6, fill: 'none', stroke: C('--crit'), 'stroke-width': 1.5}, svg);
+  }
+  // EL CURSOR: una línea vertical sobre la fecha y, en la ventanita, lo que vale
+  // cada cosa en ese periodo. Un rectángulo invisible recibe el movimiento.
+  const guia = el('line', {y1: mT, y2: mT + ih, stroke: C('--axis'), 'stroke-width': 1, opacity: 0}, svg);
+  const capa = el('rect', {x: mL, y: mT, width: iw, height: ih, fill: 'transparent'}, svg);
+  capa.addEventListener('mousemove', ev => {
+    const bb = svg.getBoundingClientRect(), xs = (ev.clientX - bb.left) * (W / bb.width);
+    const i = Math.max(0, Math.min(n - 1, Math.round((xs - mL) / (iw / Math.max(1, n - 1)))));
+    guia.setAttribute('x1', X(i)); guia.setAttribute('x2', X(i)); guia.setAttribute('opacity', 1);
+    const l = llaves[i];
+    let h = `<b>${ajEsc(etiq[l])}</b>`;
+    for (const r of res){
+      const x = r.serie.find(s => s.llave === l); if (!x) continue;
+      const j = r.pts.findIndex(p => p.llave === l);
+      h += `<div class="r"><span style="color:${anColor(r.ent)}">${ajEsc(anNombre(r.ent))}</span><span>${
+        x.v === null ? '—' : kpFmt(k, x.v)}${x.dudoso ? ' · ' + ajEsc(t('an.t.dudoso')) : ''}</span></div>`;
+      if (AN.capas.media && j >= 0 && r.mm[j] !== null)
+        h += `<div class="r"><span>${t('an.c.media')}</span><span>${kpFmt(k, r.mm[j])}</span></div>`;
+      if (AN.capas.meta && r.meta !== undefined)
+        h += `<div class="r"><span>${t('an.c.meta')}</span><span>${kpFmt(k, r.meta)}</span></div>`;
+    }
+    tipShow(h, ev);
+  });
+  capa.addEventListener('mouseleave', () => { guia.setAttribute('opacity', 0); tipHide(); });
+}
+function anPintarResultados(res){
+  const k = AN.kpi, cols = res.map(r => `<th class="num" style="color:${anColor(r.ent)}">${ajEsc(anNombre(r.ent))}</th>`).join('');
+  const fila = (tit, f, sig) => `<tr><td>${ajEsc(tit)}</td>${res.map(r => {
+    const v = f(r), s = sig && sig(r);
+    return `<td class="num${s ? ' sig' : ''}">${v}</td>`; }).join('')}</tr>`;
+  const tabla = filas => `<table><thead><tr><th></th>${cols}</tr></thead><tbody>${filas}</tbody></table>`;
+  const F = v => v === null || v === undefined ? '—' : kpFmt(k, v);
+  const r0 = res[0];
+  const bloque = (id, tit, cuerpo, nota) => `<details open data-b="${id}"><summary>${ajEsc(tit)}</summary>${cuerpo}${
+    nota ? `<p>${ajEsc(nota)}</p>` : ''}</details>`;
+  const est = bloque('est', t('an.b.est'), tabla(
+      fila('n', r => r.est ? r.est.n : '—')
+    + fila(t('an.e.media'), r => F(r.est && r.est.media))
+    + fila(t('an.e.desv'), r => F(r.est && r.est.desv))
+    + fila(t('an.e.min'), r => F(r.est && r.est.min))
+    + fila('P25', r => F(r.est && r.est.p25))
+    + fila(t('an.e.mediana'), r => F(r.est && r.est.mediana))
+    + fila('P75', r => F(r.est && r.est.p75))
+    + fila(t('an.e.max'), r => F(r.est && r.est.max))
+    + fila('P' + AN.par.percentil, r => F(r.est && r.est.px))
+    + fila('MAD', r => F(r.est && r.est.mad))),
+    r0.est ? t('an.n.est', {med: F(r0.est.mediana), lo: F(r0.est.p25), hi: F(r0.est.p75)}) : '');
+  const sigp = m => r => r[m] && r[m].p < .05;
+  const tend = bloque('tend', t('an.b.tend'), tabla(
+      fila(t('an.t.pend'), r => r.mco ? anFmtPend(k, r.mco.b) : '—')
+    + fila(t('an.t.ee'), r => r.mco ? anFmtPend(k, r.mco.se).replace('+', '') : '—')
+    + fila('t', r => r.mco ? r.mco.t.toFixed(2) : '—')
+    + fila(t('an.t.p'), r => r.mco ? anFmtP(r.mco.p) : '—', sigp('mco'))
+    + fila('R²', r => r.mco ? r.mco.r2.toFixed(3) : '—')
+    + fila(t('an.t.ic'), r => r.mco ? `${anFmtPend(k, r.mco.lo)} … ${anFmtPend(k, r.mco.hi)}` : '—')
+    + fila(t('an.t.sen'), r => r.ts ? anFmtPend(k, r.ts.b) : '—')
+    + fila(t('an.t.sen.ic'), r => r.ts ? `${anFmtPend(k, r.ts.lo)} … ${anFmtPend(k, r.ts.hi)}` : '—')
+    + fila(t('an.t.mk'), r => r.ts ? `S=${r.ts.S} · z=${r.ts.z.toFixed(2)}` : '—')
+    + fila(t('an.t.mk.p'), r => r.ts ? anFmtP(r.ts.p) : '—', sigp('ts'))),
+    r0.ts ? t(r0.ts.p < .05 ? (r0.ts.b > 0 ? 'an.n.tend.sube' : 'an.n.tend.baja') : 'an.n.tend.no',
+              {p: anFmtP(r0.ts.p), b: anFmtPend(k, r0.ts.b)}) : t('an.n.pocos'));
+  const media = bloque('media', t('an.b.media'), tabla(
+      fila(t('an.m.tipo'), () => AN.par.media === 'sma' ? `SMA ${AN.par.ventanaMedia}` : `EMA α=${AN.par.alpha}`)
+    + fila(t('an.m.ultimo'), r => { const v = r.mm.filter(x => x !== null); return F(v.length ? v[v.length - 1] : null); })));
+  const ctrl = bloque('ctrl', t('an.b.ctrl'), tabla(
+      fila(t('an.k.centro'), r => F(r.control && r.control.centro))
+    + fila(t('an.k.lo'), r => F(r.control && r.control.lo))
+    + fila(t('an.k.hi'), r => F(r.control && r.control.hi))
+    + fila(t('an.k.fuera'), r => r.control ? (r.control.fuera.map(p => p.etiqueta).join(', ') || '—') : '—')),
+    t('an.n.ctrl', {k: AN.par.k}));
+  const meta = bloque('meta', t('an.b.meta'), tabla(
+      fila(t('an.c.meta'), r => F(r.meta))
+    + fila(t('an.mt.cumple'), r => r.cumple ? `${r.cumple.ok} / ${r.cumple.n} (${PF.format(r.cumple.ok / r.cumple.n)})` : '—')
+    + fila(t('an.mt.dif'), r => r.est && r.meta !== undefined ? F(r.est.mediana - r.meta) : '—')),
+    r0.cumple ? t('an.n.meta', {ok: r0.cumple.ok, n: r0.cumple.n}) : t('an.n.sinmeta'));
+  document.getElementById('anResultados').innerHTML = est + tend + meta + media + ctrl;
+}
+/* Lo que depende del indicador elegido, sin reconstruir la barra ni la lista. */
+function anPintarCuerpo(){
+  const k = AN.kpi, cat = kpCat(k);
+  document.getElementById('anTitulo').textContent = cat.nombre || k;
+  const base = AN.p === 12 ? (anUsaTTM(k) ? t('an.sub.ttm') : t('an.sub.mes')) : t('an.sub.p', {p: AN.p});
+  const res = AN.ents.map(e => anAnalizar(e, k));
+  const dud = res.reduce((s, r) => s + r.dudosos, 0);
+  document.getElementById('anDudososTxt').textContent = t('an.dudosos.n', {n: dud});
+  document.getElementById('anSub').textContent = `${base} · ${t(cat.mayor_mejor ? 'en.metas.mayor' : 'en.metas.menor')}`;
+  anPintarResumen(res);
+  anPintarCapas();
+  anGrafica(res);
+  anPintarResultados(res);
+}
+function anPintar(){
+  if (!kpHay()){
+    document.getElementById('anLista').innerHTML = `<p class="note" style="padding:18px">${t('kp.sindatos')}</p>`;
+    return;
+  }
+  anBarra();
+  anPintarLista();
+  anPintarCuerpo();
+}
+
+/* DOS VENTANAS A LA VEZ: si en una se guardan metas o entradas, la otra se
+   entera por el almacenamiento del navegador y le pide al servidor el estado
+   vigente. Así se puede tener el análisis abierto en una y la hoja de captura
+   en la otra, y ver el semáforo moverse sin recargar. */
+addEventListener('storage', e => {
+  if (e.key === 'estadoCambio' && enHayServidor()) Shiny.setInputValue('pedir_estado', Date.now());
+});
+
 /* --- pestañas --- */
 function activarPestana(nombre){
   // Se recuerda cuál está abierta porque el botón de descarga de arriba baja
@@ -6849,7 +7821,7 @@ function activarPestana(nombre){
   // ahí es donde se queda una visible de más.
   const paneles = {facturacion: 'panelFacturacion', finanzas: 'panelFinanzas',
                    direccion: 'panelDireccion', indicadores: 'panelIndicadores',
-                   entradas: 'panelEntradas'};
+                   analisis: 'panelAnalisis', entradas: 'panelEntradas'};
   for (const [k, id] of Object.entries(paneles))
     document.getElementById(id).hidden = (k !== nombre);
   // Los filtros de arriba son de facturación: se ocultan en las otras pestañas
@@ -6859,6 +7831,11 @@ function activarPestana(nombre){
   else if (nombre === 'direccion') kpConstruir();
   else if (nombre === 'indicadores') tfConstruir();
   else if (nombre === 'entradas') enConstruir();
+  else if (nombre === 'analisis') anPintar();
+  // El análisis es parte de Indicadores: su pestaña queda marcada.
+  if (nombre === 'analisis')
+    document.querySelectorAll('.tabbar button').forEach(b =>
+      b.setAttribute('aria-selected', String(b.dataset.tab === 'indicadores')));
   // La hoja de captura no tiene botón en la barra, así que la barra no puede
   // reflejar que está abierta. Se deja ninguna pestaña marcada en vez de
   // marcar una que no es: un indicador que miente es peor que ninguno.
@@ -6903,9 +7880,12 @@ enBindRespuesta();
 /* La hoja de captura se abre con #entradas en la dirección. Es "un poco
    oculta" a propósito: la usa quien tenga asignada la captura, no todo el que
    abre el tablero. Desde Ajustes hay un botón que lleva aquí. */
-if (location.hash === '#entradas') activarPestana('entradas');
+/* #analisis abre el análisis directamente: así se deja en una segunda ventana
+   mientras en la otra se fijan las metas. */
+const AN_HASHES = {'#entradas': 'entradas', '#analisis': 'analisis'};
+if (AN_HASHES[location.hash]) activarPestana(AN_HASHES[location.hash]);
 addEventListener('hashchange', () => {
-  if (location.hash === '#entradas') activarPestana('entradas');
+  if (AN_HASHES[location.hash]) activarPestana(AN_HASHES[location.hash]);
 });
 fijarModoMontos(MODO_MONTOS, false);
 // El primer pintado pasa por setLang(), el mismo camino que cambiar de idioma

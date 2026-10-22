@@ -61,6 +61,24 @@ Cómo se escriben las piezas (entre comillas invertidas):
 | Indicadores | Todas las razones por familia, DuPont del ROE y costo de capital abierto | `tfConstruir()` `tfDupont()` `tfWacc()` |
 | Huecos honestos | Lo que no se puede calcular con honestidad no se muestra, y dice por qué | `kpAvisosDe()` `finanzas/razones_financieras.py` |
 
+## Análisis de indicadores (Avanzado)
+
+| Capacidad | Para quien la usa | Piezas |
+|---|---|---|
+| Vista propia | Se abre con Avanzado dentro de Indicadores o con `#analisis`; regresa con "← Indicadores" | `anPintar()` `#panelAnalisis` `#tfAvanzado` `t:an.titulo` |
+| Los 31 indicadores | En una lista compacta: arriba los que tienen meta, abajo los demás, con el último valor de cada empresa vista | `anPintarLista()` `#anLista` `t:an.lista.conmeta` |
+| Metas ahí mismo | Se editan en la lista y se guardan como en la hoja de captura: por empresa, por Grupo o en varias a la vez | `anPintarLista()` `#anGuardar` `#anPend` |
+| Empresas y Grupo | Una o varias empresas en la misma gráfica; elegir el Grupo apaga las empresas | `anBarra()` `#anEntidades` |
+| Periodicidad | El usuario escribe 12, 6, 4, 3, 2 o 1 datos por año; cada periodo se calcula con sus propias cifras, no promediando meses. Rechaza lo que no reparte el año | `#anP` `t:an.periodicidad.help` `dashboard/exportar_kpis.py` |
+| 12 meses móviles o el mes | Por omisión, doce meses móviles; con periodicidad 12 se puede ver el dato del mes | `#anBase` `t:an.base.ttm` |
+| Ventana | 12, 24, 36 periodos, toda la historia o periodos elegidos uno por uno | `#anVentana` `anPintarMeses()` `#anMeses` |
+| Meses dudosos | Excluidos por omisión y reincorporables; en la gráfica salen huecos | `#anDudosos` `t:an.dudosos.help` |
+| Capas | Serie, media móvil (SMA o EMA), banda P25–P75, percentil libre, tendencia MCO, tendencia robusta, meta y control; se prenden y apagan sin cambiar de gráfica y conservan sus parámetros | `anPintarCapas()` `#anCapas` `css:.ancapas .capagrp` |
+| Cursor | Al pasar el cursor, el valor de cada capa en esa fecha | `anGrafica()` |
+| Resumen y resultados | Arriba, cinco cifras; abajo, en letra pequeña, estadística, tendencia (pendiente, error estándar, valor p, R², IC, Theil-Sen, Mann-Kendall), media móvil, control y cumplimiento de meta | `anPintarResumen()` `anPintarResultados()` `anMCO()` `anTheilSen()` `anCuantil()` |
+| Recuerda la elección | Empresas, indicador, periodicidad, ventana y capas, a corto plazo | `recordar()` `#anReset` |
+| Dos ventanas | Lo que se guarda en una ventana aparece en la otra sin recargar | `enAplicarEstado()` `servidor/app.py` |
+
 ## Captura de entradas manuales
 
 | Capacidad | Para quien la usa | Piezas |

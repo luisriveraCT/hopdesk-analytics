@@ -54,6 +54,14 @@ DINAMICAS = [
     ('f.cn.', ['incluir', 'excluir', 'solo']),
     ('f.si.', ['todas', 'abiertas', 'cerradas']),
     ('tipo.', ['venta', 'compra']),
+    # Análisis: las capas (nombre y ayuda), las etiquetas de periodo y las
+    # notas de tendencia que se eligen con un ternario anidado.
+    ('an.c.', ['serie', 'media', 'banda', 'percentil', 'tendencia', 'robusta',
+               'meta', 'control']),
+    ('an.c.', [f'{x}.help' for x in ('serie', 'media', 'banda', 'percentil',
+               'tendencia', 'robusta', 'meta', 'control')]),
+    ('an.per.', ['b', 't', 'c', 's']),
+    ('an.n.tend.', ['sube', 'baja', 'no']),
 ]
 
 # Los tipos de factura que no son el base. t() busca primero '<tipo>.<clave>'

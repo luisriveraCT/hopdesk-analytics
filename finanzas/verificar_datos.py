@@ -278,6 +278,24 @@ def pruebas_sobre_kpis():
     for ent in d['series']:
         check(f'la serie {ent} trae su entrada de metas', ent in d['metas'])
 
+    # PERIODICIDAD: dos caminos al mismo número. El margen de un AÑO completo,
+    # calculado juntando sus doce meses (series_periodicas), tiene que ser el
+    # margen de doce meses móviles a DICIEMBRE de ese año, calculado mes a mes
+    # (calcular_ttm). Si difieren, uno de los dos agrega mal —y el típico error
+    # es promediar los márgenes mensuales en vez de dividir las sumas.
+    seccion('Indicadores — el año por periodos contra el acumulado a diciembre')
+    for ent, serie in d['series'].items():
+        ttm_dic = {f['periodo']: f.get('r', {}) for f in serie}
+        for f in (d.get('periodicas', {}).get(ent, {}).get('1') or []):
+            if not f.get('completo'):
+                continue
+            dic = ttm_dic.get(f"{f['anio']}-12", {})
+            for kpi in ('margen_ebitda', 'margen_ebit', 'margen_neto'):
+                a, b = f['r'].get(kpi), dic.get(kpi + '_ttm')
+                if a is not None and b is not None:
+                    check(f'{ent} {f["anio"]}: {kpi} del año = acumulado a diciembre',
+                          abs(a - b) <= 1e-6, f'{a} contra {b}')
+
     G = d['clave_grupo']
     for empresa, serie in d['series'].items():
         if not serie:

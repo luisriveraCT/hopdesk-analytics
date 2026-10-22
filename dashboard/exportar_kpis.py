@@ -361,17 +361,11 @@ def costo_inmaterial(fila):
 
 
 # ---------------------------------------------------------------------------
-def procesar(filas, supuestos, metas, interco=None, conv=None, entradas=None,
-             empresa=None):
-    """Deriva, calcula razones y pinta semáforo para una serie completa.
-
-    `entradas` son las capturas manuales del cliente. Se aplican ANTES de
-    derivar nada: si se aplicaran después, una sobrescritura de ingresos
-    quedaría en la fila pero los márgenes seguirían calculados con el valor
-    viejo, y la pantalla mostraría un ingreso corregido con un margen que no
-    corresponde a él.
-    """
-    derivadas, anterior = [], None
+def _preparar(filas, supuestos, interco, conv, entradas, empresa):
+    """Cada mes listo para derivar: con sus entradas manuales, sus supuestos y
+    sus bases de días. Lo comparten procesar() —el mes— y series_periodicas()
+    —trimestres, años—: un mes se prepara de una sola forma, la use quien la
+    use. Devuelve (fila, supuestos de la fila) por cada mes."""
     for f in filas:
         f = dict(f)
         # Los supuestos se resuelven POR FILA, no una vez para toda la serie.
@@ -402,6 +396,21 @@ def procesar(filas, supuestos, metas, interco=None, conv=None, entradas=None,
         f['base_cobranza'], f['base_pago'], f['sin_base_dias'] = bases_de_dias(
             f, (interco or {}).get(f['periodo']), conv)
         f['costo_inmaterial'] = costo_inmaterial(f)
+        yield f, sup_fila
+
+
+def procesar(filas, supuestos, metas, interco=None, conv=None, entradas=None,
+             empresa=None):
+    """Deriva, calcula razones y pinta semáforo para una serie completa.
+
+    `entradas` son las capturas manuales del cliente. Se aplican ANTES de
+    derivar nada: si se aplicaran después, una sobrescritura de ingresos
+    quedaría en la fila pero los márgenes seguirían calculados con el valor
+    viejo, y la pantalla mostraría un ingreso corregido con un margen que no
+    corresponde a él.
+    """
+    derivadas, anterior = [], None
+    for f, sup_fila in _preparar(filas, supuestos, interco, conv, entradas, empresa):
         d = rz.derivar_estado(f, sup_fila, anterior)
         derivadas.append(d)
         anterior = d
@@ -456,6 +465,99 @@ def procesar(filas, supuestos, metas, interco=None, conv=None, entradas=None,
         # sería un segundo dato que dice lo mismo de otra forma, y el día que
         # los dos no coincidan nadie sabría cuál manda.
         salida.append(fila)
+    return salida
+
+
+# ---------------------------------------------------------------------------
+# PERIODICIDAD: los indicadores por trimestre, semestre, año…
+# ---------------------------------------------------------------------------
+# Cuántos periodos caben en un año. Solo los que reparten los doce meses en
+# partes iguales y alineadas al calendario —un trimestre empieza en enero,
+# abril, julio u octubre—: un "periodo de 5 meses" no corresponde a ningún
+# cierre que alguien pueda reconocer. El 12 (mensual) ya es la serie de siempre.
+PERIODICIDADES = (6, 4, 3, 2, 1)
+
+# Qué se SUMA y qué se toma AL CIERRE al juntar meses. Es la distinción de
+# siempre: un trimestre de ingresos es la suma de sus tres meses; el
+# patrimonio de un trimestre es el del último día, no la suma de tres fotos.
+FLUJOS_PERIODO = ('ingresos', 'costo_servicio', 'gastos_operacion',
+                  'depreciacion', 'ebit', 'ebitda', 'ebt', 'gastos_financieros',
+                  'impuestos', 'utilidad_neta')
+SALDOS_PERIODO = ('activo_circulante', 'activo_fijo', 'activos_totales',
+                  'cuentas_x_cobrar', 'cuentas_x_pagar', 'deuda_con_costo',
+                  'efectivo', 'inventarios', 'pasivo_circulante',
+                  'pasivos_totales', 'patrimonio', 'partes_relacionadas',
+                  'descuadre')
+
+
+def _sumar(vals):
+    """Suma de un flujo, o None si falta un mes: un trimestre con un mes sin
+    dato no es un trimestre, es un número más chico que se ve igual."""
+    return sum(vals) if vals and all(v is not None for v in vals) else None
+
+
+def series_periodicas(filas, supuestos, interco=None, conv=None, entradas=None,
+                      empresa=None, periodicidades=PERIODICIDADES):
+    """{periodicidad: [periodo, …]} con las razones de cada periodo.
+
+    NO SE PROMEDIAN RAZONES. El margen de un año es el EBITDA del año entre los
+    ingresos del año, no el promedio de doce márgenes mensuales: un mes chico
+    con un margen raro pesaría lo mismo que diciembre. Así que se juntan las
+    cifras —flujos sumados, saldos al cierre— y se calculan las razones del
+    periodo con las MISMAS funciones del mes (derivar_estado y razones), que
+    anualizan con los periodos que caben en un año. Ninguna fórmula se copia.
+
+    Un periodo al que le faltan meses (el año en curso, el trimestre que no ha
+    terminado) sale marcado `completo: False`: el tablero lo trata como dudoso,
+    porque nueve meses de ingresos se leen igual que doce.
+    """
+    from collections import OrderedDict
+    conv = conv or {}
+    preparadas = list(_preparar(filas, supuestos, interco, conv, entradas, empresa))
+    banda = conv.get('banda_tasa_efectiva')
+    salida = {}
+    for p in periodicidades:
+        meses_por_periodo = rz.PERIODOS_POR_ANIO // p
+        bloques = OrderedDict()
+        for f, sup in preparadas:
+            llave = (f['anio'], (f['mes'] - 1) // meses_por_periodo + 1)
+            bloques.setdefault(llave, []).append((f, sup))
+        filas_p, anterior = [], None
+        for (anio, idx), meses in bloques.items():
+            fs = [m[0] for m in meses]
+            agg = {'empresa': fs[-1].get('empresa'), 'anio': anio,
+                   'periodo': f'{anio}-{p}-{idx}'}
+            for c in FLUJOS_PERIODO:
+                agg[c] = _sumar([x.get(c) for x in fs])
+            for c in SALDOS_PERIODO:
+                agg[c] = fs[-1].get(c)
+            agg['tasa_efectiva'], agg['tasa_confiable'] = av.tasa_efectiva_de(
+                agg['impuestos'], agg['ebt'], banda)
+            ic_meses = [(interco or {}).get(x['periodo']) or {} for x in fs]
+            ic = {'ingresos': sum(i.get('ingresos') or 0.0 for i in ic_meses),
+                  'gastos': sum(i.get('gastos') or 0.0 for i in ic_meses)}
+            agg['base_cobranza'], agg['base_pago'], agg['sin_base_dias'] = \
+                bases_de_dias(agg, ic, conv)
+            agg['costo_inmaterial'] = costo_inmaterial(agg)
+            # Los supuestos del último mes: son los vigentes al cerrar el periodo.
+            d = rz.derivar_estado(agg, meses[-1][1], anterior)
+            r = rz.razones(d, anterior, None, dias_anio=conv.get('dias_anio'),
+                           periodos_por_anio=p)
+            depurar_dias(r, conv.get('dias_anio') or rz.DIAS_ANIO)
+            valores = {}
+            for k, cat in rz.CATALOGO_KPIS.items():
+                v = d.get(k) if cat['fuente'] == 'derivado' else r.get(k)
+                if v is not None:
+                    valores[k] = _r(v, 6)
+            filas_p.append({
+                'periodo': agg['periodo'], 'anio': anio, 'idx': idx,
+                'meses': len(fs), 'completo': len(fs) == meses_por_periodo,
+                'ultimo_mes': fs[-1]['periodo'],
+                'mes_incompleto': any(x.get('mes_incompleto') for x in fs),
+                'es_cierre_anual': any(x.get('es_cierre_anual') for x in fs),
+                'r': valores})
+            anterior = d
+        salida[str(p)] = filas_p
     return salida
 
 
@@ -535,6 +637,7 @@ def main():
         'familias': [{'id': k, 'nombre': n} for k, n in rz.FAMILIAS],
         'holgura_semaforo': conv['holgura_semaforo'],
         'series': {},
+        'periodicas': {},     # {entidad: {periodicidad: [periodo, …]}}
         'avisos': [],
     }
     convenciones_pub = dict(pol.convenciones)
@@ -552,6 +655,9 @@ def main():
         salida['metas'][clave] = metas_ent
         salida['series'][clave] = procesar(filas, supuestos, metas_ent, ic, conv,
                                            ent_serie, clave)
+        # Las mismas cifras por trimestre, semestre, año… (ver series_periodicas).
+        salida['periodicas'][clave] = series_periodicas(filas, supuestos, ic, conv,
+                                                        ent_serie, clave)
 
     # --- Avisos que el tablero muestra arriba, no escondidos en un log -------
     faltan = [k for k in ('rf', 'beta', 'erp', 'kd') if k not in supuestos]

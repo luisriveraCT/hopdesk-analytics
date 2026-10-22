@@ -56,7 +56,7 @@ Solo se vuelve a GitHub cuando cambia el código.
 
 ---
 
-## Las cuatro pestañas, y una quinta discreta
+## Las cuatro pestañas, y dos vistas más
 
 | Pestaña | Para quién | Qué contesta |
 |---|---|---|
@@ -64,10 +64,31 @@ Solo se vuelve a GitHub cuando cambia el código.
 | **Estados Financieros** | contabilidad | Balance y Estado de Resultados por empresa y por periodo, más el grupo consolidado |
 | **Dirección** | quien decide | ¿vamos bien? Cinco cifras, semáforo contra meta, tendencia y comparación entre empresas |
 | **Indicadores** | quien revisa | ¿por qué? Todas las razones por familia, el DuPont del ROE y el costo de capital abierto |
+| **Avanzado** (dentro de Indicadores) | quien analiza | ¿es tendencia o ruido? Un indicador en el tiempo, con estadística, tendencia, control y meta. Se abre con el botón **Avanzado** o con `#analisis` |
 | **Hoja de captura** | quien tenga asignada la tarea | las cifras que el ERP no tiene, y las correcciones a mano. Se abre desde **Ajustes**, o con `#entradas` en la dirección |
 
 La hoja de captura no está en la barra de arriba a propósito: la usa quien tenga
 asignada la captura, no todo el que abre el tablero.
+
+### Avanzado: el análisis de un indicador
+
+A la izquierda, los 31 indicadores (arriba los que tienen meta, con la meta
+editable ahí mismo); a la derecha, la gráfica del elegido y, abajo en letra
+pequeña, los resultados con sus valores p. En la barra:
+
+- **Empresas**: una o varias en la misma gráfica. Elegir el Grupo apaga las empresas.
+- **Periodicidad**: se escribe cuántos datos por año (12, 6, 4, 3, 2 o 1). Cada
+  periodo se calcula con sus propias cifras en el servidor
+  (`series_periodicas()` en `dashboard/exportar_kpis.py`), no promediando meses.
+- **12 m móviles / Por periodo**: con periodicidad 12.
+- **Periodo**: 12, 24 o 36 periodos, todo, o periodos elegidos uno por uno.
+- **Incluir dudosos**: los meses que no cerraron quedan fuera por omisión.
+- **Capas**: serie, media móvil, banda P25–P75, percentil, tendencia, tendencia
+  robusta, meta y control. Se prenden y apagan sin cambiar de gráfica.
+
+La elección se recuerda a corto plazo. Se pueden abrir dos ventanas —el análisis
+en una, la hoja de captura en otra— y lo que se guarda en una aparece en la otra
+sin recargar. Los términos están en el glosario, en *Análisis de indicadores*.
 
 **Todo lo que la app sabe hacer** está en [`CAPACIDADES.md`](CAPACIDADES.md),
 capacidad por capacidad y con la pieza de código que la sostiene. Un paso del

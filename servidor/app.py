@@ -306,13 +306,15 @@ def recalcular_series(entradas_obj, cliente=None):
     interco = base.get('interco') or {}
     grupo = base.get('clave_grupo')
 
-    series = {}
+    series, periodicas = {}, {}
     for clave, filas in (base.get('series') or {}).items():
         ic = {} if clave == grupo else interco.get(clave, {})
         ent = None if clave == grupo else entradas_obj
         series[clave] = ek.procesar(filas, supuestos, pol.metas_de(clave), ic, conv,
                                     ent, clave)
-    return series
+        # Y por trimestre, semestre, año: lo que lee la vista de análisis.
+        periodicas[clave] = ek.series_periodicas(filas, supuestos, ic, conv, ent, clave)
+    return series, periodicas
 
 
 def _autor_de(session: Session) -> str:
@@ -420,9 +422,9 @@ def estado_actual(almacen=None, cliente=None, entradas_obj=None):
     almacen = almacen or repo.almacen_por_defecto()
     cliente = cliente or repo.cliente_actual(almacen)
     ent = entradas_obj or em.cargar(almacen, cliente)
-    series = None
+    series = periodicas = None
     try:
-        series = recalcular_series(ent, cliente)
+        series, periodicas = recalcular_series(ent, cliente) or (None, None)
     except Exception:                                        # noqa: BLE001
         # Sin indicadores rehechos la página sigue sirviendo: enseña los
         # horneados. Se registra para que alguien lo vea.
@@ -439,7 +441,7 @@ def estado_actual(almacen=None, cliente=None, entradas_obj=None):
     # Las metas de CADA empresa y del Grupo, igual que las publica kpis.json.
     ents = [e.iniciales for e in cliente.empresas if e.activa] + [CLAVE_GRUPO]
     return {'entradas': ent.entradas, 'metas': cliente.politica.todas_las_metas(ents),
-            'series': series, 'bitacora': bitacora, 'bitacora_actos': bc.ACTOS}
+            'series': series, 'periodicas': periodicas, 'bitacora': bitacora, 'bitacora_actos': bc.ACTOS}
 
 
 def aplicar_metas(cambios_metas, autor):

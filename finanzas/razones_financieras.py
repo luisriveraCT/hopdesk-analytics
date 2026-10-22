@@ -234,7 +234,7 @@ def _ctn(f):
     return cxc + inv - cxp
 
 
-def razones(fila, fila_anterior=None, ttm=None, dias_anio=None):
+def razones(fila, fila_anterior=None, ttm=None, dias_anio=None, periodos_por_anio=None):
     """Razones financieras de un mes ya derivado (pasar la salida de derivar_estado).
 
     ttm: opcional, dict con los agregados de los últimos 12 meses y los saldos
@@ -242,12 +242,17 @@ def razones(fila, fila_anterior=None, ttm=None, dias_anio=None):
          versiones TTM, que son las que conviene usar para decidir.
 
     dias_anio: convención de días del año (365 o 360). Del cliente.
+
+    periodos_por_anio: cuántos periodos como éste caben en un año. 12 para un
+         mes (el de siempre); 4 si la fila es un trimestre ya sumado. Es lo
+         único que cambia para calcular las razones de un periodo más largo
+         con estas mismas fórmulas: los flujos se anualizan con él.
     """
     f = fila
     r = {}
     ing = f.get('ingresos')
     dias = dias_anio or DIAS_ANIO
-    P = PERIODOS_POR_ANIO
+    P = periodos_por_anio or PERIODOS_POR_ANIO
 
     # --- Rentabilidad (márgenes: flujo sobre flujo, no requieren anualizar) ---
     r['margen_bruto'] = _div((ing - f['costo_servicio']) if None not in (ing, f.get('costo_servicio')) else None, ing)
