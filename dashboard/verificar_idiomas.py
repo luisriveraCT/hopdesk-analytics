@@ -57,11 +57,19 @@ DINAMICAS = [
     # Análisis: las capas (nombre y ayuda), las etiquetas de periodo y las
     # notas de tendencia que se eligen con un ternario anidado.
     ('an.c.', ['serie', 'media', 'banda', 'percentil', 'tendencia', 'robusta',
-               'meta', 'control']),
+               'meta', 'control', 'modelo']),
     ('an.c.', [f'{x}.help' for x in ('serie', 'media', 'banda', 'percentil',
-               'tendencia', 'robusta', 'meta', 'control')]),
+               'tendencia', 'robusta', 'meta', 'control', 'modelo')]),
     ('an.per.', ['b', 't', 'c', 's']),
     ('an.n.tend.', ['sube', 'baja', 'no']),
+    # Modelos: los avisos y errores que manda el servidor (sus códigos viven
+    # en finanzas/modelos_series.py), las series de las pruebas y el modo.
+    ('an.mod.', ['auto', 'manual']),
+    ('an.mod.av.', ['interpolados', 'sin_estacional', 'busqueda_cortada', 'no_converge']),
+    ('an.mod.err.', ['pocos_datos', 'log_no_positivo', 'parametro', 'periodicidad',
+                     'serie_larga', 'estacional_sin_datos', 'no_ajusta', 'error']),
+    ('an.mod.ser.', ['nivel', 'd1', 'd2', 'ds', 'd1ds']),
+    ('an.mod.ing.', ['estacional', 'ultimo']),
 ]
 
 # Los tipos de factura que no son el base. t() busca primero '<tipo>.<clave>'

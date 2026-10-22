@@ -80,15 +80,34 @@ pequeña, los resultados con sus valores p. En la barra:
 - **Periodicidad**: se escribe cuántos datos por año (12, 6, 4, 3, 2 o 1). Cada
   periodo se calcula con sus propias cifras en el servidor
   (`series_periodicas()` en `dashboard/exportar_kpis.py`), no promediando meses.
-- **12 m móviles / Por periodo**: con periodicidad 12, en los indicadores que
-  tienen versión de doce meses (márgenes EBITDA, EBIT y neto, ROE, ROIC, spread,
-  EVA, rotación de activos, deuda neta / EBITDA). En los demás se apaga.
+- **12 m móviles / Por periodo**: con periodicidad 12. Todo indicador que lleva
+  un flujo tiene versión de doce meses (20 de 26); se apaga solo en los que son
+  saldo al cierre (deuda / patrimonio, pasivo / activo, las tres de liquidez) y
+  en el WACC, que es una tasa.
 - **Periodo**: 12, 24 o 36 periodos, todo, o **Elegir…**: una barra de rango
   cuyos pasos son los periodos de la periodicidad. Se arrastran los extremos o
   la ventana entera; al cambiar la periodicidad, el rango se queda en las mismas fechas.
 - **Incluir dudosos**: los meses que no cerraron quedan fuera por omisión.
 - **Capas**: serie, media móvil, banda P25–P75, percentil, tendencia, tendencia
   robusta, meta y control. Se prenden y apagan sin cambiar de gráfica.
+
+**Modelo ARIMA / SARIMA** (la capa **Modelo**, o el botón *Ajustar modelo* bajo
+la gráfica). Se calcula en el servidor con `finanzas/modelos_series.py`
+(statsmodels), sobre la serie tal como se ve: la ventana, la periodicidad y sin
+los dudosos si están excluidos. En orden de lectura:
+
+1. el modelo elegido —automático por AICc, o los órdenes que se escriban— y sus
+   coeficientes con error estándar, z, valor p e intervalo;
+2. los residuos: Ljung-Box, Jarque-Bera, varianza constante, raíces y su ACF;
+3. la validación: se esconden los últimos periodos y se compara contra el
+   pronóstico ingenuo. Si no le gana, el modelo no sirve para pronosticar;
+4. el porqué: ADF y KPSS sobre el nivel y las diferencias, STL, ACF y PACF;
+5. el pronóstico con su intervalo, que también se dibuja en la gráfica.
+
+α (0.01, 0.05, 0.10) fija a la vez el nivel de todas las pruebas y el ancho de
+los intervalos. Log se bloquea si algún valor de la selección es cero o
+negativo. Un ajuste mensual con estacionalidad tarda de 10 a 20 s la primera
+vez; repetido, es instantáneo. En la página sin servidor no hay modelos.
 
 La elección se recuerda a corto plazo. Se pueden abrir dos ventanas —el análisis
 en una, la hoja de captura en otra— y lo que se guarda en una aparece en la otra
@@ -367,6 +386,7 @@ Un cliente nuevo se da de alta sin tocar un archivo `.py`.
 | `consolidacion.py` | el grupo con sus eliminaciones intercompañía |
 | `mapeo_kpis.py` | del catálogo de cuentas a los campos que usan las razones |
 | `razones_financieras.py` | **el catálogo de indicadores** y su cálculo |
+| `modelos_series.py` | ARIMA/SARIMA, ADF, KPSS, STL, ACF/PACF, Ljung-Box y validación; lo usa el servidor para la vista de análisis |
 | `normas_contables.py` | qué decide cada marco contable (IFRS/NIF, US GAAP) |
 | `entradas_manuales.py` | suministro y sobrescritura, con sus reglas |
 | `bitacora_cambios.py` | quién tocó qué, cuándo y por qué |

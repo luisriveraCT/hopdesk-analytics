@@ -483,6 +483,35 @@ th[data-help]{text-decoration:underline dotted var(--axis);text-underline-offset
 .anresultados th,.anresultados td{padding:2px 5px}
 .anresultados td.sig{color:var(--accent);font-weight:600}
 .anresultados p{margin:4px 0 2px;color:var(--ink-2);line-height:1.35}
+/* El modelo: una franja de controles, una línea con el modelo elegido y los
+   bloques de resultados con el mismo estilo compacto que la estadística. */
+.anmodelo{margin-top:8px;border:1px solid var(--line-2);border-radius:6px;padding:6px 8px;
+  background:var(--surface-2);font-size:11px}
+.anmodoff{display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:var(--ink-2)}
+.anmodbar{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.anmodbar input[type=number],.anmodbar select{font:inherit;font-size:11px;font-family:var(--mono);width:42px;
+  padding:0 3px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--ink)}
+.anmodbar select{width:auto}
+.anmodord{font-family:var(--mono);white-space:nowrap}
+.anmodord input[type=number]{width:30px;text-align:center}
+.anmodnum{display:inline-flex;gap:4px;align-items:center;white-space:nowrap;color:var(--ink-2)}
+.anmodhead{margin:7px 0 2px;font-size:12px}
+.anmodhead b{font-family:var(--mono);font-weight:600}
+.anmodnota{margin:4px 0;color:var(--ink-2);line-height:1.4}
+.anmodnota.aviso{color:var(--sem-warn)}
+.anmodnota.mal,.anmodres .mal{color:var(--sem-bad)}
+.anmodres .bien{color:var(--sem-ok)}
+.anmodres td.sig{color:var(--accent);font-weight:600}
+/* Las tablas del modelo tienen hasta seis columnas: cada bloque pide más ancho
+   que los de la estadística, o se cortaban el intervalo y la lectura. */
+.anresultados.anmodres{grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr))}
+.ancorr{display:block;width:100%;max-width:340px;height:auto;margin-top:4px}
+.ancorr .tt{font-size:9px;fill:var(--muted)}
+.ancorr .lb{font-size:8px;fill:var(--muted);font-family:var(--mono)}
+.ancorr rect{fill:var(--accent)}
+.ancorr rect.fuera{fill:var(--s2)}
+.ancorr .eje{stroke:var(--axis);stroke-width:1}
+.ancorr .banda{stroke:var(--crit);stroke-width:1;stroke-dasharray:3 3;fill:none}
 .anvacio{padding:30px;text-align:center;color:var(--muted);font-size:12px}
 .chip{display:inline-block;padding:1px 6px;border-radius:999px;font-size:10px;font-weight:600;border:1px solid var(--line)}
 .chip-ic{background:var(--accent-soft);color:var(--accent);border-color:transparent}
@@ -1121,6 +1150,7 @@ tr.esob .ecelda{border-color:var(--sem-bad);background:rgba(220,38,38,.09);
       <div class="anresumen" id="anResumen"></div>
       <div class="ancapas" id="anCapas"></div>
       <div class="plot anplot" id="anPlot"></div>
+      <div class="anmodelo" id="anModelo"></div>
       <div class="anresultados" id="anResultados"></div>
     </section>
   </div>
@@ -1728,6 +1758,14 @@ const ENTRADAS = __ENTRADAS_JSON__;
      anPintarRango()             la barra de rango: sus pasos son los periodos de
                                  la periodicidad, y AN.rango se guarda en meses
      anCorto(ent)                "Grupo" en encabezados, en vez del nombre largo
+     AN_MOD                      el modelo ARIMA/SARIMA: pedido en curso, último
+                                 resultado y memoria por clave (serie + parámetros)
+     anModPreparar / anModRecibir   pide al servidor (pedir_modelo) y recibe
+                                 (modelo_resultado); solo cuenta el último pedido
+     anModVigente(r0)            ajuste y periodos del pronóstico, para la gráfica
+     anSiguiente(x)              el periodo que sigue, para alargar el eje
+     anPintarModelo / anModResultados   controles y bloques de resultados
+     anCorrSVG                   un correlograma (ACF/PACF) con su banda
      anPintarLista()             los 31 indicadores, con meta arriba; metas
                                  editables para las entidades vistas
      anPintarResumen / anPintarCapas / anGrafica / anPintarResultados
@@ -2276,8 +2314,107 @@ const I18N = {
     'an.rango.hasta':'Fin del rango',
     'an.rango.mover':'Arrastra para mover el rango completo',
     'an.rango.help':'Arrastra los extremos para elegir dónde empieza y dónde termina, arrastra la ventana para moverla entera, o haz clic en la barra para llevar ahí el extremo más cercano. Con el teclado, las flechas mueven el extremo elegido. Los pasos son los periodos de la periodicidad vigente; al cambiarla, el rango se conserva en las mismas fechas. Debajo se ve la silueta de la serie.',
-    'an.base.sinttm':'Este indicador no tiene versión de doce meses móviles: se ve el dato de cada mes.',
+    'an.base.sinttm':'Es un saldo al cierre (o una tasa, como el WACC): no se acumula, así que no tiene versión de doce meses móviles.',
     'an.grupo.corto':'Grupo',
+    'an.c.modelo':'Modelo',
+    'an.c.modelo.help':'Ajusta un ARIMA/SARIMA en el servidor y dibuja su ajuste (punteado) y su pronóstico con intervalo. Abajo de la gráfica, sus coeficientes y pruebas.',
+    'an.mod.t':'Modelo ARIMA / SARIMA',
+    'an.mod.auto':'Automático',
+    'an.mod.manual':'Manual',
+    'an.mod.intro':'Ajusta un modelo ARIMA/SARIMA a esta serie, con sus pruebas de estacionariedad, correlogramas, diagnóstico de residuos, validación fuera de muestra y pronóstico.',
+    'an.mod.activar':'Ajustar modelo',
+    'an.mod.help':'Automático: elige d y D con KPSS y la fuerza estacional de STL, y luego busca p, q, P, Q por AICc (menor es mejor). Manual: tú escribes (p,d,q)(P,D,Q)ₛ; s es la periodicidad. Log modela el logaritmo (crecimientos proporcionales) y solo se permite con todos los valores positivos. Rezagos: cuántos muestran los correlogramas. Horizonte: cuántos periodos se pronostican. α: el nivel de significancia de todas las pruebas y el ancho de los intervalos. Se calcula en el servidor: en la página sin servidor no está disponible.',
+    'an.mod.orden.help':'(p,d,q): orden autorregresivo, diferencias y media móvil. (P,D,Q)ₛ: lo mismo, estacional, con s periodos por año.',
+    'an.mod.log':'Log',
+    'an.mod.log.help':'Modela el logaritmo: útil cuando la variación crece con el nivel. El pronóstico regresa a la escala original.',
+    'an.mod.log.bloq':'No disponible: {n} periodo(s) de la selección valen cero o menos, y el logaritmo no existe para ellos.',
+    'an.mod.rezagos':'Rezagos',
+    'an.mod.rezagos.help':'Cuántos rezagos muestran la ACF y la PACF (como máximo, la mitad de los datos).',
+    'an.mod.h':'Horizonte',
+    'an.mod.h.help':'Cuántos periodos hacia adelante se pronostican.',
+    'an.mod.alfa.help':'Nivel de significancia: una prueba "rechaza" cuando su valor p es menor que α. También fija el intervalo del pronóstico (α = 0.05 → 95%).',
+    'an.mod.sinsrv':'Los modelos se calculan en el servidor. Esta página se abrió sin él (archivo suelto o sitio estático): ábrela desde la aplicación para usarlos.',
+    'an.mod.calculando':'Calculando el modelo en el servidor…',
+    'an.mod.calculando.s':'Calculando… {s} s',
+    'an.mod.listo':'Calculado en {s} s',
+    'an.mod.dememoria':'Ya calculado',
+    'an.mod.ent':'Con varias empresas, el modelo se ajusta a {e}, la primera elegida.',
+    'an.mod.elegido':'elegido por AICc entre {n} modelos',
+    'an.mod.manualtxt':'órdenes escritos a mano',
+    'an.mod.av.interpolados':'{n} hueco(s) interior(es) se interpolaron solo para las pruebas de raíz unitaria y STL; el modelo los trata como faltantes.',
+    'an.mod.av.sin_estacional':'Muy pocos años para estimar estacionalidad: se ajustó sin parte estacional.',
+    'an.mod.av.busqueda_cortada':'La búsqueda llegó a su tope de modelos o de tiempo: puede haber uno mejor sin probar.',
+    'an.mod.av.no_converge':'La estimación no convergió del todo: toma los coeficientes con reserva.',
+    'an.mod.b.coef':'Coeficientes',
+    'an.mod.b.res':'Residuos: ¿quedó algo sin explicar?',
+    'an.mod.b.val':'Validación fuera de muestra',
+    'an.mod.b.est':'Estacionariedad',
+    'an.mod.b.corr':'Correlogramas',
+    'an.mod.b.pron':'Pronóstico',
+    'an.mod.b.alt':'Otros modelos probados',
+    'an.mod.coef':'Coeficiente',
+    'an.mod.ee':'Error est.',
+    'an.mod.ic':'IC {n}%',
+    'an.mod.n.coef':'H₀ de cada fila: el coeficiente vale cero. Con p < {a} se rechaza: el término aporta. Un término con p alta se puede quitar y comparar el AICc.',
+    'an.mod.par.ar':'AR {n}',
+    'an.mod.par.ma':'MA {n}',
+    'an.mod.par.sar':'AR estacional {n}',
+    'an.mod.par.sma':'MA estacional {n}',
+    'an.mod.par.const':'Constante',
+    'an.mod.par.sigma2':'Varianza del ruido (σ²)',
+    'an.mod.ser.nivel':'Nivel',
+    'an.mod.ser.d1':'1ª diferencia',
+    'an.mod.ser.d2':'2ª diferencia',
+    'an.mod.ser.ds':'Diferencia estacional',
+    'an.mod.ser.d1ds':'1ª + estacional',
+    'an.mod.est':'Estadístico',
+    'an.mod.lectura':'Lectura',
+    'an.mod.est.si':'estacionaria',
+    'an.mod.est.no':'no estacionaria',
+    'an.mod.est.mixta':'las pruebas no coinciden',
+    'an.mod.sug':'Diferencias sugeridas: d = {d}, D = {D}',
+    'an.mod.stl':'STL: fuerza estacional {fe}, fuerza de tendencia {ft} (0 a 1; la estacional pide D = 1 arriba de 0.64)',
+    'an.mod.n.est':'ADF — H₀: tiene raíz unitaria (no es estacionaria); p < {a} la rechaza. KPSS — H₀: es estacionaria; p < {a} la rechaza. Sus hipótesis van en sentidos opuestos a propósito: cuando las dos coinciden la conclusión es firme. KPSS solo reporta p entre 0.01 y 0.10; fuera de ahí da la cota.',
+    'an.mod.lb':'Ljung-Box, {l} rezagos',
+    'an.mod.lb.si':'sin autocorrelación: bien',
+    'an.mod.lb.no':'queda autocorrelación: falta estructura',
+    'an.mod.jb':'Jarque-Bera (normalidad)',
+    'an.mod.jb.si':'normales',
+    'an.mod.jb.no':'no normales: intervalos aproximados',
+    'an.mod.het':'Varianza constante',
+    'an.mod.het.si':'constante',
+    'an.mod.het.no':'cambia en el tiempo',
+    'an.mod.raices':'Raíces (módulo mínimo)',
+    'an.mod.raiz.ok':'lejos de 1: estable',
+    'an.mod.raiz.borde':'casi 1: al borde',
+    'an.mod.n.res':'Un buen modelo deja residuos que son ruido. Ljung-Box — H₀: sin autocorrelación; Jarque-Bera — H₀: normales; varianza — H₀: constante (primer tercio contra el último). Con p < {a} se rechaza. La ACF de los residuos no debería rebasar la banda.',
+    'an.mod.val.modelo':'Modelo',
+    'an.mod.val.ingenuo':'Ingenuo',
+    'an.mod.val.gana':'Escondiendo los últimos {k} periodos, el modelo pronosticó mejor que el ingenuo ({tipo}): su error es {r} veces el del ingenuo.',
+    'an.mod.val.pierde':'Escondiendo los últimos {k} periodos, el modelo NO le ganó al ingenuo ({tipo}): su error es {r} veces el del ingenuo. Para pronosticar, no aporta; puede servir para describir.',
+    'an.mod.val.no':'Muy pocos datos para esconder un tramo y validar.',
+    'an.mod.ing.estacional':'el mismo periodo del año anterior',
+    'an.mod.ing.ultimo':'repetir el último valor',
+    'an.mod.pron':'Pronóstico',
+    'an.mod.ajuste':'Ajuste del modelo',
+    'an.mod.inf':'Inferior',
+    'an.mod.sup':'Superior',
+    'an.mod.n.pron':'Intervalo de {n}%: si el modelo es correcto, el valor real cae dentro con esa probabilidad. Se ensancha con el horizonte.',
+    'an.mod.n.pron.log':'Intervalo de {n}%. Modelado en logaritmo: el pronóstico es la mediana, no la media, y el intervalo es asimétrico.',
+    'an.mod.corr.acf':'ACF — {ser}',
+    'an.mod.corr.pacf':'PACF — {ser}',
+    'an.mod.corr.res':'ACF de los residuos',
+    'an.mod.rezago':'Rezago',
+    'an.mod.n.corr':'Sobre la serie ya diferenciada. Barras fuera de la banda: correlación distinta de cero. Una PACF que se corta en el rezago p y una ACF que decae sugieren AR(p); al revés, MA(q). Picos en s, 2s… apuntan a la parte estacional.',
+    'an.mod.n.alt':'Menor AICc es mejor. Diferencias de menos de 2 puntos no distinguen un modelo de otro.',
+    'an.mod.err.pocos_datos':'Hacen falta al menos {min} periodos con dato; hay {n}. Amplía el periodo o baja la periodicidad.',
+    'an.mod.err.log_no_positivo':'{n} periodo(s) valen cero o menos: el logaritmo no existe. Quita Log.',
+    'an.mod.err.parametro':'Parámetro fuera de rango ({campo}): entre {lo} y {hi}.',
+    'an.mod.err.periodicidad':'Periodicidad no válida.',
+    'an.mod.err.serie_larga':'La serie es demasiado larga para el modelo (más de {max} periodos).',
+    'an.mod.err.estacional_sin_datos':'Una parte estacional necesita al menos {min} periodos; hay {n}. Deja (P,D,Q) en cero.',
+    'an.mod.err.no_ajusta':'El modelo no se pudo estimar con estos órdenes. Prueba órdenes más bajos.',
+    'an.mod.err.error':'El servidor no pudo calcular el modelo ({tipo}). El detalle quedó en su registro.',
     'nodata':'Sin datos con los filtros actuales'
   },
   en:{
@@ -2706,8 +2843,107 @@ const I18N = {
     'an.rango.hasta':'Range end',
     'an.rango.mover':'Drag to move the whole range',
     'an.rango.help':'Drag the ends to choose where it starts and ends, drag the window to move it whole, or click the bar to bring the nearest end there. With the keyboard, the arrows move the focused end. Steps are the periods of the current periodicity; when it changes, the range keeps the same dates. The series outline shows underneath.',
-    'an.base.sinttm':'This indicator has no rolling twelve-month version: each month\'s own figure is shown.',
+    'an.base.sinttm':'It is a closing balance (or a rate, like WACC): it does not accumulate, so it has no rolling twelve-month version.',
     'an.grupo.corto':'Group',
+    'an.c.modelo':'Model',
+    'an.c.modelo.help':'Fits an ARIMA/SARIMA on the server and draws its fit (dotted) and its forecast with interval. Below the chart, its coefficients and tests.',
+    'an.mod.t':'ARIMA / SARIMA model',
+    'an.mod.auto':'Automatic',
+    'an.mod.manual':'Manual',
+    'an.mod.intro':'Fit an ARIMA/SARIMA model to this series, with stationarity tests, correlograms, residual diagnostics, out-of-sample validation and forecast.',
+    'an.mod.activar':'Fit model',
+    'an.mod.help':'Automatic: picks d and D with KPSS and STL seasonal strength, then searches p, q, P, Q by AICc (lower is better). Manual: you type (p,d,q)(P,D,Q)ₛ; s is the periodicity. Log models the logarithm (proportional growth) and is only allowed with all values positive. Lags: how many the correlograms show. Horizon: how many periods are forecast. α: the significance level of every test and the width of the intervals. Computed on the server: not available on the page without a server.',
+    'an.mod.orden.help':'(p,d,q): autoregressive order, differences and moving average. (P,D,Q)ₛ: the same, seasonal, with s periods per year.',
+    'an.mod.log':'Log',
+    'an.mod.log.help':'Models the logarithm: useful when variation grows with the level. The forecast returns to the original scale.',
+    'an.mod.log.bloq':'Not available: {n} period(s) in the selection are zero or below, and the logarithm does not exist for them.',
+    'an.mod.rezagos':'Lags',
+    'an.mod.rezagos.help':'How many lags the ACF and PACF show (at most half the data).',
+    'an.mod.h':'Horizon',
+    'an.mod.h.help':'How many periods ahead are forecast.',
+    'an.mod.alfa.help':'Significance level: a test "rejects" when its p-value is below α. It also sets the forecast interval (α = 0.05 → 95%).',
+    'an.mod.sinsrv':'Models are computed on the server. This page was opened without one (a loose file or static site): open it from the app to use them.',
+    'an.mod.calculando':'Computing the model on the server…',
+    'an.mod.calculando.s':'Computing… {s} s',
+    'an.mod.listo':'Computed in {s} s',
+    'an.mod.dememoria':'Already computed',
+    'an.mod.ent':'With several companies, the model is fitted to {e}, the first one selected.',
+    'an.mod.elegido':'chosen by AICc among {n} models',
+    'an.mod.manualtxt':'hand-typed orders',
+    'an.mod.av.interpolados':'{n} interior gap(s) were interpolated only for the unit-root tests and STL; the model treats them as missing.',
+    'an.mod.av.sin_estacional':'Too few years to estimate seasonality: fitted without a seasonal part.',
+    'an.mod.av.busqueda_cortada':'The search hit its model or time limit: a better one may be untried.',
+    'an.mod.av.no_converge':'The estimation did not fully converge: treat the coefficients with caution.',
+    'an.mod.b.coef':'Coefficients',
+    'an.mod.b.res':'Residuals: is anything left unexplained?',
+    'an.mod.b.val':'Out-of-sample validation',
+    'an.mod.b.est':'Stationarity',
+    'an.mod.b.corr':'Correlograms',
+    'an.mod.b.pron':'Forecast',
+    'an.mod.b.alt':'Other models tried',
+    'an.mod.coef':'Coefficient',
+    'an.mod.ee':'Std. error',
+    'an.mod.ic':'{n}% CI',
+    'an.mod.n.coef':'H₀ for each row: the coefficient is zero. With p < {a} it is rejected: the term contributes. A term with a high p can be dropped and the AICc compared.',
+    'an.mod.par.ar':'AR {n}',
+    'an.mod.par.ma':'MA {n}',
+    'an.mod.par.sar':'Seasonal AR {n}',
+    'an.mod.par.sma':'Seasonal MA {n}',
+    'an.mod.par.const':'Constant',
+    'an.mod.par.sigma2':'Noise variance (σ²)',
+    'an.mod.ser.nivel':'Level',
+    'an.mod.ser.d1':'1st difference',
+    'an.mod.ser.d2':'2nd difference',
+    'an.mod.ser.ds':'Seasonal difference',
+    'an.mod.ser.d1ds':'1st + seasonal',
+    'an.mod.est':'Statistic',
+    'an.mod.lectura':'Reading',
+    'an.mod.est.si':'stationary',
+    'an.mod.est.no':'not stationary',
+    'an.mod.est.mixta':'the tests disagree',
+    'an.mod.sug':'Suggested differences: d = {d}, D = {D}',
+    'an.mod.stl':'STL: seasonal strength {fe}, trend strength {ft} (0 to 1; seasonal asks for D = 1 above 0.64)',
+    'an.mod.n.est':'ADF — H₀: has a unit root (not stationary); p < {a} rejects it. KPSS — H₀: is stationary; p < {a} rejects it. Their hypotheses point in opposite directions on purpose: when both agree the conclusion is firm. KPSS only reports p between 0.01 and 0.10; outside that it gives the bound.',
+    'an.mod.lb':'Ljung-Box, {l} lags',
+    'an.mod.lb.si':'no autocorrelation: good',
+    'an.mod.lb.no':'autocorrelation remains: structure missing',
+    'an.mod.jb':'Jarque-Bera (normality)',
+    'an.mod.jb.si':'normal',
+    'an.mod.jb.no':'not normal: intervals approximate',
+    'an.mod.het':'Constant variance',
+    'an.mod.het.si':'constant',
+    'an.mod.het.no':'changes over time',
+    'an.mod.raices':'Roots (minimum modulus)',
+    'an.mod.raiz.ok':'far from 1: stable',
+    'an.mod.raiz.borde':'almost 1: borderline',
+    'an.mod.n.res':'A good model leaves residuals that are noise. Ljung-Box — H₀: no autocorrelation; Jarque-Bera — H₀: normal; variance — H₀: constant (first third against the last). With p < {a} it is rejected. The residual ACF should not cross the band.',
+    'an.mod.val.modelo':'Model',
+    'an.mod.val.ingenuo':'Naive',
+    'an.mod.val.gana':'Hiding the last {k} periods, the model forecast better than the naive one ({tipo}): its error is {r} times the naive one.',
+    'an.mod.val.pierde':'Hiding the last {k} periods, the model did NOT beat the naive one ({tipo}): its error is {r} times the naive one. For forecasting it adds nothing; it may still describe.',
+    'an.mod.val.no':'Too few data to hold out a stretch and validate.',
+    'an.mod.ing.estacional':'the same period last year',
+    'an.mod.ing.ultimo':'repeat the last value',
+    'an.mod.pron':'Forecast',
+    'an.mod.ajuste':'Model fit',
+    'an.mod.inf':'Lower',
+    'an.mod.sup':'Upper',
+    'an.mod.n.pron':'{n}% interval: if the model is right, the actual value falls inside with that probability. It widens with the horizon.',
+    'an.mod.n.pron.log':'{n}% interval. Modelled in logs: the forecast is the median, not the mean, and the interval is asymmetric.',
+    'an.mod.corr.acf':'ACF — {ser}',
+    'an.mod.corr.pacf':'PACF — {ser}',
+    'an.mod.corr.res':'Residual ACF',
+    'an.mod.rezago':'Lag',
+    'an.mod.n.corr':'On the already differenced series. Bars outside the band: correlation different from zero. A PACF that cuts off at lag p and a decaying ACF suggest AR(p); the reverse, MA(q). Spikes at s, 2s… point to the seasonal part.',
+    'an.mod.n.alt':'Lower AICc is better. Differences under 2 points do not tell models apart.',
+    'an.mod.err.pocos_datos':'At least {min} periods with data are needed; there are {n}. Widen the window or lower the periodicity.',
+    'an.mod.err.log_no_positivo':'{n} period(s) are zero or below: the logarithm does not exist. Turn off Log.',
+    'an.mod.err.parametro':'Parameter out of range ({campo}): between {lo} and {hi}.',
+    'an.mod.err.periodicidad':'Invalid periodicity.',
+    'an.mod.err.serie_larga':'The series is too long for the model (over {max} periods).',
+    'an.mod.err.estacional_sin_datos':'A seasonal part needs at least {min} periods; there are {n}. Leave (P,D,Q) at zero.',
+    'an.mod.err.no_ajusta':'The model could not be estimated with these orders. Try lower orders.',
+    'an.mod.err.error':'The server could not compute the model ({tipo}). The detail is in its log.',
     'nodata':'No data for the current filters'
   }
 };
@@ -2722,7 +2958,9 @@ let TIPO = 'venta';
 const t = (k, vars) => {
   const d = I18N[LANG] || I18N.es, tk = TIPO + '.' + k;
   let s = (TIPO !== 'venta' && (d[tk] || I18N.es[tk])) || d[k] || I18N.es[k] || k;
-  if (vars) for (const v in vars) s = s.replace('{'+v+'}', vars[v]); return s; };
+  // Todas las apariciones, no la primera: un texto que repite "{a}" dejaba la
+  // segunda sin sustituir y la pantalla mostraba la llave cruda.
+  if (vars) for (const v in vars) s = s.split('{'+v+'}').join(vars[v]); return s; };
 
 let NF, NF2, NFI, PF;
 function buildFormats(){
@@ -4921,6 +5159,32 @@ const GLOSARIO = [
     en:{t:'Control limits (MAD)', d:'Bands at ±k σ from the median, with robust σ = 1.4826 × MAD (the median of distances to the median). A period outside them is rare for that indicator and deserves a look.'}},
   {cat:'analisis', es:{t:'Cumplimiento de meta', d:'Cuántos de los periodos vistos habrían alcanzado la meta vigente, según si el indicador es mejor cuando sube o cuando baja.'},
     en:{t:'Target attainment', d:'How many of the periods shown would have met the current target, depending on whether the indicator is better higher or lower.'}},
+  {cat:'analisis', es:{t:'Doce meses móviles (TTM)', d:'La suma de los flujos de los últimos doce meses, y el promedio de los saldos en esos mismos meses. Todo indicador que lleva un flujo tiene esta versión; los que son puro saldo al cierre (deuda / patrimonio, pasivo / activo, liquidez) y el WACC no, porque un saldo no se acumula.'},
+    en:{t:'Rolling twelve months (TTM)', d:'The sum of flows over the last twelve months, and the average of balances over those same months. Every indicator that involves a flow has this version; pure closing-balance ones (debt / equity, liabilities / assets, liquidity) and WACC do not, because a balance does not accumulate.'}},
+  {cat:'analisis', es:{t:'ARIMA / SARIMA (p,d,q)(P,D,Q)s', d:'Modelo que explica cada periodo con los anteriores (AR, orden p), con los errores anteriores (MA, orden q) y después de diferenciar la serie d veces. SARIMA agrega lo mismo a distancia de un año (P, D, Q, con s periodos por año). Se estima por máxima verosimilitud en el servidor.'},
+    en:{t:'ARIMA / SARIMA (p,d,q)(P,D,Q)s', d:'A model that explains each period with the previous ones (AR, order p), with previous errors (MA, order q), after differencing the series d times. SARIMA adds the same at a one-year distance (P, D, Q, with s periods per year). Estimated by maximum likelihood on the server.'}},
+  {cat:'analisis', es:{t:'Estacionariedad y diferenciación (d, D)', d:'Una serie es estacionaria cuando su nivel y su variación no cambian con el tiempo; los modelos ARIMA lo necesitan. Si no lo es, se modela su cambio de un periodo a otro (d = 1) o contra el mismo periodo del año anterior (D = 1).'},
+    en:{t:'Stationarity and differencing (d, D)', d:'A series is stationary when its level and variation do not change over time; ARIMA models need it. If it is not, its change from one period to the next (d = 1) or against the same period last year (D = 1) is modelled instead.'}},
+  {cat:'analisis', es:{t:'ADF (Dickey-Fuller aumentada)', d:'Prueba de raíz unitaria. H₀: la serie NO es estacionaria. Un valor p menor que α la rechaza: la serie es estacionaria. Se acompaña de KPSS porque tiene poca potencia con pocos datos.'},
+    en:{t:'ADF (augmented Dickey-Fuller)', d:'Unit-root test. H₀: the series is NOT stationary. A p-value below α rejects it: the series is stationary. Paired with KPSS because it has little power with few data.'}},
+  {cat:'analisis', es:{t:'KPSS', d:'Prueba de estacionariedad con la hipótesis al revés que ADF. H₀: la serie SÍ es estacionaria; un valor p menor que α la rechaza. Si ADF y KPSS coinciden, la conclusión es firme. Solo reporta p entre 0.01 y 0.10; fuera de ahí da la cota.'},
+    en:{t:'KPSS', d:'Stationarity test with the hypothesis reversed from ADF. H₀: the series IS stationary; a p-value below α rejects it. If ADF and KPSS agree, the conclusion is firm. It only reports p between 0.01 and 0.10; outside that it gives the bound.'}},
+  {cat:'analisis', es:{t:'Fuerza estacional y de tendencia (STL)', d:'STL separa la serie en tendencia, estacionalidad y residuo. La fuerza de cada parte va de 0 a 1: 1 − Var(residuo) / Var(parte + residuo). Una fuerza estacional mayor que 0.64 pide una diferencia estacional (D = 1).'},
+    en:{t:'Seasonal and trend strength (STL)', d:'STL splits the series into trend, seasonality and remainder. Each part\'s strength goes from 0 to 1: 1 − Var(remainder) / Var(part + remainder). A seasonal strength above 0.64 calls for a seasonal difference (D = 1).'}},
+  {cat:'analisis', es:{t:'ACF y PACF (correlogramas)', d:'ACF: la correlación de la serie con ella misma k periodos antes. PACF: la misma, quitando lo que ya explican los rezagos intermedios. Las barras que rebasan la banda son significativas; su forma sugiere los órdenes p y q.'},
+    en:{t:'ACF and PACF (correlograms)', d:'ACF: the series\' correlation with itself k periods earlier. PACF: the same, removing what intermediate lags already explain. Bars beyond the band are significant; their shape suggests the orders p and q.'}},
+  {cat:'analisis', es:{t:'AICc', d:'Criterio de información de Akaike corregido para muestras chicas: premia el ajuste y castiga cada parámetro extra. Menor es mejor; diferencias de menos de 2 no distinguen un modelo de otro. BIC castiga más los parámetros.'},
+    en:{t:'AICc', d:'Akaike information criterion corrected for small samples: rewards fit and penalises each extra parameter. Lower is better; differences under 2 do not tell models apart. BIC penalises parameters more.'}},
+  {cat:'analisis', es:{t:'Ljung-Box', d:'Prueba sobre los residuos del modelo. H₀: no tienen autocorrelación (son ruido). Un valor p menor que α dice que quedó estructura sin explicar: el modelo está incompleto.'},
+    en:{t:'Ljung-Box', d:'Test on the model\'s residuals. H₀: they have no autocorrelation (they are noise). A p-value below α says structure was left unexplained: the model is incomplete.'}},
+  {cat:'analisis', es:{t:'Jarque-Bera', d:'Prueba de normalidad de los residuos. H₀: son normales. Si se rechaza, el pronóstico central sigue valiendo, pero sus intervalos son aproximados.'},
+    en:{t:'Jarque-Bera', d:'Normality test on the residuals. H₀: they are normal. If rejected, the central forecast still holds, but its intervals are approximate.'}},
+  {cat:'analisis', es:{t:'Heterocedasticidad', d:'Que la varianza del error cambie con el tiempo. Se prueba comparando el primer tercio de los residuos contra el último. H₀: varianza constante.'},
+    en:{t:'Heteroskedasticity', d:'Error variance changing over time. Tested by comparing the first third of the residuals against the last. H₀: constant variance.'}},
+  {cat:'analisis', es:{t:'Validación fuera de muestra', d:'Se esconden los últimos periodos, se ajusta el modelo con el resto y se compara su pronóstico con lo que pasó, contra un pronóstico ingenuo (el mismo periodo del año anterior, o el último valor). MAE y RMSE miden el error en las unidades del indicador; MAPE, en porcentaje. Un modelo que no le gana al ingenuo no aporta para pronosticar.'},
+    en:{t:'Out-of-sample validation', d:'The last periods are hidden, the model is fitted on the rest and its forecast is compared with what happened, against a naive forecast (the same period last year, or the last value). MAE and RMSE measure the error in the indicator\'s units; MAPE, as a percentage. A model that does not beat the naive one adds nothing for forecasting.'}},
+  {cat:'analisis', es:{t:'Logaritmo y rezagos', d:'Log: modelar el logaritmo convierte cambios proporcionales en sumas y estabiliza una variación que crece con el nivel; solo existe para valores positivos, por eso se bloquea si alguno es cero o negativo. Rezago k: el valor k periodos antes.'},
+    en:{t:'Logarithm and lags', d:'Log: modelling the logarithm turns proportional changes into sums and stabilises variation that grows with the level; it only exists for positive values, so it is blocked if any is zero or negative. Lag k: the value k periods earlier.'}},
 ];
 
 function glosarioNorm(s){ return strip(s).toLowerCase(); }
@@ -7153,6 +7417,8 @@ function enRegistrarRespuesta(){
   // Shiny lo vea como un valor nuevo.
   Shiny.addCustomMessageHandler('estado_actual', function(r){ enAplicarEstado(r); });
   Shiny.setInputValue('pedir_estado', Date.now());
+  // Los modelos ARIMA/SARIMA de la vista de análisis (ver anModPreparar).
+  Shiny.addCustomMessageHandler('modelo_resultado', function(r){ anModRecibir(r); });
   Shiny.addCustomMessageHandler('entradas_guardadas', function(r){
     clearTimeout(EN.espera);
     const b = document.getElementById('enExportar');
@@ -7282,8 +7548,10 @@ const AN_PERIODICIDADES = [12, 6, 4, 3, 2, 1];
 const AN_DEF = {ents: null, kpi: null, p: 12, base: 'ttm', ventana: '36', rango: null,
   dudosos: false,
   capas: {serie: true, media: true, banda: true, tendencia: false, robusta: false,
-          meta: true, control: false, percentil: false},
-  par: {media: 'sma', ventanaMedia: 3, alpha: 0.3, percentil: 90, k: 3}};
+          meta: true, control: false, percentil: false, modelo: false},
+  par: {media: 'sma', ventanaMedia: 3, alpha: 0.3, percentil: 90, k: 3},
+  // El modelo: rezagos y horizonte en null = los de la periodicidad.
+  mod: {modo: 'auto', orden: [1, 0, 1], est: [0, 0, 0], log: false, rezagos: null, h: null, alfa: 0.05}};
 const AN = JSON.parse(JSON.stringify(AN_DEF));
 (function(){
   const g = recordado('analisis');
@@ -7752,7 +8020,8 @@ const AN_CAPAS = [
   {k: 'serie', cc: '--accent', cls: ''}, {k: 'media', cc: '--s3', cls: 'pun'},
   {k: 'banda', cc: '--accent', cls: 'ban'}, {k: 'percentil', cc: '--s4', cls: 'pun'},
   {k: 'tendencia', cc: '--s2', cls: ''}, {k: 'robusta', cc: '--s2', cls: 'pun'},
-  {k: 'meta', cc: '--sem-ok', cls: ''}, {k: 'control', cc: '--crit', cls: 'pun'}];
+  {k: 'meta', cc: '--sem-ok', cls: ''}, {k: 'control', cc: '--crit', cls: 'pun'},
+  {k: 'modelo', cc: '--ink-2', cls: 'pun'}];
 function anPintarCapas(){
   const c = document.getElementById('anCapas'), P = AN.par;
   const extra = {
@@ -7808,6 +8077,10 @@ function anGrafica(res){
   llaves.sort((a, b) => (res[0].serie.find(x => x.llave === a) || {}).fin > (res[0].serie.find(x => x.llave === b) || {}).fin ? 1 : -1);
   if (!llaves.length || !res.some(r => r.pts.length)){
     host.innerHTML = `<div class="anvacio">${t('an.vacio')}</div>`; return; }
+  // El pronóstico alarga el eje hacia adelante: sus periodos van después de
+  // ordenar, porque todavía no existen en ninguna serie.
+  const M = anModVigente(res[0]);
+  if (M) for (const f of M.fut) if (!(f.llave in etiq)){ llaves.push(f.llave); etiq[f.llave] = f.etiqueta; }
   const W = Math.max(480, host.clientWidth || 800), H = 320, mL = 64, mR = 16, mT = 10, mB = 30;
   const iw = W - mL - mR, ih = H - mT - mB, n = llaves.length;
   const X = i => mL + (n === 1 ? iw / 2 : i * iw / (n - 1));
@@ -7816,6 +8089,10 @@ function anGrafica(res){
     for (const x of r.serie) if (x.v !== null && (AN.dudosos || !x.dudoso)) vals.push(x.v);
     if (AN.capas.meta && r.meta !== undefined) vals.push(r.meta);
     if (AN.capas.control && r.control){ vals.push(r.control.lo, r.control.hi); }
+  }
+  if (M){
+    const P = M.R.pronostico;
+    for (const a of [P.media, P.lo, P.hi, Object.values(M.ajuste)]) for (const v of a) if (v !== null) vals.push(v);
   }
   const tk = anTicks(Math.min(...vals), Math.max(...vals), 5);
   const y0 = tk[0], y1 = tk[tk.length - 1], Y = v => mT + ih - (v - y0) / ((y1 - y0) || 1) * ih;
@@ -7826,7 +8103,8 @@ function anGrafica(res){
                 'font-family': mono}, svg).textContent = kpFmt(k, v);
   }
   const paso = Math.max(1, Math.ceil(n / 12));
-  llaves.forEach((l, i) => { if (i % paso === 0 || i === n - 1)
+  // La última etiqueta siempre va; la regular que le queda pegada, no.
+  llaves.forEach((l, i) => { if (i === n - 1 || (i % paso === 0 && n - 1 - i >= Math.ceil(paso * .6)))
     el('text', {x: X(i), y: H - 10, 'text-anchor': 'middle', 'font-size': 10, fill: C('--muted'),
                 'font-family': mono}, svg).textContent = etiq[l]; });
   for (const r of res){
@@ -7861,6 +8139,27 @@ function anGrafica(res){
     if (AN.capas.control && r.control) for (const p of r.control.fuera)
       el('circle', {cx: X(idx(p.llave)), cy: Y(p.v), r: 6, fill: 'none', stroke: C('--crit'), 'stroke-width': 1.5}, svg);
   }
+  // EL MODELO: el ajuste a un paso sobre la historia (punteado fino) y el
+  // pronóstico con su intervalo. La línea del pronóstico arranca en el último
+  // dato observado para que se lea como continuación, no como otra serie.
+  if (M){
+    const trazo = (pts, attrs) => { if (pts.length < 2) return;
+      el('path', Object.assign({d: pts.map((p, j) => (j ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(''),
+        fill: 'none'}, attrs), svg); };
+    trazo(llaves.filter(l => M.ajuste[l] !== undefined).map(l => [X(llaves.indexOf(l)), Y(M.ajuste[l])]),
+          {stroke: C('--ink-2'), 'stroke-width': 1.2, 'stroke-dasharray': '1.5 2.5', opacity: .85});
+    const P = M.R.pronostico, xs = M.fut.map(f => X(llaves.indexOf(f.llave)));
+    const js = P.media.map((_, j) => j).filter(j => P.media[j] !== null && P.lo[j] !== null && P.hi[j] !== null);
+    if (js.length){
+      const borde = js.map(j => [xs[j], Y(P.hi[j])]).concat(js.slice().reverse().map(j => [xs[j], Y(P.lo[j])]));
+      el('path', {d: borde.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('') + 'Z',
+        fill: C('--ink'), opacity: .08}, svg);
+      const ult = res[0].pts[res[0].pts.length - 1];
+      trazo((ult ? [[X(llaves.indexOf(ult.llave)), Y(ult.v)]] : []).concat(js.map(j => [xs[j], Y(P.media[j])])),
+            {stroke: C('--ink-2'), 'stroke-width': 1.8, 'stroke-dasharray': '6 3'});
+      for (const j of js) el('circle', {cx: xs[j], cy: Y(P.media[j]), r: 2.2, fill: C('--ink-2')}, svg);
+    }
+  }
   // EL CURSOR: una línea vertical sobre la fecha y, en la ventanita, lo que vale
   // cada cosa en ese periodo. Un rectángulo invisible recibe el movimiento.
   const guia = el('line', {y1: mT, y2: mT + ih, stroke: C('--axis'), 'stroke-width': 1, opacity: 0}, svg);
@@ -7880,6 +8179,15 @@ function anGrafica(res){
         h += `<div class="r"><span>${t('an.c.media')}</span><span>${kpFmt(k, r.mm[j])}</span></div>`;
       if (AN.capas.meta && r.meta !== undefined)
         h += `<div class="r"><span>${t('an.c.meta')}</span><span>${kpFmt(k, r.meta)}</span></div>`;
+    }
+    if (M){
+      const j = M.fut.findIndex(f => f.llave === l), P = M.R.pronostico;
+      if (j >= 0 && P.media[j] !== null)
+        h += `<div class="r"><span>${t('an.mod.pron')}</span><span>${kpFmt(k, P.media[j])}</span></div>`
+           + `<div class="r"><span>${t('an.mod.ic', {n: Math.round((1 - M.R.alfa) * 100)})}</span><span>${
+               kpFmt(k, P.lo[j])} – ${kpFmt(k, P.hi[j])}</span></div>`;
+      else if (M.ajuste[l] !== undefined)
+        h += `<div class="r"><span>${t('an.mod.ajuste')}</span><span>${kpFmt(k, M.ajuste[l])}</span></div>`;
     }
     tipShow(h, ev);
   });
@@ -7939,6 +8247,288 @@ function anPintarResultados(res){
   caja.style.setProperty('--n', res.length);
   caja.innerHTML = est + tend + meta + media + ctrl;
 }
+/* ---- MODELOS ARIMA / SARIMA: se calculan en el servidor ---------------------
+   La estadística de arriba corre en el navegador; un modelo no puede —hay que
+   estimarlo por máxima verosimilitud y probarlo—, así que se le pide al
+   servidor (finanzas/modelos_series.py) por el canal de Shiny:
+
+     pedir_modelo  {id, valores, periodicidad, params}  →
+     ← modelo_resultado  {id, ok, resultado | codigo, datos, segundos}
+
+   Se manda la serie TAL COMO SE VE: la ventana elegida, con los dudosos como
+   huecos si están excluidos. Así el modelo contesta sobre lo mismo que la
+   gráfica muestra.
+
+   Solo cuenta la respuesta al último pedido (el servidor además descarta los
+   que quedaron viejos antes de empezarlos), y cada respuesta se guarda por su
+   clave: volver a un indicador ya visto no cuesta nada. Sin servidor —la
+   página suelta— no hay modelo y se dice. */
+const AN_MOD = {id: 0, pendiente: null, actual: null, salida: null, cache: new Map(),
+                pedidos: new Map(), t0: 0, timer: null, reloj: null};
+function anModDefectos(){
+  return {rez: {12: 24, 6: 12, 4: 8, 3: 6, 2: 4, 1: 4}[AN.p] || 12,
+          h: AN.p === 12 ? 12 : AN.p === 1 ? 3 : AN.p};
+}
+function anModPedido(r0){
+  const serie = r0.serie;
+  const valores = serie.map(x => x.v === null || (!AN.dudosos && x.dudoso) ? null : x.v);
+  const noPos = valores.filter(v => v !== null && v <= 0).length;
+  const m = AN.mod, def = anModDefectos();
+  const params = {modo: m.modo, alfa: m.alfa, rezagos: m.rezagos || def.rez,
+                  horizonte: m.h || def.h, log: !!m.log && !noPos};
+  if (m.modo === 'manual'){
+    params.orden = m.orden.slice();
+    params.estacional = AN.p > 1 ? m.est.slice() : [0, 0, 0];
+  }
+  return {ent: r0.ent, llaves: serie.map(x => x.llave), serie, valores, noPos, params,
+          clave: JSON.stringify([valores, AN.p, params])};
+}
+function anModPreparar(r0){
+  if (!AN.capas.modelo || !r0 || !r0.serie.length){ AN_MOD.actual = null; AN_MOD.salida = null; return; }
+  const a = anModPedido(r0);
+  const antes = AN_MOD.actual && AN_MOD.actual.clave;
+  AN_MOD.actual = a;
+  AN_MOD.salida = AN_MOD.cache.get(a.clave) || null;
+  if (AN_MOD.salida || !enHayServidor()){ AN_MOD.pendiente = null; return; }
+  if (antes === a.clave && AN_MOD.pendiente) return;          // ya va en camino
+  // Un respiro antes de mandar: escribir "12" en un campo no debe pedir el
+  // modelo del "1" y luego el del "12".
+  clearTimeout(AN_MOD.timer);
+  const id = ++AN_MOD.id;
+  AN_MOD.pendiente = id; AN_MOD.t0 = Date.now(); AN_MOD.pedidos.set(id, a.clave);
+  AN_MOD.timer = setTimeout(() => {
+    if (AN_MOD.pendiente === id)
+      Shiny.setInputValue('pedir_modelo', {id, valores: a.valores, periodicidad: AN.p, params: a.params});
+  }, 350);
+  clearInterval(AN_MOD.reloj);
+  AN_MOD.reloj = setInterval(() => {
+    const e = document.getElementById('anModEstado');
+    if (!AN_MOD.pendiente){ clearInterval(AN_MOD.reloj); return; }
+    if (e) e.textContent = t('an.mod.calculando.s', {s: Math.round((Date.now() - AN_MOD.t0) / 1000)});
+  }, 1000);
+}
+function anModRecibir(r){
+  const clave = AN_MOD.pedidos.get(r.id);
+  if (!clave) return;
+  AN_MOD.pedidos.delete(r.id);
+  AN_MOD.cache.set(clave, r);
+  while (AN_MOD.cache.size > 40) AN_MOD.cache.delete(AN_MOD.cache.keys().next().value);
+  if (r.id === AN_MOD.pendiente) AN_MOD.pendiente = null;
+  AN_MOD.recien = clave;     // lo que acaba de llegar; lo demás sale de memoria
+  if (PESTANA === 'analisis') anPintarCuerpo();
+}
+/* Lo que la gráfica necesita del modelo vigente, o null: el ajuste por llave
+   de periodo, y los periodos del pronóstico. El modelo recorta los huecos de
+   las orillas, así que el pronóstico empieza después del último dato válido;
+   si eso cae dentro de la ventana, usa esos periodos, y después inventa los
+   siguientes. */
+function anModVigente(r0){
+  const a = AN_MOD.actual, s = AN_MOD.salida;
+  if (!AN.capas.modelo || !a || !r0 || a.ent !== r0.ent || !s || !s.ok) return null;
+  const R = s.resultado, L = a.llaves, ajuste = {}, fut = [];
+  R.ajuste.forEach((v, j) => { if (v !== null && L[R.inicio + j] !== undefined) ajuste[L[R.inicio + j]] = v; });
+  let ult = a.serie[a.serie.length - 1];
+  for (let j = 0; j < R.pronostico.media.length; j++){
+    const pos = R.inicio + R.n + j;
+    if (pos < L.length) fut.push({llave: L[pos], etiqueta: a.serie[pos].etiqueta});
+    else { ult = anSiguiente(ult); fut.push(ult); }
+  }
+  return {R, ajuste, fut};
+}
+function anSiguiente(x){
+  if (AN.p === 12){
+    const [a, m] = x.llave.split('-').map(Number), tt = a * 12 + m;
+    const ll = `${Math.floor(tt / 12)}-${String(tt % 12 + 1).padStart(2, '0')}`;
+    return {llave: ll, etiqueta: ll};
+  }
+  let [a, , i] = x.llave.split('-').map(Number);
+  if (++i > AN.p){ i = 1; a++; }
+  return {llave: `${a}-${AN.p}-${i}`, etiqueta: anEtiqueta({periodo: '', anio: a, idx: i})};
+}
+const anFmtN = v => v === null || v === undefined || !isFinite(v) ? '—'
+  : (Math.abs(v) >= 1e5 || (v !== 0 && Math.abs(v) < 1e-3)) ? v.toExponential(2) : String(+(+v).toPrecision(4));
+/* ar.L1 → "AR 1", ma.S.L12 → "MA estacional 12", sigma2 → "Varianza del ruido". */
+function anModParam(nm){
+  let m;
+  if ((m = /^ar\.S\.L(\d+)$/.exec(nm))) return t('an.mod.par.sar', {n: m[1]});
+  if ((m = /^ma\.S\.L(\d+)$/.exec(nm))) return t('an.mod.par.sma', {n: m[1]});
+  if ((m = /^ar\.L(\d+)$/.exec(nm))) return t('an.mod.par.ar', {n: m[1]});
+  if ((m = /^ma\.L(\d+)$/.exec(nm))) return t('an.mod.par.ma', {n: m[1]});
+  if (nm === 'const' || nm === 'intercept') return t('an.mod.par.const');
+  if (nm === 'sigma2') return t('an.mod.par.sigma2');
+  return nm;
+}
+/* Un correlograma en SVG: barras por rezago y la banda de significancia. Las
+   barras que la rebasan van en otro color: son las que sugieren un orden. */
+function anCorrSVG(vals, banda, tit){
+  const W = 300, H = 104, mL = 26, mR = 6, mT = 16, mB = 14, k = vals.length;
+  if (!k) return '';
+  const iw = W - mL - mR, ih = H - mT - mB, y0 = mT + ih / 2, Yc = v => y0 - v * ih / 2;
+  const xc = i => mL + (i + .5) * iw / k, bw = Math.max(1.5, iw / k * .55);
+  const b = i => Array.isArray(banda) ? banda[i] : banda;
+  let s = `<svg class="ancorr" viewBox="0 0 ${W} ${H}" role="img" aria-label="${ajEsc(tit)}">`
+        + `<text class="tt" x="${mL}" y="10">${ajEsc(tit)}</text>`;
+  for (const v of [1, 0, -1]) s += `<text class="lb" x="${mL - 4}" y="${Yc(v) + 3}" text-anchor="end">${v}</text>`;
+  s += `<line class="eje" x1="${mL}" x2="${W - mR}" y1="${y0}" y2="${y0}"/>`;
+  for (const sg of [1, -1]){
+    const pts = vals.map((_, i) => b(i) === null ? null : `${xc(i).toFixed(1)},${Yc(sg * b(i)).toFixed(1)}`).filter(Boolean);
+    if (pts.length) s += `<polyline class="banda" points="${pts.join(' ')}"/>`;
+  }
+  const paso = Math.max(1, Math.round(k / 8));
+  vals.forEach((v0, i) => {
+    const v = v0 || 0, fuera = b(i) !== null && Math.abs(v) > b(i);
+    s += `<rect class="${fuera ? 'fuera' : ''}" x="${(xc(i) - bw / 2).toFixed(1)}" y="${Math.min(Yc(v), y0).toFixed(1)}"`
+       + ` width="${bw.toFixed(1)}" height="${Math.max(.5, Math.abs(Yc(v) - y0)).toFixed(1)}">`
+       + `<title>${ajEsc(t('an.mod.rezago'))} ${i + 1}: ${v.toFixed(3)}</title></rect>`;
+    if ((i + 1) % paso === 0 || i === 0) s += `<text class="lb" x="${xc(i).toFixed(1)}" y="${H - 3}" text-anchor="middle">${i + 1}</text>`;
+  });
+  return s + '</svg>';
+}
+function anPintarModelo(r0){
+  const caja = document.getElementById('anModelo');
+  if (!AN.capas.modelo){
+    caja.innerHTML = `<div class="anmodoff"><span>${t('an.mod.intro')}</span>
+      <button class="tbtn" type="button" id="anModOn">${t('an.mod.activar')}</button>
+      <button class="help" type="button" data-help="an.mod.help">?</button></div>`;
+    document.getElementById('anModOn').onclick = () => { AN.capas.modelo = true; anRecordar(); anPintarCuerpo(); };
+    return;
+  }
+  const m = AN.mod, a = AN_MOD.actual, def = anModDefectos(), s = AN_MOD.salida;
+  const num = (attr, v, lo, hi, w) => `<input ${attr} type="number" min="${lo}" max="${hi}" step="1" value="${v}"${w ? ` style="width:${w}px"` : ''}>`;
+  const lim = {o: [[0, 5], [0, 2], [0, 5]], e: [[0, 2], [0, 1], [0, 2]]};
+  const ord = m.modo !== 'manual' ? '' : `<span class="anmodord" title="${ajEsc(t('an.mod.orden.help'))}">(${
+      m.orden.map((v, i) => num(`data-o="${i}"`, v, ...lim.o[i])).join(',')})${AN.p > 1 ? `(${
+      m.est.map((v, i) => num(`data-e="${i}"`, v, ...lim.e[i])).join(',')})<sub>${AN.p}</sub>` : ''}</span>`;
+  const noPos = a ? a.noPos : 0;
+  let h = `<div class="anmodbar"><span class="flabel">${t('an.mod.t')}</span>
+    <div class="seg" id="anModModo" role="group">${['auto', 'manual'].map(v =>
+      `<button type="button" data-v="${v}" aria-pressed="${m.modo === v}">${t('an.mod.' + v)}</button>`).join('')}</div>${ord}
+    <label class="anchk" title="${ajEsc(noPos ? t('an.mod.log.bloq', {n: noPos}) : t('an.mod.log.help'))}"><input type="checkbox"
+      id="anModLog"${m.log && !noPos ? ' checked' : ''}${noPos ? ' disabled' : ''}>${t('an.mod.log')}</label>
+    <label class="anmodnum" title="${ajEsc(t('an.mod.rezagos.help'))}">${t('an.mod.rezagos')} ${num('data-m="rezagos"', m.rezagos || def.rez, 1, 48)}</label>
+    <label class="anmodnum" title="${ajEsc(t('an.mod.h.help'))}">${t('an.mod.h')} ${num('data-m="h"', m.h || def.h, 1, 36)}</label>
+    <label class="anmodnum" title="${ajEsc(t('an.mod.alfa.help'))}">α <select data-m="alfa">${[0.01, 0.05, 0.1].map(x =>
+      `<option value="${x}"${Math.abs(m.alfa - x) < 1e-9 ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
+    <span class="hint" id="anModEstado">${AN_MOD.pendiente ? t('an.mod.calculando.s', {s: Math.round((Date.now() - AN_MOD.t0) / 1000)})
+      : s ? (s.cache || AN_MOD.recien !== a.clave ? t('an.mod.dememoria') : t('an.mod.listo', {s: s.segundos})) : ''}</span>
+    <button class="help" type="button" data-help="an.mod.help">?</button></div>`;
+  if (AN.ents.length > 1 && a) h += `<p class="anmodnota">${t('an.mod.ent', {e: anNombre(a.ent)})}</p>`;
+  if (!a) h += `<p class="anmodnota">${t('an.vacio')}</p>`;
+  else if (!enHayServidor()) h += `<p class="anmodnota">${t('an.mod.sinsrv')}</p>`;
+  else if (!s) h +=`<p class="anmodnota">${t('an.mod.calculando')}</p>`;
+  else if (!s.ok) h += `<p class="anmodnota mal">${t('an.mod.err.' + s.codigo, Object.assign({}, s.datos || {}))}</p>`;
+  else h += anModResultados(s.resultado, r0);
+  caja.innerHTML = h;
+  // Los controles. Un valor fuera de rango se marca y no se aplica, como en las capas.
+  caja.querySelectorAll('#anModModo button').forEach(b => b.onclick = () => {
+    // Al pasar a manual se parte del modelo que eligió la búsqueda: lo
+    // natural es probar una variación de él, no empezar de cero.
+    if (b.dataset.v === 'manual' && m.modo !== 'manual' && s && s.ok){
+      m.orden = s.resultado.orden.slice(); m.est = s.resultado.estacional.slice(); }
+    m.modo = b.dataset.v; anRecordar(); anPintarCuerpo();
+  });
+  const fijar = (inp, lo, hi, poner) => inp.onchange = () => {
+    const n = +inp.value;
+    if (!Number.isInteger(n) || n < lo || n > hi){
+      inp.setAttribute('aria-invalid', 'true'); inp.style.borderColor = 'var(--crit)';
+      toast(t('an.c.rango', {a: lo, b: hi})); return;
+    }
+    poner(n); anRecordar(); anPintarCuerpo();
+  };
+  caja.querySelectorAll('[data-o]').forEach(i => fijar(i, ...lim.o[+i.dataset.o], n => { m.orden[+i.dataset.o] = n; }));
+  caja.querySelectorAll('[data-e]').forEach(i => fijar(i, ...lim.e[+i.dataset.e], n => { m.est[+i.dataset.e] = n; }));
+  const rz = caja.querySelector('[data-m="rezagos"]'), hz = caja.querySelector('[data-m="h"]');
+  fijar(rz, 1, 48, n => { m.rezagos = n; });
+  fijar(hz, 1, 36, n => { m.h = n; });
+  caja.querySelector('[data-m="alfa"]').onchange = e => { m.alfa = +e.target.value; anRecordar(); anPintarCuerpo(); };
+  const lg = document.getElementById('anModLog');
+  lg.onchange = () => { m.log = lg.checked; anRecordar(); anPintarCuerpo(); };
+}
+/* Los resultados, en el orden en que se leen: qué modelo, si sus residuos son
+   ruido, si pronostica mejor que no hacer nada; después el porqué (las pruebas
+   de estacionariedad y los correlogramas) y el pronóstico. */
+function anModResultados(R, r0){
+  const k = AN.kpi, al = R.alfa, est = R.estacional.some(x => x);
+  const nombre = `${est ? 'SARIMA' : 'ARIMA'}(${R.orden.join(',')})${est ? `(${R.estacional.join(',')})<sub>${R.s}</sub>` : ''}`;
+  const pv = (p, cota) => cota === 'mayor' ? '&gt; 0.10' : cota === 'menor' ? '&lt; 0.01' : anFmtP(p);
+  const tabla = (cab, filas) => `<table><thead><tr>${cab.map((c, i) => `<th${i ? ' class="num"' : ''}>${c}</th>`).join('')}</tr></thead><tbody>${
+    filas.map(f => `<tr>${f.map((c, i) => { const o = typeof c === 'object' && c !== null ? c : {v: c};
+      return `<td class="${i ? 'num' : ''}${o.cls ? ' ' + o.cls : ''}">${o.v}</td>`; }).join('')}</tr>`).join('')}</tbody></table>`;
+  const bloque = (id, tit, cuerpo, nota) => `<details open data-b="${id}"><summary>${ajEsc(tit)}</summary>${cuerpo}${
+    nota ? `<p>${nota}</p>` : ''}</details>`;
+  const dec = (malo, siTxt, noTxt) => ({v: ajEsc(malo ? noTxt : siTxt), cls: malo ? 'mal' : 'bien'});
+  let h = `<div class="anmodhead"><b>${nombre}</b> · AICc ${anFmtN(R.info.aicc)} · BIC ${anFmtN(R.info.bic)} · n ${R.n_obs}${
+    R.log ? ' · log' : ''} · ${R.modo === 'auto' ? t('an.mod.elegido', {n: R.probados}) : t('an.mod.manualtxt')}</div>`;
+  for (const av of R.avisos) h += `<p class="anmodnota aviso">${t('an.mod.av.' + av, {n: R.interpolados})}</p>`;
+
+  const coef = bloque('coef', t('an.mod.b.coef'), tabla(
+    ['', t('an.mod.coef'), t('an.mod.ee'), 'z', t('an.t.p'), t('an.mod.ic', {n: Math.round((1 - al) * 100)})],
+    R.coeficientes.map(c => [ajEsc(anModParam(c.nombre)), anFmtN(c.coef), anFmtN(c.ee), anFmtN(c.z),
+      {v: anFmtP(c.p), cls: c.p !== null && c.p < al ? 'sig' : ''}, `${anFmtN(c.lo)} … ${anFmtN(c.hi)}`])),
+    t('an.mod.n.coef', {a: al}));
+
+  const D = R.diagnostico || {}, filasRes = [];
+  for (const lb of D.ljung_box || [])
+    filasRes.push([t('an.mod.lb', {l: lb.rezagos}), anFmtN(lb.estadistico), anFmtP(lb.p),
+                   dec(lb.p !== null && lb.p < al, t('an.mod.lb.si'), t('an.mod.lb.no'))]);
+  if (D.jarque_bera) filasRes.push([t('an.mod.jb'), anFmtN(D.jarque_bera.estadistico), anFmtP(D.jarque_bera.p),
+    dec(D.jarque_bera.p !== null && D.jarque_bera.p < al, t('an.mod.jb.si'), t('an.mod.jb.no'))]);
+  if (D.heterocedasticidad) filasRes.push([t('an.mod.het'), anFmtN(D.heterocedasticidad.estadistico),
+    anFmtP(D.heterocedasticidad.p), dec(D.heterocedasticidad.p !== null && D.heterocedasticidad.p < al,
+      t('an.mod.het.si'), t('an.mod.het.no'))]);
+  const rmin = [R.raices.ar, R.raices.ma].filter(v => v !== null);
+  if (rmin.length) filasRes.push([t('an.mod.raices'),
+    `${R.raices.ar !== null ? 'AR ' + anFmtN(R.raices.ar) : ''}${R.raices.ar !== null && R.raices.ma !== null ? ' · ' : ''}${
+      R.raices.ma !== null ? 'MA ' + anFmtN(R.raices.ma) : ''}`, '',
+    dec(Math.min(...rmin) < 1.05, t('an.mod.raiz.ok'), t('an.mod.raiz.borde'))]);
+  const cr = R.correlograma_residuos;
+  const resid = bloque('res', t('an.mod.b.res'), tabla(['', t('an.mod.est'), t('an.t.p'), t('an.mod.lectura')], filasRes)
+    + (cr ? anCorrSVG(cr.acf, cr.acf_banda, t('an.mod.corr.res')) : ''), t('an.mod.n.res', {a: al}));
+
+  const V = R.validacion, pct = v => v === null || v === undefined ? '—' : (v * 100).toFixed(1) + '%';
+  const val = bloque('val', t('an.mod.b.val'), V ? tabla(['', t('an.mod.val.modelo'), t('an.mod.val.ingenuo')], [
+      ['MAE', kpFmt(k, V.modelo.mae), kpFmt(k, V.ingenuo.mae)],
+      ['RMSE', kpFmt(k, V.modelo.rmse), kpFmt(k, V.ingenuo.rmse)],
+      ['MAPE', pct(V.modelo.mape), pct(V.ingenuo.mape)]]) : '',
+    V ? `<span class="${V.razon_rmse !== null && V.razon_rmse < 1 ? 'bien' : 'mal'}">${t(V.razon_rmse !== null && V.razon_rmse < 1
+        ? 'an.mod.val.gana' : 'an.mod.val.pierde', {k: V.k, r: anFmtN(V.razon_rmse), tipo: t('an.mod.ing.' + V.ingenuo_tipo)})}</span>`
+      : t('an.mod.val.no'));
+
+  const lect = f => {
+    const a = f.adf && f.adf.p !== null ? f.adf.p < al : null;
+    const kp = f.kpss && f.kpss.p !== null ? !(f.kpss.cota === 'menor' || (f.kpss.cota !== 'mayor' && f.kpss.p < al)) : null;
+    if (a === null || kp === null) return '—';
+    return a && kp ? {v: t('an.mod.est.si'), cls: 'bien'} : !a && !kp ? {v: t('an.mod.est.no'), cls: 'mal'} : t('an.mod.est.mixta');
+  };
+  const estac = bloque('est', t('an.mod.b.est'), tabla(
+      ['', 'ADF', t('an.t.p'), 'KPSS', t('an.t.p'), t('an.mod.lectura')],
+      R.estacionariedad.map(f => [t('an.mod.ser.' + f.serie),
+        f.adf ? anFmtN(f.adf.estadistico) : '—', f.adf ? pv(f.adf.p) : '—',
+        f.kpss ? anFmtN(f.kpss.estadistico) : '—', f.kpss ? pv(f.kpss.p, f.kpss.cota) : '—', lect(f)]))
+    + `<p>${t('an.mod.sug', {d: R.sugerido.d, D: R.sugerido.D})}${R.stl ? ' · ' + t('an.mod.stl',
+        {fe: anFmtN(R.stl.fuerza_estacional), ft: anFmtN(R.stl.fuerza_tendencia)}) : ''}</p>`,
+    t('an.mod.n.est', {a: al}));
+
+  const C = R.correlograma;
+  const serDif = R.orden[1] === 0 && R.estacional[1] === 0 ? 'nivel'
+    : R.estacional[1] ? (R.orden[1] ? 'd1ds' : 'ds') : (R.orden[1] === 2 ? 'd2' : 'd1');
+  const corr = C ? bloque('corr', t('an.mod.b.corr'),
+      anCorrSVG(C.acf, C.acf_banda, t('an.mod.corr.acf', {ser: t('an.mod.ser.' + serDif)}))
+    + anCorrSVG(C.pacf, C.pacf_banda, t('an.mod.corr.pacf', {ser: t('an.mod.ser.' + serDif)})), t('an.mod.n.corr')) : '';
+
+  const M = anModVigente(r0), P = R.pronostico;
+  const pron = M ? bloque('pron', t('an.mod.b.pron'), tabla(['', t('an.mod.pron'), t('an.mod.inf'), t('an.mod.sup')],
+      M.fut.map((f, j) => [ajEsc(f.etiqueta), kpFmt(k, P.media[j]), kpFmt(k, P.lo[j]), kpFmt(k, P.hi[j])])),
+    t(R.log ? 'an.mod.n.pron.log' : 'an.mod.n.pron', {n: Math.round((1 - al) * 100)})) : '';
+
+  const alt = R.alternativas && R.alternativas.length ? bloque('alt', t('an.mod.b.alt'), tabla(['', 'AICc'],
+      R.alternativas.map(x => [`${x.estacional.some(v => v) ? 'SARIMA' : 'ARIMA'}(${x.orden.join(',')})${
+        x.estacional.some(v => v) ? `(${x.estacional.join(',')})<sub>${R.s}</sub>` : ''}`, anFmtN(x.aicc)])),
+    t('an.mod.n.alt')) : '';
+
+  return h + `<div class="anresultados anmodres">${coef}${resid}${val}${estac}${corr}${pron}${alt}</div>`;
+}
+
 /* Lo que depende del indicador elegido, sin reconstruir la barra ni la lista. */
 function anPintarCuerpo(){
   const k = AN.kpi, cat = kpCat(k);
@@ -7951,7 +8541,9 @@ function anPintarCuerpo(){
   anPintarBase();
   anPintarResumen(res);
   anPintarCapas();
+  anModPreparar(res[0]);  // antes de la gráfica: ella dibuja el pronóstico
   anGrafica(res);
+  anPintarModelo(res[0]);
   anPintarResultados(res);
 }
 function anPintar(){

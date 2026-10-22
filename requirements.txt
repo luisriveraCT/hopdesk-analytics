@@ -9,3 +9,6 @@
 shiny>=1.8
 boto3>=1.34
 cryptography>=42.0
+# Modelos de series (ARIMA/SARIMA, ADF, KPSS, Ljung-Box) de la vista de
+# análisis. Trae consigo numpy, scipy y pandas.
+statsmodels>=0.14

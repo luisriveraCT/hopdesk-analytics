@@ -53,7 +53,12 @@ import os
 import re
 import sys
 import json
+import time
+import asyncio
+import threading
 import traceback
+from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 RAIZ = os.path.dirname(AQUI)
@@ -461,7 +466,108 @@ def aplicar_metas(cambios_metas, autor):
     return aplicados, rechazados
 
 
+# ---------------------------------------------------------------------------
+# MODELOS DE SERIES (ARIMA/SARIMA y sus pruebas) — finanzas/modelos_series.py
+# ---------------------------------------------------------------------------
+# Un ajuste mensual con estacionalidad tarda de diez a veinte segundos. Tres
+# cosas lo hacen tolerable sin que una sesión estorbe a las demás:
+#
+#   · corre en un hilo aparte, y la sesión sigue atendiendo mientras tanto
+#     (guardar, pedir el estado) en vez de quedarse congelada;
+#   · solo se calcula el ÚLTIMO pedido de cada sesión: si el usuario cambió
+#     el orden tres veces mientras esperaba, los dos de en medio se descartan
+#     antes de empezar;
+#   · lo ya calculado se guarda en memoria: volver a un indicador visto es
+#     instantáneo. Mismos números y mismos parámetros dan el mismo modelo,
+#     porque la búsqueda se corta por número de modelos y no por tiempo.
+#
+# Dos hilos para todos: más haría que varios ajustes se peleen el procesador y
+# todos tarden más.
+_MODELOS = ThreadPoolExecutor(max_workers=2, thread_name_prefix='modelos')
+_CACHE_MODELOS = OrderedDict()
+_CACHE_MAX = 64
+_cache_lock = threading.Lock()
+
+
+def _calentar_modelos():
+    """Importar statsmodels cuesta unos diez segundos la primera vez. Se paga
+    al arrancar, en segundo plano, y no en la primera consulta de alguien."""
+    try:
+        import modelos_series
+        modelos_series.calentar()
+    except Exception:                                        # noqa: BLE001
+        print('AVISO: no se pudieron precargar los modelos:',
+              traceback.format_exc(), file=sys.stderr, flush=True)
+
+
+threading.Thread(target=_calentar_modelos, daemon=True).start()
+
+
+def calcular_modelo(pedido):
+    """Corre el análisis y lo traduce a un mensaje para la página."""
+    import modelos_series as msr
+    clave = json.dumps([pedido.get('valores'), pedido.get('periodicidad'),
+                        pedido.get('params')], sort_keys=True)
+    with _cache_lock:
+        if clave in _CACHE_MODELOS:
+            _CACHE_MODELOS.move_to_end(clave)
+            return dict(_CACHE_MODELOS[clave], cache=True)
+    t = time.time()
+    try:
+        r = msr.analizar(pedido.get('valores'), int(pedido.get('periodicidad') or 0),
+                         pedido.get('params') or {})
+        salida = {'ok': True, 'resultado': r}
+    except msr.ErrorModelo as e:
+        # Un motivo para no calcular no es una falla: va con su código, que la
+        # página traduce, y también se guarda (los mismos datos darían lo mismo).
+        salida = {'ok': False, 'codigo': e.codigo, 'datos': e.datos}
+    salida['segundos'] = round(time.time() - t, 1)
+    with _cache_lock:
+        _CACHE_MODELOS[clave] = salida
+        while len(_CACHE_MODELOS) > _CACHE_MAX:
+            _CACHE_MODELOS.popitem(last=False)
+    return salida
+
+
 def server(input, output, session):        # noqa: A002
+    ultimo_modelo = {'id': None}
+    tareas = set()
+
+    @reactive.effect
+    @reactive.event(input.pedir_modelo)
+    async def _modelo():
+        pedido = input.pedir_modelo() or {}
+        ultimo_modelo['id'] = pedido.get('id')
+
+        async def trabajo():
+            try:
+                # Se revisa al EMPEZAR, ya dentro del hilo: un pedido que quedó
+                # en la fila detrás de otro y ya fue reemplazado no se calcula.
+                def tal_vez():
+                    if pedido.get('id') != ultimo_modelo['id']:
+                        return None
+                    return calcular_modelo(pedido)
+                salida = await asyncio.get_running_loop().run_in_executor(_MODELOS, tal_vez)
+                if salida is None:
+                    return
+                await session.send_custom_message('modelo_resultado',
+                                                  dict(salida, id=pedido.get('id')))
+            except Exception as e:                           # noqa: BLE001
+                print('ERROR en el modelo:', traceback.format_exc(),
+                      file=sys.stderr, flush=True)
+                try:
+                    await session.send_custom_message('modelo_resultado', {
+                        'id': pedido.get('id'), 'ok': False, 'codigo': 'error',
+                        'datos': {'tipo': type(e).__name__}})
+                except Exception:                            # noqa: BLE001
+                    pass
+
+        # La tarea va aparte para que la sesión no se quede esperando; se
+        # guarda la referencia porque asyncio solo guarda una débil y una tarea
+        # sin dueño puede desaparecer a la mitad.
+        tarea = asyncio.create_task(trabajo())
+        tareas.add(tarea)
+        tarea.add_done_callback(tareas.discard)
 
     # En cuanto la página se conecta pide el estado vigente (ver estado_actual).
     @reactive.effect

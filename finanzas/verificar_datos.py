@@ -290,7 +290,12 @@ def pruebas_sobre_kpis():
             if not f.get('completo'):
                 continue
             dic = ttm_dic.get(f"{f['anio']}-12", {})
-            for kpi in ('margen_ebitda', 'margen_ebit', 'margen_neto'):
+            # Solo los que son flujo entre flujo: ahí las dos rutas tienen que
+            # dar EXACTAMENTE lo mismo. Los que llevan saldos (días, ROE) no se
+            # comparan: el año usa el saldo al cierre y los doce meses el
+            # promedio de la ventana, a propósito.
+            for kpi in ('margen_bruto', 'margen_ebitda', 'margen_ebit', 'margen_neto',
+                        'cobertura_intereses', 'tasa_efectiva'):
                 a, b = f['r'].get(kpi), dic.get(kpi + '_ttm')
                 if a is not None and b is not None:
                     check(f'{ent} {f["anio"]}: {kpi} del año = acumulado a diciembre',

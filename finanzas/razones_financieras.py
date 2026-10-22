@@ -423,6 +423,37 @@ def razones(fila, fila_anterior=None, ttm=None, dias_anio=None, periodos_por_ani
             r['spread_roic_wacc_ttm'] = r['roic_ttm'] - f['wacc']
             r['eva_ttm'] = (r['spread_roic_wacc_ttm'] * ci_ttm
                             if ci_ttm else None)
+
+        # LOS QUE FALTABAN. Todo indicador que lleva un flujo tiene versión de
+        # doce meses, con la misma regla: los flujos sumados en la ventana y los
+        # saldos promediados en esa misma ventana. Solo se quedan sin ella los
+        # que son puro saldo al cierre (deuda/patrimonio, pasivo/activo y las
+        # tres de liquidez): un saldo no se acumula.
+        ing12, cs12 = ttm.get('ingresos'), ttm.get('costo_servicio')
+        r['margen_bruto_ttm'] = _div((ing12 - cs12) if None not in (ing12, cs12) else None, ing12)
+        r['margen_fcf_ttm'] = _div(ttm.get('fcf'), ing12)
+        r['roa_ttm'] = _div(ttm.get('utilidad_neta'), act_ttm)
+        # Días: saldo promedio de doce meses contra la base de doce meses, con la
+        # misma distinción de llave que el mes (ver arriba): llave ausente = usar
+        # la base clásica; llave con None = quien llama determinó que no aplica.
+        cob12 = ttm['base_cobranza'] if 'base_cobranza' in ttm else ing12
+        pag12 = ttm['base_pago'] if 'base_pago' in ttm else cs12
+        dias_de = lambda saldo, base: (_div(saldo, base) * dias
+                                       if _div(saldo, base) is not None else None)
+        r['dso_ttm'] = dias_de(ttm.get('cuentas_x_cobrar_prom'), cob12)
+        r['dio_ttm'] = dias_de(ttm.get('inventarios_prom'), pag12)
+        r['dpo_ttm'] = dias_de(ttm.get('cuentas_x_pagar_prom'), pag12)
+        r['ccc_ttm'] = (r['dso_ttm'] + (r['dio_ttm'] or 0) - r['dpo_ttm']
+                        if None not in (r['dso_ttm'], r['dpo_ttm']) else None)
+        # Capital de trabajo al corte entre las ventas del año: la forma usual.
+        r['ctn_sobre_ventas_ttm'] = _div(_ctn(f), ing12)
+        gf12 = ttm.get('gastos_financieros')
+        r['cobertura_intereses_ttm'] = _div(ttm.get('ebit'), gf12) if (gf12 or 0) > 0 else None
+        r['costo_deuda_efectivo_ttm'] = (_div(gf12, ttm.get('deuda_con_costo_prom'))
+                                         if (gf12 or 0) > 0 else None)
+        # La tasa la resuelve quien llama, con la regla única de
+        # tasa_efectiva_de() y la banda del cliente; aquí solo se respeta.
+        r['tasa_efectiva_ttm'] = ttm.get('tasa_efectiva') if ttm.get('tasa_confiable') else None
     return r
 
 
@@ -467,10 +498,12 @@ def calcular_ttm(filas_derivadas, i):
     if i < PERIODOS_POR_ANIO - 1:
         return None
     ventana = filas_derivadas[i - (PERIODOS_POR_ANIO - 1):i + 1]
-    flujos = ('ingresos', 'ebitda', 'ebit', 'utilidad_neta', 'nopat',
-              'costo_servicio', 'fcf', 'impuestos', 'depreciacion')
+    flujos = ('ingresos', 'ebitda', 'ebit', 'ebt', 'utilidad_neta', 'nopat',
+              'costo_servicio', 'fcf', 'impuestos', 'depreciacion',
+              'gastos_financieros')
     saldos = ('patrimonio', 'activos_totales', 'capital_invertido',
-              'cuentas_x_cobrar', 'cuentas_x_pagar', 'deuda_con_costo')
+              'cuentas_x_cobrar', 'cuentas_x_pagar', 'deuda_con_costo',
+              'inventarios')
     out = {}
     for c in flujos:
         vals = [f.get(c) for f in ventana]
@@ -479,6 +512,13 @@ def calcular_ttm(filas_derivadas, i):
         vals = [f.get(c) for f in ventana]
         out[f'{c}_prom'] = (sum(vals) / len(vals)
                             if all(v is not None for v in vals) else None)
+    # Las bases de días se suman como flujo, pero solo si quien llama las
+    # calculó en TODOS los meses: la llave ausente significa "usa la clásica" y
+    # no se puede inventar a medias. Un mes con None (no aplica) anula el año.
+    for c in ('base_cobranza', 'base_pago'):
+        if all(c in f for f in ventana):
+            vals = [f[c] for f in ventana]
+            out[c] = sum(vals) if all(v is not None for v in vals) else None
     return out
 
 
@@ -520,8 +560,9 @@ FAMILIAS = [
 # Ahora el catálogo viaja en los datos y el tablero se arma con él.
 #
 # 'ttm' es el nombre de la versión de doce meses, o None si no tiene. No todos
-# la tienen: un saldo del balance no se acumula, y los días de cobranza ya se
-# calculan contra ventas anualizadas.
+# la tienen: un saldo del balance al cierre no se acumula, así que las razones
+# que son puro saldo (deuda/patrimonio, pasivo/activo, liquidez) y el WACC, que
+# es una tasa, no llevan. Todo lo que lleva un flujo, sí.
 def _k(nombre, unidad, mayor_mejor, familia, ttm=None, monetario=False,
        destacado=False, fuente='razon'):
     return {'nombre': nombre, 'unidad': unidad, 'mayor_mejor': mayor_mejor,
@@ -544,17 +585,19 @@ def _k(nombre, unidad, mayor_mejor, familia, ttm=None, monetario=False,
 
 CATALOGO_KPIS = {
     # --- Rentabilidad ------------------------------------------------------
-    'margen_bruto':      _k('Margen bruto', '%', True, 'rentabilidad'),
+    'margen_bruto':      _k('Margen bruto', '%', True, 'rentabilidad',
+                            ttm='margen_bruto_ttm'),
     'margen_ebitda':     _k('Margen EBITDA', '%', True, 'rentabilidad',
                             ttm='margen_ebitda_ttm', destacado=True),
     'margen_ebit':       _k('Margen operativo', '%', True, 'rentabilidad',
                             ttm='margen_ebit_ttm'),
     'margen_neto':       _k('Margen neto', '%', True, 'rentabilidad',
                             ttm='margen_neto_ttm', destacado=True),
-    'margen_fcf':        _k('Margen de flujo libre', '%', True, 'rentabilidad'),
+    'margen_fcf':        _k('Margen de flujo libre', '%', True, 'rentabilidad',
+                            ttm='margen_fcf_ttm'),
     # --- Rendimiento sobre capital ----------------------------------------
     'roe':               _k('ROE', '%', True, 'rendimiento', ttm='roe_ttm'),
-    'roa':               _k('ROA', '%', True, 'rendimiento'),
+    'roa':               _k('ROA', '%', True, 'rendimiento', ttm='roa_ttm'),
     'roic':              _k('ROIC', '%', True, 'rendimiento', ttm='roic_ttm',
                             destacado=True),
     'wacc':              _k('WACC', '%', False, 'rendimiento', fuente='derivado'),
@@ -569,19 +612,23 @@ CATALOGO_KPIS = {
                             ttm='rotacion_activos_ttm'),
     # --- Ciclo de efectivo -------------------------------------------------
     'dso':               _k('Días de cobranza', 'días', False, 'ciclo',
-                            destacado=True),
-    'dio':               _k('Días de inventario', 'días', False, 'ciclo'),
-    'dpo':               _k('Días de pago', 'días', True, 'ciclo'),
-    'ccc':               _k('Ciclo de efectivo', 'días', False, 'ciclo'),
-    'ctn_sobre_ventas':  _k('Capital de trabajo / ventas', '%', False, 'ciclo'),
+                            ttm='dso_ttm', destacado=True),
+    'dio':               _k('Días de inventario', 'días', False, 'ciclo', ttm='dio_ttm'),
+    'dpo':               _k('Días de pago', 'días', True, 'ciclo', ttm='dpo_ttm'),
+    'ccc':               _k('Ciclo de efectivo', 'días', False, 'ciclo', ttm='ccc_ttm'),
+    'ctn_sobre_ventas':  _k('Capital de trabajo / ventas', '%', False, 'ciclo',
+                            ttm='ctn_sobre_ventas_ttm'),
     # --- Apalancamiento y solvencia ---------------------------------------
     'deuda_entre_patrimonio': _k('Deuda / patrimonio', 'x', False, 'deuda'),
     'deuda_neta_ebitda': _k('Deuda neta / EBITDA', 'x', False, 'deuda',
                             ttm='deuda_neta_ebitda_ttm', destacado=True),
-    'cobertura_intereses': _k('Cobertura de intereses', 'x', True, 'deuda'),
-    'costo_deuda_efectivo': _k('Costo de la deuda', '%', False, 'deuda'),
+    'cobertura_intereses': _k('Cobertura de intereses', 'x', True, 'deuda',
+                            ttm='cobertura_intereses_ttm'),
+    'costo_deuda_efectivo': _k('Costo de la deuda', '%', False, 'deuda',
+                            ttm='costo_deuda_efectivo_ttm'),
     'razon_deuda':       _k('Pasivo / activo', '%', False, 'deuda'),
-    'tasa_efectiva':     _k('Tasa efectiva de impuestos', '%', False, 'deuda'),
+    'tasa_efectiva':     _k('Tasa efectiva de impuestos', '%', False, 'deuda',
+                            ttm='tasa_efectiva_ttm'),
     # --- Liquidez ----------------------------------------------------------
     'razon_circulante':  _k('Razón circulante', 'x', True, 'liquidez'),
     'prueba_acida':      _k('Prueba del ácido', 'x', True, 'liquidez'),

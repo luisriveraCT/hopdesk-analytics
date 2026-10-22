@@ -334,13 +334,19 @@ def depurar_dias(r, dias_anio):
     """
     limite = dias_anio
     motivos = {}
-    for k in ('dso', 'dio', 'dpo'):
-        if r.get(k) is not None and r[k] > limite:
-            motivos[k] = r[k]
-            r[k] = None
-    if motivos:
-        # El ciclo de efectivo es la suma de los tres: si falta uno, no existe.
-        r['ccc'] = None
+    # La versión de doce meses se depura igual: con un año de ventas en el
+    # denominador, un saldo que no cabe ni una vez tampoco es un plazo.
+    for suf in ('', '_ttm'):
+        quitados = False
+        for k in ('dso', 'dio', 'dpo'):
+            k = k + suf
+            if r.get(k) is not None and r[k] > limite:
+                motivos[k] = r[k]
+                r[k] = None
+                quitados = True
+        if quitados:
+            # El ciclo de efectivo es la suma de los tres: si falta uno, no existe.
+            r['ccc' + suf] = None
     return motivos
 
 
@@ -418,6 +424,11 @@ def procesar(filas, supuestos, metas, interco=None, conv=None, entradas=None,
     salida = []
     for i, d in enumerate(derivadas):
         ttm = rz.calcular_ttm(derivadas, i)
+        if ttm:
+            # La tasa del año, con la MISMA regla y la misma banda que el mes y
+            # que los periodos agregados.
+            ttm['tasa_efectiva'], ttm['tasa_confiable'] = av.tasa_efectiva_de(
+                ttm.get('impuestos'), ttm.get('ebt'), conv.get('banda_tasa_efectiva'))
         ant = derivadas[i - 1] if i else None
         r = rz.razones(d, ant, ttm, dias_anio=conv['dias_anio'])
         suprimidos = depurar_dias(r, conv['dias_anio'])

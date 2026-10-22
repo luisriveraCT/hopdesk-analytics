@@ -72,7 +72,12 @@ Cómo se escriben las piezas (entre comillas invertidas):
 | Periodicidad | El usuario escribe 12, 6, 4, 3, 2 o 1 datos por año; cada periodo se calcula con sus propias cifras, no promediando meses. Rechaza lo que no reparte el año | `#anP` `t:an.periodicidad.help` `dashboard/exportar_kpis.py` |
 | 12 meses móviles o el mes | Por omisión, doce meses móviles; con periodicidad 12 se puede ver el dato del mes | `#anBase` `t:an.base.ttm` |
 | Ventana | 12, 24, 36 periodos, toda la historia, o un rango en una barra cuyos pasos son los periodos de la periodicidad; el rango se conserva en las mismas fechas al cambiarla. Se mueve por los extremos, arrastrando la ventana entera, con clic en la pista o con el teclado | `#anVentana` `anPintarRango()` `#anRango` `t:an.rango.help` |
-| Base honesta | "12 m móviles" se apaga en los indicadores que no tienen versión de doce meses, y el botón marcado es lo que se ve | `anPintarBase()` `t:an.base.sinttm` |
+| Base honesta | "12 m móviles" se apaga en los indicadores que no tienen versión de doce meses (solo los saldos al cierre y el WACC), y el botón marcado es lo que se ve | `anPintarBase()` `t:an.base.sinttm` |
+| Doce meses en todo lo que lleva un flujo | 20 de 26 indicadores con versión de doce meses: flujos sumados y saldos promediados en la misma ventana; el año completo por periodos cuadra con diciembre | `finanzas/razones_financieras.py` `finanzas/verificar_datos.py` |
+| Modelo ARIMA / SARIMA | Automático (d y D por KPSS y STL, órdenes por AICc) o manual (p,d,q)(P,D,Q)ₛ, con log (bloqueado si hay valores ≤ 0), rezagos, horizonte y α. Se calcula en el servidor; sin servidor lo dice | `anPintarModelo()` `anModPreparar()` `#anModelo` `finanzas/modelos_series.py` |
+| Pruebas de hipótesis del modelo | Coeficientes con error estándar, z, p e IC; ADF y KPSS sobre nivel y diferencias; STL; Ljung-Box, Jarque-Bera, varianza constante y raíces; validación fuera de muestra contra el pronóstico ingenuo | `anModResultados()` `t:an.mod.n.est` `t:an.mod.n.res` |
+| Correlogramas | ACF y PACF de la serie diferenciada y ACF de los residuos, con su banda | `anCorrSVG()` `css:.ancorr` |
+| Pronóstico en la gráfica | Capa "Modelo": ajuste punteado, pronóstico con intervalo, y el cursor los muestra | `anModVigente()` `anSiguiente()` `t:an.c.modelo` |
 | Meses dudosos | Excluidos por omisión y reincorporables; en la gráfica salen huecos | `#anDudosos` `t:an.dudosos.help` |
 | Capas | Serie, media móvil (SMA o EMA), banda P25–P75, percentil libre, tendencia MCO, tendencia robusta, meta y control; se prenden y apagan sin cambiar de gráfica y conservan sus parámetros | `anPintarCapas()` `#anCapas` `css:.ancapas .capagrp` |
 | Cursor | Al pasar el cursor, el valor de cada capa en esa fecha | `anGrafica()` |
