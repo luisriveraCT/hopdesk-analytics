@@ -12,10 +12,10 @@ bucket que se lee por URL fija eso no es inocuo: el tablero pide los archivos
 que dice su índice, pero cualquiera —o cualquier versión vieja del HTML que
 alguien tenga abierta— puede seguir pidiendo los otros, y recibirlos.
 
-Pasó de verdad. Al cambiar la fuente del Excel al ERP, el bucket conservó
-`rows-2005.json`, `rows-2019.json` y `rows-sin-fecha.json`: archivos que solo
-existían en la base de Excel y que el ERP no produce. Ahí se quedaron
-sirviéndose durante dos días, con datos de una fuente retirada.
+Pasó de verdad: al cambiar de fuente, el bucket conservó `rows-2005.json`,
+`rows-2019.json` y `rows-sin-fecha.json`, archivos que la fuente nueva ya no
+produce. Ahí se quedaron sirviéndose durante dos días, con datos que nadie
+recalculaba.
 
 Por eso esto sincroniza en vez de sumar: sube lo que hay y retira lo que sobra.
 
@@ -92,15 +92,26 @@ def main():
                     help='muestra qué se subiría y qué se borraría, sin hacerlo')
     args = ap.parse_args()
 
-    # El índice manda: es lo que el tablero va a pedir.
-    with open(os.path.join(HERE, 'indice.json'), encoding='utf-8') as f:
-        indice = json.load(f)
+    # Los índices mandan: son lo que el tablero va a pedir. Uno por tipo de
+    # factura, y TODOS entran en `esperados`. Si el de compras faltara aquí, la
+    # limpieza de abajo retiraría del bucket los trozos de compras en cada
+    # corrida, y el tablero se quedaría pidiéndolos.
+    indice = []
+    for nombre in ('indice.json', 'indice-compra.json'):
+        ruta = os.path.join(HERE, nombre)
+        if os.path.exists(ruta):
+            with open(ruta, encoding='utf-8') as f:
+                indice += json.load(f)
+        elif nombre == 'indice.json':
+            raise SystemExit('Falta indice.json: corre exportar_dashboard.py')
     estaticos = estaticos_locales()
     # Los estáticos entran en `esperados`: así la limpieza de abajo no los ve
     # como sobrantes y no hay que acordarse de excluirlos a mano.
     esperados = {PREFIJO_DATOS + c['archivo'] for c in indice} | set(estaticos)
 
-    locales = {PREFIJO_DATOS + a for a in os.listdir(DATA_DIR) if a.endswith('.json')}
+    locales = {PREFIJO_DATOS + os.path.relpath(os.path.join(r, a), DATA_DIR).replace(os.sep, '/')
+               for r, _, archivos in os.walk(DATA_DIR) for a in archivos
+               if a.endswith('.json')}
     sobran_local = locales - esperados
     if sobran_local:
         print(f'AVISO: hay {len(sobran_local)} archivo(s) en data/ que el índice '
@@ -159,7 +170,7 @@ def main():
         # `delete_objects` NO lanza excepción cuando falla: devuelve los fallos
         # dentro de la respuesta, en `Errors`. La primera versión de esto
         # imprimía "retirados 3 archivo(s)" sin mirar esa lista, y los tres
-        # archivos de la era Excel siguieron publicándose — con un mensaje de
+        # archivos obsoletos siguieron publicándose — con un mensaje de
         # éxito en pantalla. Hay que revisar la respuesta, siempre.
         r = s3.delete_objects(Bucket=BUCKET,
                               Delete={'Objects': [{'Key': k} for k in a_borrar]})

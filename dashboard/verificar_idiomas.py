@@ -52,7 +52,16 @@ DINAMICAS = [
     ('disc.m.', ['ver', 'estructura', 'ocultar']),
     ('f.ic.', ['todo', 'solo', 'excluir']),
     ('f.cn.', ['incluir', 'excluir', 'solo']),
+    ('f.si.', ['todas', 'abiertas', 'cerradas']),
+    ('tipo.', ['venta', 'compra']),
 ]
+
+# Los tipos de factura que no son el base. t() busca primero '<tipo>.<clave>'
+# —"Proveedores" donde ventas dice "Clientes"— y si no existe usa la clave de
+# siempre. Una de esas versiones cuenta como usada si su clave base se usa; y
+# si su clave base no existe en ningún lado, es un error: una versión de
+# compras de un texto que no aparece en pantalla nunca se va a ver.
+TIPOS_SOBREPUESTOS = ['compra']
 
 
 def diccionarios():
@@ -86,7 +95,7 @@ def usadas():
     u = set()
     for args in re.findall(r"\bt\(([^()]*)\)", sin_com):
         u |= set(re.findall(r"'([a-zA-Z0-9_.]+)'", args))
-    for attr in ('data-i18n', 'data-i18n-ph', 'data-help'):
+    for attr in ('data-i18n', 'data-i18n-ph', 'data-i18n-aria', 'data-help'):
         u |= set(re.findall(attr + r'="([a-zA-Z0-9_.]+)"', sin_com))
     for prefijo, sufijos in DINAMICAS:
         u |= {prefijo + x for x in sufijos}
@@ -101,12 +110,25 @@ def main():
         print('No se encontró ningún diccionario de idioma.')
         return 1
     u = usadas()
+    todas_def = set().union(*dic.values())
+    sobrepuestas = {k for k in todas_def
+                    if any(k.startswith(tp + '.') for tp in TIPOS_SOBREPUESTOS)}
+    # Error: la clave base no está definida en ningún idioma. Si está definida
+    # pero esta lectura no la ve usada (pasa con t('x', {a: f(b)}), que tiene
+    # paréntesis anidados), la versión del tipo hereda ese mismo estado: sale
+    # en la lista informativa de "sin usar" junto a su base, no como error.
+    sin_base = sorted(k for k in sobrepuestas if k.split('.', 1)[1] not in todas_def)
+    u |= {k for k in sobrepuestas if k.split('.', 1)[1] in u}
     print(f'idiomas: {", ".join(sorted(dic))}')
+    if sin_base:
+        print(f'\nVERSIÓN DE UN TIPO SIN CLAVE BASE EN PANTALLA ({len(sin_base)}):')
+        for k in sin_base:
+            print(f'   {k}')
     for idioma, claves in sorted(dic.items()):
         print(f'  {idioma}: {len(claves)} claves definidas')
     print(f'claves usadas: {len(u)}')
 
-    problemas = 0
+    problemas = len(sin_base)
     for idioma, claves in sorted(dic.items()):
         faltan = sorted(u - claves)
         if faltan:

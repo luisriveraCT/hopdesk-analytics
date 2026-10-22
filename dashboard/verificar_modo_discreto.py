@@ -47,6 +47,11 @@ CASOS = [
     ('T.C.', False), ('FX', False), ('TC', False), ('Tipo de cambio prom.', False),
     ('Mes', False), ('Periodo', False), ('Año', False),
     ('Cliente', False), ('Empresa', False), ('Concepto', False),
+    # Las columnas de la vista de compras y la de situación. Son texto, pero
+    # la clasificación tiene que ser correcta por nombre: el día que una de
+    # ellas llegara como número, se taparía sin razón.
+    ('Proveedor', False), ('Supplier', False), ('Referencia', False),
+    ('Folio proveedor', False), ('Situación', False), ('Comprado en USD', True),
     ('Días de cierre', False), ('Folio', False), ('Estatus', False),
 ]
 

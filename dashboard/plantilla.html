@@ -259,6 +259,21 @@ button,select,input{font:inherit;color:inherit}
 .seg button{background:transparent;border:0;padding:4px 10px;font-size:11.5px;cursor:pointer;color:var(--ink-2);white-space:nowrap}
 .seg button + button{border-left:1px solid var(--line)}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+/* Ventas | Compras. Va PRIMERO en la primera fila de filtros y no en la barra
+   de arriba, por tres razones de diseño:
+     · Gobierna todo lo que hay debajo —KPIs, gráficas, tabla—, y en una
+       jerarquía de lectura lo que decide el contexto va antes que lo que lo
+       afina. Se lee "Compras · Empresas NCS NG…", no al revés.
+     · Solo aplica a Facturación, y esta barra solo existe en Facturación. En la
+       barra de arriba tendría que aparecer y desaparecer según la pestaña, y
+       los botones de al lado brincarían de lugar: quien busca "Descargar" lo
+       encuentra donde lo dejó.
+     · La primera fila sobrevive a "Menos filtros", así que el selector sigue
+       a la vista aun con los filtros plegados — que es cuando más fácil se
+       olvida qué se está viendo.
+   La separación vertical lo distingue de los filtros sin agregarle peso. */
+.segtipo button{padding:4px 12px;font-weight:600}
+.fsep{width:1px;align-self:stretch;background:var(--line);margin:1px 2px;flex:none}
 
 select,.txtin{background:var(--surface-2);border:1px solid var(--line);border-radius:7px;padding:4px 8px;font-size:12px}
 .txtin{min-width:190px}
@@ -468,10 +483,10 @@ tbody tr:hover{background:var(--surface-2)}
   background:var(--accent-soft);color:var(--accent);border:1px solid rgba(74,58,167,.2)}
 /* ---- Hoja de captura de entradas manuales -------------------------------
    Se parece a una hoja de cálculo a propósito: quien la va a usar lleva años
-   capturando en Excel, y una interfaz que le pide aprender otra forma de
-   moverse es una interfaz que se usa mal.
+   capturando en hojas de cálculo, y una interfaz que le pide aprender otra
+   forma de moverse es una interfaz que se usa mal.
 
-   Lo que NO se copia de Excel: la cuadrícula infinita de celdas vacías. Aquí
+   Lo que NO se copia de una hoja de cálculo: la cuadrícula infinita de celdas vacías. Aquí
    cada renglón es un campo con nombre, unidad y explicación. Una rejilla sin
    etiquetas obliga a recordar qué iba en cada columna. */
 .ehoja{margin:14px 18px 0}
@@ -611,7 +626,7 @@ tr.esob .ecelda{border-color:var(--sem-bad);background:rgba(220,38,38,.09);
 <body>
 
 <div class="topbar"><div class="topbar-in">
-  <div class="brand"><b data-i18n="app.name">Facturación Consolidada</b><span id="brandSub">159,123 facturas · 2020–2026</span></div>
+  <div class="brand"><b data-i18n="app.name">Facturación Consolidada</b><span id="brandSub"></span></div>
   <div class="loadwrap"><span id="loadTxt" data-i18n="load.loading">Cargando detalle…</span>
     <span class="loadbar"><i id="loadBar"></i></span></div>
   <button class="gbtn" id="btnGlosario"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
@@ -667,6 +682,11 @@ tr.esob .ecelda{border-color:var(--sem-bad);background:rgba(220,38,38,.09);
 
 <div class="filters" id="filters">
   <div class="frow">
+    <div class="seg segtipo" id="segTipo" role="group" data-i18n-aria="tipo.aria" aria-label="Tipo de factura" hidden>
+      <button data-v="venta" aria-pressed="true" data-i18n="tipo.venta">Ventas</button>
+      <button data-v="compra" aria-pressed="false" data-i18n="tipo.compra">Compras</button>
+    </div>
+    <span class="fsep" id="segTipoSep" hidden></span>
     <span class="flabel" data-i18n="f.empresas">Empresas</span>
     <div class="bubbles" id="bubbles"></div>
     <button class="minibtn" id="bAll" data-i18n="f.todas">Todas</button>
@@ -686,6 +706,13 @@ tr.esob .ecelda{border-color:var(--sem-bad);background:rgba(220,38,38,.09);
       <button data-v="incluir" aria-pressed="false" data-i18n="f.cn.incluir">Incluir</button>
       <button data-v="solo" aria-pressed="false" data-i18n="f.cn.solo">Solo</button>
     </div>
+    <span class="flabel" data-i18n="f.situacion">Situación</span>
+    <div class="seg" id="segSituacion" role="group">
+      <button data-v="todas" aria-pressed="true" data-i18n="f.si.todas">Todas</button>
+      <button data-v="abiertas" aria-pressed="false" data-i18n="f.si.abiertas">Abiertas</button>
+      <button data-v="cerradas" aria-pressed="false" data-i18n="f.si.cerradas">Cerradas</button>
+    </div>
+    <button class="help" type="button" data-help="f.situacion.help">?</button>
     <span class="flabel" data-i18n="f.montos">Montos</span>
     <div class="seg" id="segMetrica" role="group">
       <button data-v="total" aria-pressed="true" data-i18n="m.total">Total MXN</button>
@@ -694,13 +721,14 @@ tr.esob .ecelda{border-color:var(--sem-bad);background:rgba(220,38,38,.09);
       <button data-v="usd" aria-pressed="false" data-i18n="m.usd">Total USD</button>
     </div>
     <button class="help" type="button" data-help="f.montos.help">?</button>
-    <span class="flabel" data-i18n="f.plaza">Plaza</span>
+    <span class="flabel" id="plazasEtq" data-i18n="f.plaza">Plaza</span>
     <div class="bubbles" id="plazas"></div>
   </div>
   <div class="frow">
     <span class="flabel" data-i18n="f.periodo">Periodo</span>
     <div class="seg" id="segPer" role="group">
-      <button data-v="all" aria-pressed="true" data-i18n="f.p.todo">Todo</button>
+      <button data-v="all" aria-pressed="false" data-i18n="f.p.todo">Todo</button>
+      <button data-v="60" aria-pressed="true">60 m</button>
       <button data-v="24" aria-pressed="false">24 m</button>
       <button data-v="12" aria-pressed="false">12 m</button>
       <button data-v="ytd" aria-pressed="false">YTD</button>
@@ -710,7 +738,7 @@ tr.esob .ecelda{border-color:var(--sem-bad);background:rgba(220,38,38,.09);
     <select id="ymTo" aria-label="Hasta"></select>
     <div class="search" id="searchWrap" data-off="1">
       <span class="flabel" data-i18n="f.buscar">Buscar</span>
-      <input class="txtin" id="q" type="search" placeholder="Cliente, folio, concepto, monto…" autocomplete="off">
+      <input class="txtin" id="q" type="search" placeholder="Cliente, RFC, folio, referencia, monto…" autocomplete="off">
       <span class="hint" id="qHint"></span>
     </div>
   </div>
@@ -990,8 +1018,17 @@ tr.esob .ecelda{border-color:var(--sem-bad);background:rgba(220,38,38,.09);
 </div>
 
 <script>
-const META = __META_JSON__;
-const CHUNKS = __CHUNKS_JSON__;
+/* Las facturas, en dos juegos con la misma forma: ventas y compras. Cada uno
+   trae su resumen (meta: diccionarios + agregado mensual, para el primer
+   pintado) y la lista de trozos con el detalle, que se bajan aparte. Los
+   produce dashboard/exportar_dashboard.py con el mismo código para los dos;
+   por eso todo lo de la pestaña Facturación sirve igual para ambos. Las
+   compras pueden venir vacías: entonces el selector Ventas | Compras no se
+   muestra. */
+const FACTURAS = {
+  venta:  {meta: __META_JSON__,        chunks: __CHUNKS_JSON__},
+  compra: {meta: __META_COMPRA_JSON__, chunks: __CHUNKS_COMPRA_JSON__}
+};
 /* Bitácora de actualizaciones: la produce finanzas/bitacora_actualizaciones.py
    y la inyecta construir.py. Llega vacía mientras no haya una segunda
    extracción con la cual comparar — no es un error, es que todavía no hay
@@ -1018,25 +1055,19 @@ const ENTRADAS = __ENTRADAS_JSON__;
 /* ============================================================================
    QUÉ ES ESTA APP, CÓMO SE TRABAJA AQUÍ, Y HACIA DÓNDE VA
    (párrafo vivo: actualízalo cuando una decisión de fondo cambie —
-    última edición: 2026-09-29, al darle tres estados al botón Montos, hacer
-    que la descarga salga como la pantalla, y bajar la hoja abierta en vez
-    del tablero entero)
+    última edición: 2026-10-21, al agregar Ventas | Compras a Facturación,
+    corregir "Total USD" —que sumaba pesos—, publicar toda la historia del
+    ERP y dejar la lista de capacidades en CAPACIDADES.md)
    ============================================================================
-   ESTA APP es el tablero analítico del grupo (Networks Crossdocking, Networks
-   Group LCT, Networks & Logistics, Networks Realtors, Networks Trucking y
-   Paragon Logistics). Nació de un problema concreto: la facturación vivía en
-   decenas de Excel hechos a mano, uno por empresa y por año, con formatos que
-   cambiaban de un mes a otro y filas de totales que no siempre cuadraban con
-   sus propios datos.
+   ESTA APP es el tablero analítico de un grupo de empresas, construido
+   directamente sobre su ERP. Qué empresas son, con qué ERP se conecta cada
+   una y cuánta historia se publica es configuración del cliente
+   (finanzas/configuracion/), no algo que este archivo sepa.
 
-   CAMBIO DE FONDO (2026-09-25): ESA ETAPA TERMINÓ. La fuente de verdad ya no
-   son los Excel sino el ERP. La auditoría que lo decidió está en
-   legacy/README.md, y el resumen es que el ERP resultó estrictamente mejor:
-   218,808 facturas de venta desde 2013 contra 159,123 desde 2020, más 197,639
-   de compra que antes no existían en ningún lado. Donde ambas fuentes cubrían
-   lo mismo, coincidían al centavo; las diferencias que quedaron eran defectos
-   del Excel (383 filas duplicadas y 49 folios inexistentes solo en NCS 2022).
-   El consolidador de Excel se retiró a legacy/ y se conserva por trazabilidad.
+   LA FUENTE DE VERDAD ES EL ERP, documento por documento: las facturas de
+   venta y de compra con toda la historia que el ERP tenga, y las pólizas de
+   las que salen los estados financieros. Nada de lo que se muestra aquí se
+   captura en otro lado ni se reconstruye a partir de reportes.
 
    El pipeline hoy es: finanzas/erp/extraer_*.py -> dashboard/
    exportar_dashboard.py -> construir.py, todo orquestado por un solo comando,
@@ -1045,13 +1076,22 @@ const ENTRADAS = __ENTRADAS_JSON__;
    dos se puede saltar.
 
    LA REGLA NÚMERO UNO, de la que cuelga todo lo demás: los números se calculan
-   sumando documentos individuales, nunca leyendo una fila de "TOTAL". Nació
-   porque había 8 hojas de Excel donde el total escrito no coincidía con la
-   suma de sus propias filas, y sobrevive al cambio de fuente porque en el ERP
-   reapareció con otra cara: las facturas canceladas conviven con su DOCUMENTO
+   sumando documentos individuales, nunca leyendo un total ya hecho. En el ERP
+   tiene una cara concreta: las facturas canceladas conviven con su DOCUMENTO
    DE CANCELACIÓN, que trae el importe en POSITIVO. Sumar "todo lo que hay"
-   cuenta tres veces la misma operación. Se filtra siempre por
-   clase_documento == 'normal'.
+   cuenta tres veces la misma operación. Se suma siempre solo lo de
+   clase_documento == 'normal'; las canceladas se publican marcadas, para que
+   el filtro de Canceladas pueda enseñarlas, y los documentos de cancelación
+   no se publican.
+
+   CADA IMPORTE TIENE SU MONEDA, Y EL ERP LA DICE. SAP guarda el total en
+   moneda local (DocTotal), en la del documento (DocTotalFC) y en la de
+   sistema. "Total MXN" es el primero; "Total USD" es el segundo, de las
+   facturas en dólares. No se convierte nada aquí: el ERP ya trae los dos
+   importes y el tipo de cambio que aplicó ese día. Durante un tiempo "Total
+   USD" sumó pesos —19 veces de más— porque se tomaba la columna equivocada,
+   y nada lo delataba: un monto en la columna equivocada se ve idéntico a uno
+   bueno.
 
    LA SEGUNDA REGLA, del mismo linaje: ninguna verificación debe poder
    cumplirse sola. El Balance de diciembre daba cero en todas las cuentas
@@ -1078,8 +1118,11 @@ const ENTRADAS = __ENTRADAS_JSON__;
    LAS CUATRO PESTAÑAS, y a quién sirve cada una. La app dejó de ser "el
    tablero de facturación": hoy son cuatro lecturas del mismo dato.
 
-     · **Facturación** — el detalle documento por documento, 2020-2026, con
-       filtros, búsqueda y pronóstico.
+     · **Facturación** — el detalle documento por documento, con toda la
+       historia del ERP, filtros, búsqueda y pronóstico. En DOS vistas que
+       comparten todo: **Ventas** (facturas a clientes, lo que se cobra) y
+       **Compras** (facturas de proveedores, lo que se paga). Ver VENTAS Y
+       COMPRAS más abajo.
      · **Estados Financieros** — Balance y Estado de Resultados por empresa y
        por periodo, con el grupo consolidado (con eliminaciones, no una suma).
      · **Dirección** — la lectura de quien decide. Cinco cifras, el semáforo
@@ -1091,6 +1134,34 @@ const ENTRADAS = __ENTRADAS_JSON__;
    Y una quinta que NO está en la barra: la **hoja de captura** de entradas
    manuales, que se abre desde Ajustes o con #entradas en la dirección. La usa
    quien tenga asignada la captura, no todo el que abre el tablero.
+
+   LO QUE LA APP SABE HACER está listado, capacidad por capacidad y con la
+   pieza que la sostiene, en CAPACIDADES.md en la raíz. verificar_capacidades.py
+   comprueba en cada actualización que ninguna pieza desaparezca. Si quitas
+   algo de esa lista, que sea a propósito.
+
+   VENTAS Y COMPRAS — UNA PESTAÑA, DOS JUEGOS DE FACTURAS
+   ------------------------------------------------------
+   El ERP trae las facturas de venta y las de compra con la misma forma, y el
+   exportador las produce con el mismo código (dashboard/exportar_dashboard.py).
+   Por eso Compras no es una pestaña nueva: es Facturación leyendo otro juego.
+   Todo lo que costó construir —filtros, búsqueda, tarjetas, pronóstico, tabla,
+   descargas, modo de montos— sirve igual, sin una línea duplicada.
+
+     · FACTURAS = {venta, compra}: cada una con su resumen (meta) y sus trozos.
+       META y R apuntan al que se está viendo; fijarTipo() es el ÚNICO sitio
+       que los cambia, igual que fijarModoMontos() con los montos.
+     · Los textos cuyo sentido cambia —"Proveedores" donde ventas dice
+       "Clientes"— viven como 'compra.<clave>' en I18N, y t() los prefiere
+       cuando se ven compras. Una clave sin versión de compras sirve para los
+       dos. Una versión nueva trae SIEMPRE sus dos idiomas, como cualquier
+       otra; verificar_idiomas.py lo comprueba.
+     · Las compras se bajan la primera vez que alguien las pide.
+     · El selector va primero en la barra de filtros (ver el CSS de .segtipo
+       para el porqué) y solo aparece si hay compras exportadas.
+     · Situación (abierta/cerrada) y Referencia existen en los dos tipos: en
+       una venta, pendiente de cobro y la referencia del cliente; en una
+       compra, pendiente de pago y el folio del proveedor.
 
    LOS TRES MODOS DEL BOTÓN MONTOS, Y POR QUÉ ESTÁN ANTES QUE UN PERMISO
    ---------------------------------------------------------------------
@@ -1240,8 +1311,8 @@ const ENTRADAS = __ENTRADAS_JSON__;
    doce. La alternativa —calcularlo con lo que haya— produce un número que se
    ve idéntico a uno bueno.
 
-   LA VISIÓN de aquí en adelante: alimentar las pestañas Datos_Financieros y
-   Precision_Pronostico de KPIs_Finanzas.xlsx desde esta misma fuente, y unir
+   LA VISIÓN de aquí en adelante: alimentar el reporte de indicadores de la
+   Gerencia de Finanzas (finanzas/generar_kpis_finanzas.py) desde esta misma fuente, y unir
    la identidad con HopDesk, que ya tiene la antigüedad de saldos y el listado
    de financiamientos (ver finanzas/PLAN_UNIFICACION.md). El costo real de la
    deuda que hoy es un supuesto capturado saldría de ahí.
@@ -1254,17 +1325,29 @@ const ENTRADAS = __ENTRADAS_JSON__;
     "Base sin IVA", que estaba viva pero escondida dentro de Ajustes.)
    ----------------------------------------------------------------------------
    IDIOMA Y FORMATO
-     t(clave, vars)              traduce; cae al español si falta la clave
+     t(clave, vars)              traduce; con TIPO compra prefiere 'compra.<clave>';
+                                 cae al español si falta la clave
      buildFormats()              arma los formateadores Intl del idioma activo
      MONTHS()                    nombres de mes (¡siempre con timeZone UTC!)
+     anioDe(ym)                  el año de un índice de mes (desde META.anioBase)
      ymLabel / ymLabelLong       etiqueta de un mes a partir de su índice
      money / compact / bigMoney  formatos de monto (completo / eje / mosaico)
      strip / glosarioNorm        normalización de texto para búsquedas
 
-   DATOS
-     mergeChunk(p)               mete un chunk descargado a los arreglos tipados
-     loadAll()                   baja los chunks de S3 en paralelo
-     prepQuery()                 precalcula la búsqueda global
+   DATOS  (ver VENTAS Y COMPRAS arriba)
+     FACTURAS                    {venta, compra}: resumen y trozos de cada tipo
+     TIPO / META / R             el tipo que se ve, su resumen y su almacén
+     fijarTipo(tipo)             el ÚNICO sitio donde se cambia de tipo
+     hayTipo(tipo)               si ese tipo se exportó (si no, no hay selector)
+     nuevoAlmacen / almacenDe    los arreglos tipados de un tipo, creados al pedirlos
+     epochDe(meta)               el 1-ene del año base de un resumen, en ms UTC
+     mergeChunk(tipo, p)         mete un trozo descargado en el almacén de SU tipo
+     cargarTipo(tipo)            baja los trozos de un tipo en paralelo, una vez
+     pintarCarga()               el estado de carga del tipo que se ve, arriba
+     recordar / recordado        memoria de 12 horas (tipo y periodo)
+     aplicarPeriodo(v)           Todo / 60 m / 24 m / 12 m / YTD contra el último mes
+     recordarPeriodo / restaurarPeriodo   el periodo en meses absolutos
+     prepQuery()                 precalcula la búsqueda global (nombre y RFC)
      applyFilters()              aplica TODOS los filtros -> MASK / MATCH
      aggregateRows()             agrega desde el detalle completo
      aggregateMeta()             agrega desde el resumen incrustado (primer pintado)
@@ -1300,9 +1383,11 @@ const ENTRADAS = __ENTRADAS_JSON__;
      drawKpis()                  mosaicos de indicadores
 
    TABLA MAESTRA
+     MT_COLS                     las columnas, declaradas una vez (con su orden)
+     columnasTabla()             las que se muestran: sin las de catálogo vacío
      sortMatches / fechaTxt / rowCells
      renderTableHead / renderTableBody / renderTable   (virtualizada)
-     tableRowsForMaster()        filas listas para exportar
+     tableRowsForMaster()        filas listas para exportar (mismas columnas)
 
    EXPORTACIÓN Y DESCARGA
      toDelim()                   arreglo de filas -> texto delimitado
@@ -1339,7 +1424,10 @@ const ENTRADAS = __ENTRADAS_JSON__;
      sincronizarMetricaGlobal()  refleja el estado real (o mixto) en ese control
      tipShow / tipHide / bindTip / helpTipShow   tooltips
      renderGlosario / openGlosario / closeGlosario / bindGlosario
-     setLang()                   cambia idioma y vuelve a armar todo
+     setLang()                   cambia idioma y vuelve a armar todo. Es también
+                                 el camino del arranque y del cambio de tipo
+     pintarMarca()               "N facturas · año–año" bajo el nombre de la app
+     aplicarCatalogos()          esconde lo que depende de un catálogo vacío
      render() / doRender()       el ciclo de dibujado completo
      toast()                     aviso efímero
      activarPestana(nombre)      conmuta panel, dispara su construcción y deja
@@ -1432,7 +1520,8 @@ const ENTRADAS = __ENTRADAS_JSON__;
    2) TOCASTE FECHAS
       -> usa siempre timeZone:'UTC' en cualquier Intl.DateTimeFormat/
          Intl.NumberFormat que involucre las fechas de este dataset. Los
-         días se guardan como enteros desde EPOCH_MS (2020-01-01 UTC); sin
+         días se guardan como enteros desde el 1-ene del año base de los
+         datos (META.anioBase, ver epochDe), en UTC; sin
          forzar UTC, en cualquier huso horario de México los meses se corren
          un día y las etiquetas del eje de tiempo salen desfasadas (bug real
          que ya pasó una vez — ver ymLabel/MONTHS()).
@@ -1444,8 +1533,9 @@ const ENTRADAS = __ENTRADAS_JSON__;
          consistentes en toda la app cuando cambie el idioma.
 
    4) AGREGASTE UNA EMPRESA NUEVA AL GRUPO (7ª empresa)
-      -> además de exportar_dashboard.py (EMPRESAS/EMPRESA_NOMBRE/
-         COMPANY_NAMES/GRUPO_PATRONES), este archivo necesita:
+      -> la empresa se da de alta en la configuración del cliente
+         (configurar.py --agregar-empresa), no en código. Lo único que este
+         archivo necesita es:
         a) una 7ª variable de color categórico (--s7 en :root, modo claro Y
             oscuro) — NO reuses --s1..--s6 ciclando, valídala con el
             validador de paleta del skill de dataviz (contraste + CVD) antes
@@ -1458,23 +1548,24 @@ const ENTRADAS = __ENTRADAS_JSON__;
    5) REGLA DURA DE NEGOCIO, NO LA ROMPAS AUNQUE PAREZCA MÁS FÁCIL
       -> todo total/suma en este tablero se calcula sumando facturas
          individuales (columna Total MXN fila por fila). NUNCA leas ni
-         confíes en una fila de "SUMA"/total de los archivos Excel
-         originales — esa regla viene de arriba (del usuario dueño de los
-         datos) porque esas filas de cierre a veces están desactualizadas
-         respecto a los datos reales (ver hoja "Totales Declarados
-         (Referencia)" del consolidador retirado en legacy/ para ejemplos
-         reales donde no cuadran).
+         confíes en un total ya hecho — de un reporte, de una vista del ERP o
+         de cualquier otro lado. Esa regla viene de arriba (del usuario dueño
+         de los datos): un total escrito puede quedarse desactualizado
+         respecto a los documentos, y una suma de documentos no.
 
    6) ARQUITECTURA DE DATOS / SEGURIDAD (S3) — ver también refrescar.py
-      -> Hoy (Opción A): los chunks data/rows-<año>.json se sirven desde un
-         bucket S3 de lectura pública (sin ListBucket) referenciados por URL
-         directa en CHUNKS. meta.json sigue embebido arriba en este archivo
-         para que el primer render sea instantáneo sin esperar red.
+      -> Hoy (Opción A): los trozos data/rows-<año>.json (ventas) y
+         data/compra/rows-<año>.json (compras) se sirven desde un bucket S3
+         de lectura pública (sin ListBucket) referenciados por URL directa en
+         FACTURAS[tipo].chunks. Los resúmenes siguen embebidos arriba en este
+         archivo para que el primer render sea instantáneo sin esperar red.
+         OJO: las compras dicen a quién le paga el grupo y cuánto. La Opción
+         B es la que corresponde para ellas; quedó decidida y pendiente.
       -> Si en el futuro se activa la Opción B (privacidad real): el bucket
-         se vuelve privado y las URLs en CHUNKS dejan de ser URLs planas de
+         se vuelve privado y las URLs de los trozos dejan de ser URLs planas de
          S3 para ser URLs PRE-FIRMADAS (presigned, con expiración) generadas
          por refrescar.py en cada refresco. Este archivo (index.html) NO
-         necesita cambiar de lógica para ese salto — CHUNKS ya es solo un
+         necesita cambiar de lógica para ese salto — cada lista de trozos ya es solo un
          arreglo de {archivo, n} donde "archivo" es la URL a hacer fetch();
          el único cambio real ocurre en cómo construir.py arma ese arreglo
          (URL pública vs. URL firmada) y en si Connect Cloud restringe el
@@ -1527,18 +1618,18 @@ const I18N = {
     'f.montos.help':'Cambia de golpe qué mide TODO el tablero: Total MXN incluye IVA y demás impuestos; Base sin IVA es el monto antes de impuestos; también puedes medir en número de facturas o en dólares. Cada tarjeta conserva su propio selector en Ajustes si quieres una distinta.',
     'f.montos.avisoBase':'Base sin IVA existe solo en {cob} de las facturas — los totales se ven más bajos por eso, no porque cayera la operación.',
     'f.montos.avisoParcial':'{n} tarjeta(s) no admiten esa métrica y conservan la suya.',
-    'q.ph':'Cliente, folio, concepto, monto…','q.wait':'disponible al cargar el detalle',
+    'q.ph':'Cliente, RFC, folio, referencia, monto…','q.wait':'disponible al cargar el detalle',
     'k.total':'Facturación total','k.base':'Base sin IVA','k.n':'Facturas','k.ticket':'Factura promedio',
     'k.ic':'Intercompañía','k.usd':'Facturado en USD','k.tc':'Tipo de cambio prom.','k.cn':'Canceladas',
     'k.cov':'cobertura','k.ofTotal':'del total','k.wavg':'ponderado','k.rows':'con dato',
-    'k.help.total':'Suma del Total MXN (incluye IVA y demás impuestos) de todas las facturas que pasan los filtros activos, sumando factura por factura — nunca la fila de "SUMA" de los archivos originales.',
-    'k.help.base':'Suma del monto antes de IVA (columna Subtotal, o Importe cuando no hay Subtotal capturado). Solo existe para el 60% de las facturas — ese % de cobertura se muestra debajo. Compara ese % con el de tu selección actual antes de sacar conclusiones sobre montos base.',
+    'k.help.total':'Suma del Total MXN (incluye IVA y demás impuestos) de todas las facturas que pasan los filtros activos, sumando factura por factura — nunca un total ya hecho.',
+    'k.help.base':'Suma del Subtotal (el monto antes de impuestos) de las facturas que pasan los filtros activos.',
     'k.help.n':'Número de facturas que pasan los filtros activos — cada renglón de la tabla de detalle cuenta como una factura, incluidas las de $0 si no excluiste canceladas.',
     'k.help.ticket':'Facturación total entre número de facturas del periodo/filtros actuales. Se distorsiona fácilmente por outliers — revisa el histograma de "Tamaño de factura" antes de usarlo como referencia típica.',
     'k.help.ic':'% del Total MXN facturado a otra empresa del grupo (Intercompañía) — ver glosario "Intercompañía" para el criterio exacto de clasificación.',
     'k.help.usd':'Suma de los dólares de las facturas emitidas en USD, tal como los registra el ERP en la moneda del documento. No es una conversión del Total MXN: las facturas en pesos no suman aquí.',
     'k.help.tc':'Tipo de cambio promedio del dólar, ponderado por el Total MXN de cada factura en USD (no un promedio simple de tasas). Solo usa tasas entre 10 y 35 MXN/USD, para excluir errores de captura evidentes.',
-    'k.help.cn':'Facturas marcadas como canceladas en el archivo origen (Estatus = CANCELADA, o texto "CANCELADA"/"CANCELADO" en el nombre del cliente). Por defecto el filtro de Canceladas las excluye — este mosaico muestra "—" mientras estén excluidas.',
+    'k.help.cn':'Facturas que el ERP marca como canceladas. Por defecto el filtro de Canceladas las excluye — este mosaico muestra "—" mientras estén excluidas.',
     'c.serie.t':'Facturación por mes','c.serie.s':'Apilado por empresa emisora · MXN con impuestos',
     'c.emp.t':'Empresa emisora','c.emp.s':'Quién factura dentro del grupo (proveedor)',
     'c.ic.t':'Intercompañía vs. terceros','c.ic.s':'Ventas reales al exterior contra flujo interno',
@@ -1548,13 +1639,13 @@ const I18N = {
     'c.plz.t':'Plazas','c.plz.s':'Distribución por localidad registrada',
     'c.tab.t':'Detalle de facturas',
     'c.serie.help':'Suma el Total MXN (o la métrica elegida en Ajustes) de las facturas que pasan los filtros activos, agrupado por mes/trimestre/año y apilado por empresa. En modo 100% cada barra representa la mezcla porcentual de empresas de ese periodo, no el monto absoluto — usa el modo Apilado para comparar tamaños entre meses. Para ver un pronóstico, extiende el selector "Hasta" más allá del último mes real (solo disponible en granularidad Mes y modo Apilado); el método se elige en Ajustes.',
-    'c.emp.help':'Quién emite las facturas dentro del grupo: cuánto factura cada una de las 6 empresas en el periodo y filtros actuales. No indica quién es el cliente, solo el proveedor/emisor.',
-    'c.ic.help':'Compara facturas emitidas a otra empresa del grupo (Intercompañía) contra facturas emitidas a clientes externos (Terceros) — la clasificación depende de si el CLIENTE de la factura es una de las 6 empresas del grupo, sin importar quién la emite. La línea de abajo muestra cómo cambió ese % mes a mes.',
+    'c.emp.help':'Quién emite las facturas dentro del grupo: cuánto factura cada empresa en el periodo y filtros actuales. No indica quién es el cliente, solo el emisor.',
+    'c.ic.help':'Compara facturas con otra empresa del grupo (Intercompañía) contra facturas con terceros — la clasificación depende de si la CONTRAPARTE está en el registro intercompañía de la configuración. La línea de abajo muestra cómo cambió ese % mes a mes.',
     'c.cli.help':'Ordena a los clientes facturados de mayor a menor según la métrica elegida. El punto (•) antes del nombre marca que ese cliente es una empresa del grupo (intercompañía). "Otros" agrupa a todos los clientes fuera del Top N configurado en Ajustes.',
     'c.hist.help':'Reparte las facturas en 10 rangos fijos de monto (Total MXN) para ver si la operación se concentra en facturas chicas o grandes. Útil para detectar si el promedio general está distorsionado por unas cuantas facturas muy altas.',
     'c.fx.help':'Arriba: cuántos dólares se facturaron por mes, en la moneda del documento según el ERP. Abajo: el tipo de cambio del dólar promedio, ponderado por el monto de cada factura (no un promedio simple de tasas) — solo con tasas en un rango plausible (10–35 MXN/USD).',
-    'c.plz.help':'Distribución por la localidad/sede registrada en cada factura (columna Localidad del archivo origen). "Sin dato" son facturas sin localidad capturada; no confundir con la plaza real de la operación si el campo se dejó en blanco.',
-    'c.tab.help':'El detalle fila por fila de cada factura que pasa los filtros activos, tal como quedó en la base consolidada. Ordenable por columna (clic en el encabezado). Es la única vista con acceso a folio, RFC y estatus original de cada factura.',
+    'c.plz.help':'Distribución por la sede registrada en cada factura. "Sin dato" son facturas sin sede; no confundir con la plaza real de la operación.',
+    'c.tab.help':'El detalle fila por fila de cada factura que pasa los filtros activos, tal como viene del ERP. Ordenable por columna (clic en el encabezado).',
     'b.ajustes':'Ajustes','b.tabla':'Tabla',
     'dl.btn':'Descargar','dl.copiar':'Copiar','dl.csv':'Copiar como CSV',
     'dl.xlsx':'Descargar Excel','dl.pdf':'Descargar PDF',
@@ -1759,7 +1850,49 @@ const I18N = {
     'copy.title':'Copia el contenido y pégalo en Excel','copy.now':'Copiar','copy.close':'Cerrar',
     'copy.ok':'Copiado al portapapeles','sin':'Sin dato','otros':'Otros',
     'tab.sub':'{n} facturas filtradas de {tot}','load.wait':'Cargando detalle completo…',
-    'foot':'Fuente: ERP (SAP Business One) · {rows} facturas vigentes · Los totales se calculan sumando documentos individuales; las facturas canceladas y sus documentos de cancelación quedan fuera. Intercompañía se determina por el registro de RFC y códigos de socio configurado, no por el nombre. {nodate} facturas sin fecha quedan fuera de las gráficas.',
+    'foot':'Fuente: ERP (SAP Business One), extraído el {fecha} · {rows} facturas vigentes · Los totales se calculan sumando documentos individuales; las canceladas quedan fuera salvo que el filtro de Canceladas las incluya, y sus documentos de cancelación no se publican. Intercompañía se determina por el registro de RFC y códigos de socio configurado, no por el nombre. {nodate} facturas sin fecha quedan fuera de las gráficas.',
+    'tipo.venta':'Ventas',
+    'tipo.compra':'Compras',
+    'tipo.aria':'Tipo de factura',
+    'brand.sub':'{n} facturas · {desde}–{hasta}',
+    'f.situacion':'Situación',
+    'f.si.todas':'Todas',
+    'f.si.abiertas':'Abiertas',
+    'f.si.cerradas':'Cerradas',
+    'f.situacion.help':'Abierta es una factura que el ERP todavía tiene con saldo pendiente de cobro; cerrada, una que ya no lo tiene. Es el estado del documento el día de la extracción (ver el pie de página), no en tiempo real.',
+    'si.abierta':'Abierta',
+    'si.cerrada':'Cerrada',
+    'th.ref':'Referencia',
+    'th.situacion':'Situación',
+    'tab.filas':'{n} filas',
+    'c.ic.pct':'% intercompañía por mes',
+    'c.fx.tc':'Tipo de cambio promedio ponderado (MXN/USD)',
+    'compra.brand.sub':'{n} facturas de compra · {desde}–{hasta}',
+    'compra.q.ph':'Proveedor, RFC, folio, folio del proveedor, monto…',
+    'compra.k.total':'Compras totales',
+    'compra.k.usd':'Comprado en USD',
+    'compra.k.help.total':'Suma del Total MXN (incluye IVA y demás impuestos) de todas las facturas de proveedores que pasan los filtros activos, sumando factura por factura — nunca un total ya hecho.',
+    'compra.k.help.ticket':'Compras totales entre número de facturas del periodo/filtros actuales. Se distorsiona fácilmente por outliers — revisa el histograma de "Tamaño de factura" antes de usarlo como referencia típica.',
+    'compra.k.help.ic':'% del Total MXN comprado a otra empresa del grupo (Intercompañía) — ver glosario "Intercompañía" para el criterio exacto de clasificación.',
+    'compra.k.help.usd':'Suma de los dólares de las facturas de proveedores emitidas en USD, tal como los registra el ERP en la moneda del documento. No es una conversión del Total MXN.',
+    'compra.c.serie.t':'Compras por mes',
+    'compra.c.serie.s':'Apilado por empresa que compra · MXN con impuestos',
+    'compra.c.emp.t':'Empresa receptora',
+    'compra.c.emp.s':'Quién compra dentro del grupo (cliente del proveedor)',
+    'compra.c.emp.help':'Quién recibe las facturas de proveedores dentro del grupo: cuánto compra cada empresa en el periodo y filtros actuales. No indica quién es el proveedor, solo quién compra.',
+    'compra.c.ic.s':'Compras a terceros contra flujo interno',
+    'compra.c.ic.help':'Compara compras a otra empresa del grupo (Intercompañía) contra compras a proveedores externos (Terceros) — la clasificación depende de si el PROVEEDOR está en el registro intercompañía de la configuración. La línea de abajo muestra cómo cambió ese % mes a mes.',
+    'compra.c.cli.t':'Proveedores',
+    'compra.c.cli.s':'Concentración por proveedor',
+    'compra.c.cli.help':'Ordena a los proveedores de mayor a menor según la métrica elegida. El punto (•) antes del nombre marca que ese proveedor es una empresa del grupo (intercompañía). "Otros" agrupa a todos los proveedores fuera del Top N configurado en Ajustes.',
+    'compra.c.fx.s':'Monto comprado en USD y tipo de cambio aplicado',
+    'compra.c.fx.help':'Arriba: cuántos dólares se compraron por mes, en la moneda del documento según el ERP. Abajo: el tipo de cambio del dólar promedio, ponderado por el monto de cada factura (no un promedio simple de tasas) — solo con tasas en un rango plausible (10–35 MXN/USD).',
+    'compra.th.cliente':'Proveedor',
+    'compra.th.ref':'Folio proveedor',
+    'compra.f.situacion.help':'Abierta es una factura de proveedor que el ERP todavía tiene con saldo pendiente de pago; cerrada, una que ya no lo tiene. Es el estado del documento el día de la extracción (ver el pie de página), no en tiempo real.',
+    'compra.serie.pronNota':'Valor estimado, no son compras reales. Extiende "Hasta" para ver más meses de pronóstico; cambia el método en Ajustes.',
+    'compra.aj.fue.filas':'Facturas de compra en la base',
+    'compra.foot':'Fuente: ERP (SAP Business One), extraído el {fecha} · {rows} facturas de proveedores vigentes · Los totales se calculan sumando documentos individuales; las canceladas quedan fuera salvo que el filtro de Canceladas las incluya, y sus documentos de cancelación no se publican. Intercompañía se determina por el registro de RFC y códigos de socio configurado, no por el nombre. {nodate} facturas sin fecha quedan fuera de las gráficas.',
     'nodata':'Sin datos con los filtros actuales'
   },
   en:{
@@ -1774,18 +1907,18 @@ const I18N = {
     'f.montos.help':'Switches what the WHOLE dashboard measures at once: Total MXN includes VAT and other taxes; Net of VAT is the pre-tax amount; you can also measure in invoice count or in dollars. Each card keeps its own selector under Settings if you want a different one there.',
     'f.montos.avisoBase':'Net of VAT exists for only {cob} of invoices — totals look lower because of that, not because the business dropped.',
     'f.montos.avisoParcial':'{n} card(s) don\'t support that measure and keep their own.',
-    'q.ph':'Client, invoice no., item, amount…','q.wait':'available once detail loads',
+    'q.ph':'Client, tax ID, invoice no., reference, amount…','q.wait':'available once detail loads',
     'k.total':'Total billed','k.base':'Net of VAT','k.n':'Invoices','k.ticket':'Average invoice',
     'k.ic':'Intercompany','k.usd':'Billed in USD','k.tc':'Avg. exchange rate','k.cn':'Cancelled',
     'k.cov':'coverage','k.ofTotal':'of total','k.wavg':'weighted','k.rows':'with data',
-    'k.help.total':'Sum of Total MXN (tax-included) for every invoice passing the active filters, added invoice by invoice — never the "SUMA" row from the original files.',
-    'k.help.base':'Sum of the pre-VAT amount (Subtotal column, or Importe when no Subtotal was captured). Only exists for 60% of invoices — that coverage % is shown below. Compare it against your current selection\'s coverage before drawing conclusions.',
+    'k.help.total':'Sum of Total MXN (tax-included) for every invoice passing the active filters, added invoice by invoice — never a pre-computed total.',
+    'k.help.base':'Sum of the Subtotal (the pre-tax amount) for invoices passing the active filters.',
     'k.help.n':'Count of invoices passing the active filters — every row in the detail table counts as one invoice, including $0 ones if cancelled invoices aren\'t excluded.',
     'k.help.ticket':'Total billed divided by invoice count for the current period/filters. Easily skewed by outliers — check the "Invoice size" histogram before treating it as a typical value.',
     'k.help.ic':'% of Total MXN billed to another group company (Intercompany) — see the glossary entry "Intercompany" for the exact classification rule.',
     'k.help.usd':'Sum of the dollars on invoices issued in USD, as the ERP records them in the document currency. Not a conversion of Total MXN: peso invoices do not add here.',
     'k.help.tc':'Average dollar exchange rate, weighted by each USD invoice\'s Total MXN (not a plain average of rates). Only uses rates between 10 and 35 MXN/USD, to exclude obvious capture errors.',
-    'k.help.cn':'Invoices flagged as cancelled in the source file (Estatus = CANCELADA, or "CANCELADA"/"CANCELADO" in the client name). Cancelled invoices are excluded by default — this tile shows "—" while excluded.',
+    'k.help.cn':'Invoices the ERP flags as cancelled. The Cancelled filter excludes them by default — this tile shows "—" while excluded.',
     'c.serie.t':'Billing by month','c.serie.s':'Stacked by issuing company · MXN incl. tax',
     'c.emp.t':'Issuing company','c.emp.s':'Who bills within the group (supplier)',
     'c.ic.t':'Intercompany vs. third parties','c.ic.s':'Real outside sales against internal flow',
@@ -1795,13 +1928,13 @@ const I18N = {
     'c.plz.t':'Sites','c.plz.s':'Distribution by recorded location',
     'c.tab.t':'Invoice detail',
     'c.serie.help':'Sums Total MXN (or the measure chosen in Settings) for invoices that pass the active filters, grouped by month/quarter/year and stacked by company. In 100% mode each bar shows that period\'s percentage mix of companies, not the absolute amount — use Stacked mode to compare size across months. To see a forecast, extend the "To" selector past the last real month (only available in Month granularity and Stacked mode); pick the method in Settings.',
-    'c.emp.help':'Who issues invoices within the group: how much each of the 6 companies billed in the current period/filters. This is the issuer/supplier, not the client.',
-    'c.ic.help':'Compares invoices billed to another group company (Intercompany) against invoices billed to outside clients (Third parties) — classified by whether the invoice\'s CLIENT is one of the 6 group companies, regardless of who issued it. The line below tracks how that % moved month to month.',
+    'c.emp.help':'Who issues invoices within the group: how much each company billed in the current period/filters. This is the issuer, not the client.',
+    'c.ic.help':'Compares invoices with another group company (Intercompany) against invoices with third parties — classified by whether the COUNTERPARTY is in the configured intercompany registry. The line below tracks how that % moved month to month.',
     'c.cli.help':'Ranks billed clients highest to lowest by the chosen measure. The dot (•) before a name flags that client as a group company (intercompany). "Other" groups every client outside the Top N set in Settings.',
     'c.hist.help':'Splits invoices into 10 fixed amount bands (Total MXN) to see whether the business concentrates in small or large invoices — useful for spotting when a handful of large invoices skew the overall average.',
     'c.fx.help':'Top: dollars billed per month, in the document currency as recorded by the ERP. Bottom: the average dollar exchange rate, weighted by each invoice\'s amount (not a plain average of rates) — only rates in a plausible range (10–35 MXN/USD).',
-    'c.plz.help':'Distribution by the site/location recorded on each invoice (the source file\'s Localidad column). "No data" means the field was left blank — it does not necessarily mean the operation had no site.',
-    'c.tab.help':'Row-by-row detail for every invoice passing the active filters, exactly as it sits in the consolidated base. Sortable by column (click a header). The only view exposing invoice no., RFC and the original status per invoice.',
+    'c.plz.help':'Distribution by the site recorded on each invoice. "No data" means no site was recorded — not necessarily that the operation had none.',
+    'c.tab.help':'Row-by-row detail for every invoice passing the active filters, as it comes from the ERP. Sortable by column (click a header).',
     'b.ajustes':'Settings','b.tabla':'Table',
     'dl.btn':'Download','dl.copiar':'Copy','dl.csv':'Copy as CSV',
     'dl.xlsx':'Download Excel','dl.pdf':'Download PDF',
@@ -2006,12 +2139,63 @@ const I18N = {
     'copy.title':'Copy the content and paste it into Excel','copy.now':'Copy','copy.close':'Close',
     'copy.ok':'Copied to clipboard','sin':'No data','otros':'Other',
     'tab.sub':'{n} invoices filtered out of {tot}','load.wait':'Loading full detail…',
-    'foot':'Source: ERP (SAP Business One) · {rows} active invoices · Totals are computed by summing individual documents; cancelled invoices and their cancellation documents are excluded. Intercompany is determined by the configured registry of tax IDs and partner codes, not by name. {nodate} invoices without a date are excluded from charts.',
+    'foot':'Source: ERP (SAP Business One), extracted on {fecha} · {rows} active invoices · Totals are computed by summing individual documents; cancelled invoices are excluded unless the Cancelled filter includes them, and their cancellation documents are not published. Intercompany is determined by the configured registry of tax IDs and partner codes, not by name. {nodate} invoices without a date are excluded from charts.',
+    'tipo.venta':'Sales',
+    'tipo.compra':'Purchases',
+    'tipo.aria':'Invoice type',
+    'brand.sub':'{n} invoices · {desde}–{hasta}',
+    'f.situacion':'Open/Closed',
+    'f.si.todas':'All',
+    'f.si.abiertas':'Open',
+    'f.si.cerradas':'Closed',
+    'f.situacion.help':'Open is an invoice the ERP still carries with an outstanding balance to collect; closed, one that no longer does. It is the document status on the extraction date (see the footer), not real time.',
+    'si.abierta':'Open',
+    'si.cerrada':'Closed',
+    'th.ref':'Reference',
+    'th.situacion':'Open/Closed',
+    'tab.filas':'{n} rows',
+    'c.ic.pct':'% intercompany by month',
+    'c.fx.tc':'Weighted avg. exchange rate (MXN/USD)',
+    'compra.brand.sub':'{n} purchase invoices · {desde}–{hasta}',
+    'compra.q.ph':'Supplier, tax ID, invoice no., supplier invoice no., amount…',
+    'compra.k.total':'Total purchases',
+    'compra.k.usd':'Purchased in USD',
+    'compra.k.help.total':'Sum of Total MXN (tax-included) for every supplier invoice passing the active filters, added invoice by invoice — never a pre-computed total.',
+    'compra.k.help.ticket':'Total purchases divided by invoice count for the current period/filters. Easily skewed by outliers — check the "Invoice size" histogram before treating it as a typical value.',
+    'compra.k.help.ic':'% of Total MXN purchased from another group company (Intercompany) — see the "Intercompany" glossary entry for the exact classification rule.',
+    'compra.k.help.usd':'Sum of the dollars on supplier invoices issued in USD, as the ERP records them in the document currency. Not a conversion of Total MXN.',
+    'compra.c.serie.t':'Purchases by month',
+    'compra.c.serie.s':'Stacked by purchasing company · MXN incl. taxes',
+    'compra.c.emp.t':'Receiving company',
+    'compra.c.emp.s':'Who buys within the group (the supplier\'s client)',
+    'compra.c.emp.help':'Who receives supplier invoices within the group: how much each company bought in the current period/filters. This is the buyer, not the supplier.',
+    'compra.c.ic.s':'Third-party purchases against internal flow',
+    'compra.c.ic.help':'Compares purchases from another group company (Intercompany) against purchases from outside suppliers (Third parties) — classified by whether the SUPPLIER is in the configured intercompany registry. The line below tracks how that % moved month to month.',
+    'compra.c.cli.t':'Suppliers',
+    'compra.c.cli.s':'Concentration by supplier',
+    'compra.c.cli.help':'Ranks suppliers highest to lowest by the chosen measure. The dot (•) before a name flags that supplier as a group company (intercompany). "Other" groups every supplier outside the Top N set in Settings.',
+    'compra.c.fx.s':'Amount purchased in USD and applied exchange rate',
+    'compra.c.fx.help':'Top: dollars purchased per month, in the document currency as recorded by the ERP. Bottom: the average dollar exchange rate, weighted by each invoice\'s amount (not a plain average of rates) — only rates in a plausible range (10–35 MXN/USD).',
+    'compra.th.cliente':'Supplier',
+    'compra.th.ref':'Supplier invoice no.',
+    'compra.f.situacion.help':'Open is a supplier invoice the ERP still carries with an outstanding balance to pay; closed, one that no longer does. It is the document status on the extraction date (see the footer), not real time.',
+    'compra.serie.pronNota':'Estimated value, not actual purchases. Extend "To" to see more forecast months; change the method in Settings.',
+    'compra.aj.fue.filas':'Purchase invoices in the base',
+    'compra.foot':'Source: ERP (SAP Business One), extracted on {fecha} · {rows} active supplier invoices · Totals are computed by summing individual documents; cancelled invoices are excluded unless the Cancelled filter includes them, and their cancellation documents are not published. Intercompany is determined by the configured registry of tax IDs and partner codes, not by name. {nodate} invoices without a date are excluded from charts.',
     'nodata':'No data for the current filters'
   }
 };
 let LANG = 'es';
-const t = (k, vars) => { let s = (I18N[LANG] && I18N[LANG][k]) || I18N.es[k] || k;
+/* Qué facturas se están viendo: 'venta' o 'compra'. Se declara aquí, junto a
+   t(), porque t() lo lee: cuando se ven compras, una clave busca primero su
+   versión 'compra.<clave>' —"Proveedores" donde ventas dice "Clientes"— y si
+   no la hay, usa la de siempre. Así solo se escriben los textos cuyo sentido
+   cambia, y todo lo demás (filtros, métricas, pronóstico, descargas) sirve
+   igual sin duplicar una sola cadena. Se cambia solo en fijarTipo(). */
+let TIPO = 'venta';
+const t = (k, vars) => {
+  const d = I18N[LANG] || I18N.es, tk = TIPO + '.' + k;
+  let s = (TIPO !== 'venta' && (d[tk] || I18N.es[tk])) || d[k] || I18N.es[k] || k;
   if (vars) for (const v in vars) s = s.replace('{'+v+'}', vars[v]); return s; };
 
 let NF, NF2, NFI, PF;
@@ -2027,8 +2211,12 @@ const MONTHS = () => { const loc = LANG==='es'?'es-MX':'en-US';
   const f = new Intl.DateTimeFormat(loc,{month:'short', timeZone:'UTC'});
   return Array.from({length:12},(_,i)=>f.format(new Date(Date.UTC(2021,i,1))).replace('.','')); };
 let MN = MONTHS();
-const ymLabel = ym => MN[((ym%12)+12)%12] + ' ' + (2020 + Math.floor(ym/12)).toString().slice(2);
-const ymLabelLong = ym => MN[((ym%12)+12)%12] + ' ' + (2020 + Math.floor(ym/12));
+/* El índice de mes `ym` cuenta desde enero del año base de los datos —el
+   primer año publicado, que dice el propio META—. Era 2020 escrito en siete
+   lugares, y la historia anterior no tenía cómo entrar. */
+const anioDe = ym => META.anioBase + Math.floor(ym/12);
+const ymLabel = ym => MN[((ym%12)+12)%12] + ' ' + String(anioDe(ym)).slice(2);
+const ymLabelLong = ym => MN[((ym%12)+12)%12] + ' ' + anioDe(ym);
 /* ============================================================================
    MODO DISCRETO — ocultar los importes sin ocultar el análisis
    ----------------------------------------------------------------------------
@@ -2119,7 +2307,7 @@ function esColumnaDeMonto(nombre){
   // maestra y el mosaico lo enseñaban, la tabla de la tarjeta lo tapaba.
   // Ocultarlo no protege nada y deja la columna USD sin con qué leerse.
   const n = String(nombre).toLowerCase();
-  return !/(%|porcentaje|percent|part\.|participaci[oó]n|share|d[ií]as|days|mes|month|periodo|period|a[nñ]o|year|folio|n\.?[°º]|\bn\b|facturas|invoices|cuenta|account|cliente|client|empresa|company|concepto|plaza|estatus|status|\b(?:tc|fx)\b|t\.c\.|tipo de cambio|exchange)/.test(n);
+  return !/(%|porcentaje|percent|part\.|participaci[oó]n|share|d[ií]as|days|mes|month|periodo|period|a[nñ]o|year|folio|n\.?[°º]|\bn\b|facturas|invoices|cuenta|account|cliente|client|proveedor|supplier|referencia|reference|situaci[oó]n|empresa|company|concepto|plaza|estatus|status|\b(?:tc|fx)\b|t\.c\.|tipo de cambio|exchange)/.test(n);
 }
 
 /** Aplica el modo de montos a filas que NO salieron de la pantalla.
@@ -2158,12 +2346,23 @@ const bigMoney = v => { if (DISCRETO) return MASCARA;
   return NF.format(Math.round(v)); };
 
 /* ====================== estado ====================== */
+/* META es el resumen de las facturas que se están viendo. Cambia con
+   fijarTipo(), y por eso es `let`: todo lo que lo lee lo lee al dibujar, nunca
+   lo guarda. Las empresas son las mismas en los dos juegos —salen de la
+   configuración del cliente—, así que NE, los colores y las burbujas no se
+   mueven al cambiar de ventas a compras. */
+let META = FACTURAS.venta.meta;
 const NE = META.empresas.length;
 const FORECAST_MAX_MESES = 24;  // cuánto se puede extender "Hasta" hacia el futuro
+/* El periodo con el que abre: los últimos cinco años. Con toda la historia del
+   ERP publicada, abrir en "Todo" pondría una década en la primera gráfica y lo
+   reciente se volvería una franja delgada al final. */
+const PERIODO_INICIAL = '60';
 const S = {
   empresas: new Set(META.empresas.map((_,i)=>i)),
-  interco: 'todo', cancel: 'excluir',
-  ymFrom: 0, ymTo: META.ymMax,
+  interco: 'todo', cancel: 'excluir', situacion: 'todas',
+  periodo: PERIODO_INICIAL,
+  ymFrom: Math.max(0, META.ymMax - (+PERIODO_INICIAL) + 1), ymTo: META.ymMax,
   plazas: new Set(META.plazas.map((_,i)=>i)),
   q: '',
   local: {
@@ -2181,69 +2380,172 @@ const SERIES_VARS = ['--s1','--s2','--s3','--s4','--s5','--s6'];
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const empColor = i => cssv(SERIES_VARS[i % 6]);
 
-/* ====================== datos ====================== */
-const TOTAL_ROWS = CHUNKS.reduce((a,c)=>a+c.n,0);
-const R = { n:0, ready:false,
-  e:new Int8Array(TOTAL_ROWS), ym:new Int16Array(TOTAL_ROWS), d:new Int32Array(TOTAL_ROWS),
-  c:new Int16Array(TOTAL_ROWS), k:new Int8Array(TOTAL_ROWS), l:new Int8Array(TOTAL_ROWS),
-  s:new Int8Array(TOTAL_ROWS), t:new Float64Array(TOTAL_ROWS), b:new Float64Array(TOTAL_ROWS),
-  u:new Float64Array(TOTAL_ROWS), x:new Float32Array(TOTAL_ROWS), f:new Array(TOTAL_ROWS),
-  ic:new Uint8Array(TOTAL_ROWS), pl:new Int8Array(TOTAL_ROWS)
-};
+/* ====================== datos ======================
+   Un ALMACÉN por tipo de factura: los arreglos tipados con el detalle de ese
+   tipo. R apunta al del tipo que se está viendo; cambiarlo es todo lo que hace
+   falta para que filtros, agregados, gráficas y tabla trabajen sobre el otro.
+   El de compras se crea y se baja la primera vez que alguien lo pide: quien
+   solo mira ventas no paga ni la memoria ni la descarga. */
 const NODATE_YM = -32768;
-const EPOCH_MS = Date.UTC(2020,0,1);
+const epochDe = meta => Date.UTC(meta.anioBase, 0, 1);
 let statsNoDate = 0, statsOut = 0;
 
-function mergeChunk(p){
-  const base = R.n, n = p.n;
+function nuevoAlmacen(chunks){
+  const N = chunks.reduce((a,c)=>a+c.n,0);
+  return { n:0, ready:false, cargando:false, hechos:0, fallaron:0, total:chunks.length,
+    e:new Int8Array(N), ym:new Int16Array(N), d:new Int32Array(N),
+    c:new Int16Array(N), k:new Int8Array(N), l:new Int8Array(N),
+    s:new Int8Array(N), o:new Uint8Array(N), t:new Float64Array(N), b:new Float64Array(N),
+    u:new Float64Array(N), x:new Float32Array(N), f:new Array(N), r:new Array(N),
+    ic:new Uint8Array(N), pl:new Int8Array(N) };
+}
+function almacenDe(tipo){
+  const L = FACTURAS[tipo];
+  return L.R || (L.R = nuevoAlmacen(L.chunks));
+}
+/* Un tipo existe si se exportó: trae empresas y al menos un trozo. */
+function hayTipo(tipo){
+  const L = FACTURAS[tipo];
+  return !!(L && L.meta && L.meta.empresas && L.chunks && L.chunks.length);
+}
+let R = almacenDe('venta');
+
+/* Mete un trozo descargado en el almacén de SU tipo, que no tiene por qué ser
+   el que se está viendo: las compras pueden terminar de bajar mientras alguien
+   ya volvió a ventas. Por eso recibe el tipo y no usa R ni META. */
+function mergeChunk(tipo, p){
+  const A = almacenDe(tipo), M = FACTURAS[tipo].meta, epoch = epochDe(M);
+  const base = A.n, n = p.n;
   for (let i=0;i<n;i++){
     const j = base+i, d = p.d[i];
-    R.e[j]=p.e[i]; R.d[j]=d; R.c[j]=p.c[i]; R.k[j]=p.k[i]; R.l[j]=p.l[i]; R.s[j]=p.s[i];
-    R.t[j]=p.t[i]; R.b[j]=p.b[i]; R.u[j]=p.u[i]; R.x[j]=p.x[i]; R.f[j]=p.f[i];
+    A.e[j]=p.e[i]; A.d[j]=d; A.c[j]=p.c[i]; A.k[j]=p.k[i]; A.l[j]=p.l[i]; A.s[j]=p.s[i];
+    A.o[j]=p.o ? p.o[i] : 0; A.r[j]=p.r ? p.r[i] : '';
+    A.t[j]=p.t[i]; A.b[j]=p.b[i]; A.u[j]=p.u[i]; A.x[j]=p.x[i]; A.f[j]=p.f[i];
     const ci = p.c[i];
-    R.ic[j] = ci>=0 && META.clientes[ci].g ? 1 : 0;
+    A.ic[j] = ci>=0 && M.clientes[ci].g ? 1 : 0;
     const li = p.l[i];
-    R.pl[j] = li>=0 ? META.localidadPlaza[li] : -1;
-    if (d === -99999){ R.ym[j]=NODATE_YM; statsNoDate++; }
+    A.pl[j] = li>=0 ? M.localidadPlaza[li] : -1;
+    if (d === -99999){ A.ym[j]=NODATE_YM; statsNoDate++; }
     else {
-      const dt = new Date(EPOCH_MS + d*86400000);
-      const ym = (dt.getUTCFullYear()-2020)*12 + dt.getUTCMonth();
-      R.ym[j]=ym;
-      if (ym < 0 || ym > META.ymMax) statsOut++;
+      const dt = new Date(epoch + d*86400000);
+      const ym = (dt.getUTCFullYear()-M.anioBase)*12 + dt.getUTCMonth();
+      A.ym[j]=ym;
+      if (ym < 0 || ym > M.ymMax) statsOut++;
     }
   }
-  R.n += n;
+  A.n += n;
 }
 
-/* Un chunk que no llega se DICE. Antes se registraba en la consola y la barra
+/* Un trozo que no llega se DICE. Antes se registraba en la consola y la barra
    seguía hasta "Detalle completo" con el punto verde: el tablero afirmaba tener
    el detalle completo con cero filas cargadas, y la pestaña quedaba en $0 con
    un "Sin datos con los filtros actuales" que culpaba a los filtros. Pasó de
    verdad, publicando un index.html construido en modo local —cuyas rutas
    relativas no existen en Connect Cloud— y nadie pudo distinguirlo de un
-   periodo sin facturas. El estado de carga es parte del dato. */
-async function loadAll(){
-  const bar = document.getElementById('loadBar'), txt = document.getElementById('loadTxt');
-  let done = 0, fallaron = 0;
-  await Promise.all(CHUNKS.map(async c => {
+   periodo sin facturas. El estado de carga es parte del dato.
+
+   La barra de arriba enseña SIEMPRE el estado del tipo que se está viendo: si
+   las compras están bajando y alguien vuelve a ventas, ve el punto verde de
+   ventas, no el progreso de algo que no está mirando. */
+function pintarCarga(){
+  const w = document.querySelector('.loadwrap');
+  if (!w) return;
+  const lista = R.ready && !R.fallaron;
+  const txt = R.ready ? t(lista ? 'load.ready' : 'load.error') : t('load.loading');
+  const marca = R.ready
+    ? `<span class="${lista ? 'dot-ok' : 'dot-mal'}"></span>`
+    : `<span class="loadbar"><i id="loadBar" style="width:${Math.round(R.hechos / Math.max(1, R.total) * 100)}%"></i></span>`;
+  w.innerHTML = `<span id="loadTxt">${txt}</span>${marca}`;
+  document.getElementById('searchWrap').dataset.off = R.ready ? '0' : '1';
+  document.getElementById('q').disabled = !R.ready;
+}
+
+async function cargarTipo(tipo){
+  const A = almacenDe(tipo), chunks = FACTURAS[tipo].chunks;
+  if (A.ready || A.cargando) return;
+  A.cargando = true;
+  if (tipo === TIPO) pintarCarga();
+  await Promise.all(chunks.map(async c => {
     try{
       const res = await fetch(c.archivo);
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      const p = await res.json();
-      mergeChunk(p);
-    }catch(err){ fallaron++; console.error('chunk', c.archivo, err); }
-    done++;
-    bar.style.width = Math.round(done/CHUNKS.length*100)+'%';
+      mergeChunk(tipo, await res.json());
+    }catch(err){ A.fallaron++; console.error('trozo', c.archivo, err); }
+    A.hechos++;
+    const bar = document.getElementById('loadBar');
+    if (bar && tipo === TIPO) bar.style.width = Math.round(A.hechos/chunks.length*100)+'%';
   }));
-  R.ready = true;
-  const bien = fallaron === 0;
-  txt.textContent = t(bien ? 'load.ready' : 'load.error');
-  document.querySelector('.loadwrap .loadbar').outerHTML =
-    `<span class="${bien ? 'dot-ok' : 'dot-mal'}"></span>`;
-  if (!bien) toast(t('load.error.n', {n: fallaron, tot: CHUNKS.length}));
-  document.getElementById('searchWrap').dataset.off = '0';
-  document.getElementById('q').disabled = false;
+  A.ready = true; A.cargando = false;
+  if (tipo !== TIPO) return;
+  pintarCarga();
+  if (A.fallaron) toast(t('load.error.n', {n: A.fallaron, tot: chunks.length}));
   render();
+}
+
+/* ---- lo que se recuerda "un rato" -----------------------------------------
+   El tipo de factura y el periodo se recuerdan entre visitas, pero no para
+   siempre: volver a la mañana siguiente y encontrar el tablero en compras de
+   2016, sin acordarse de haberlo dejado así, es leer una cifra creyendo que es
+   otra. Pasado ese rato vuelve a ventas y a los últimos cinco años. Va en
+   try/catch por lo mismo que el resto: una ventana privada no debe tumbar el
+   arranque. */
+const RECUERDO_HORAS = 12;
+function recordar(clave, valor){
+  try { localStorage.setItem(clave, JSON.stringify({v: valor, t: Date.now()})); } catch (e) {}
+}
+function recordado(clave){
+  try {
+    const o = JSON.parse(localStorage.getItem(clave) || 'null');
+    if (o && Date.now() - o.t < RECUERDO_HORAS * 3600e3) return o.v;
+  } catch (e) {}
+  return null;
+}
+
+/* Aplica un botón de periodo (Todo, 60 m, 24 m, 12 m, YTD) contra el último
+   mes de los datos que se están viendo. Vive aparte porque se usa en tres
+   momentos: al pulsar el botón, al arrancar con lo recordado y al cambiar de
+   tipo, donde el último mes puede ser otro. */
+function aplicarPeriodo(v){
+  const last = META.ymMax;
+  S.periodo = v;
+  if (v==='all'){ S.ymFrom = 0; S.ymTo = last; }
+  else if (v==='ytd'){ S.ymFrom = Math.floor(last/12)*12; S.ymTo = last; }
+  else { S.ymFrom = Math.max(0, last - (+v) + 1); S.ymTo = last; }
+}
+function recordarPeriodo(){
+  // Se guarda en meses absolutos (año × 12 + mes), no en el índice: el índice
+  // cuenta desde el año base de cada tipo, y ventas y compras pueden no
+  // arrancar el mismo año.
+  recordar('periodo', S.periodo ? {p: S.periodo}
+    : {desde: META.anioBase*12 + S.ymFrom, hasta: META.anioBase*12 + S.ymTo});
+}
+function restaurarPeriodo(guardado){
+  if (!guardado) return;
+  if (guardado.p){ aplicarPeriodo(guardado.p); return; }
+  const tope = META.ymMax + FORECAST_MAX_MESES;
+  const rel = abs => Math.min(tope, Math.max(0, abs - META.anioBase*12));
+  S.periodo = null; S.ymFrom = rel(guardado.desde); S.ymTo = Math.max(S.ymFrom, rel(guardado.hasta));
+}
+
+/* EL ÚNICO SITIO DONDE SE CAMBIA DE VENTAS A COMPRAS. Igual que
+   fijarModoMontos(): todo lo demás lee TIPO, META y R al dibujar, así que
+   cambiar esos tres y volver a pintar basta. El periodo elegido se conserva —
+   si se estaban viendo los últimos 12 meses, se ven los últimos 12 del otro
+   tipo—, y los filtros también: comparar las ventas y las compras de la misma
+   empresa en el mismo periodo es justo para lo que sirve el selector. */
+function fijarTipo(tipo, repintar = true){
+  if (!hayTipo(tipo)) tipo = 'venta';
+  const antes = {p: S.periodo, desde: META.anioBase*12 + S.ymFrom, hasta: META.anioBase*12 + S.ymTo};
+  TIPO = tipo; META = FACTURAS[tipo].meta; R = almacenDe(tipo);
+  MASK = MATCH = null; MATCH_N = 0; SORTED = null;
+  restaurarPeriodo(antes);
+  recordar('tipoFactura', tipo);
+  const seg = document.getElementById('segTipo');
+  if (seg) setSeg('segTipo', tipo);
+  if (!repintar) return;
+  setLang(LANG);
+  pintarCarga();
+  cargarTipo(tipo);
 }
 
 /* ====================== filtros ====================== */
@@ -2256,7 +2558,10 @@ function prepQuery(){
   if (!q){ qState.cli = qState.con = qState.loc = qState.num = null; return; }
   const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   const nq = norm(q);
-  qState.cli = new Set(); META.clientes.forEach((c,i)=>{ if(norm(c.n).includes(nq)) qState.cli.add(i); });
+  // La contraparte se encuentra por su nombre o por su RFC: el RFC no depende
+  // de cómo la capturó cada quien.
+  qState.cli = new Set(); META.clientes.forEach((c,i)=>{
+    if (norm(c.n).includes(nq) || (c.r && norm(c.r).includes(nq))) qState.cli.add(i); });
   qState.con = new Set(); META.conceptos.forEach((c,i)=>{ if(norm(c).includes(nq)) qState.con.add(i); });
   qState.loc = new Set(); META.localidades.forEach((c,i)=>{ if(norm(c).includes(nq)) qState.loc.add(i); });
   qState.empSet = new Set(); META.empresas.forEach((c,i)=>{
@@ -2268,7 +2573,7 @@ function applyFilters(){
   if (!R.ready) return;
   prepQuery();
   if (!MASK || MASK.length < R.n){ MASK = new Uint8Array(R.n); MATCH = new Int32Array(R.n); }
-  const {ymFrom, ymTo, interco, cancel} = S;
+  const {ymFrom, ymTo, interco, cancel, situacion} = S;
   const hasQ = !!qState.q, allPlaza = S.plazas.size === META.plazas.length;
   let m = 0;
   for (let i=0;i<R.n;i++){
@@ -2282,12 +2587,18 @@ function applyFilters(){
     const cn = R.s[i] === 1;
     if (cancel === 'excluir' && cn) continue;
     if (cancel === 'solo' && !cn) continue;
+    if (situacion === 'abiertas' && !R.o[i]) continue;
+    if (situacion === 'cerradas' && R.o[i]) continue;
     if (!allPlaza){ const p = R.pl[i]; if (p < 0 || !S.plazas.has(p)) continue; }
     if (hasQ){
       const ci = R.c[i];
       let ok = (ci>=0 && qState.cli.has(ci)) || qState.empSet.has(R.e[i]) ||
                (R.k[i]>=0 && qState.con.has(R.k[i])) || (R.l[i]>=0 && qState.loc.has(R.l[i]));
       if (!ok){ const f = R.f[i]; if (f && f.toLowerCase().includes(qState.q)) ok = true; }
+      // La referencia: en una compra, el folio que puso el proveedor — que es
+      // el número que el tesorero tiene en la mano cuando le preguntan por un
+      // pago. En una venta, la referencia del cliente (su orden de compra).
+      if (!ok){ const r = R.r[i]; if (r && r.toLowerCase().includes(qState.q)) ok = true; }
       if (!ok && qState.num){ if (String(Math.round(R.t[i])).includes(qState.num)) ok = true; }
       if (!ok) continue;
     }
@@ -2357,13 +2668,17 @@ function aggregateRows(){
 function aggregateMeta(){
   const A = blankAgg();
   for (const r of META.agg){
-    const [e, ym, ic, cn, n, tv, bv, uv] = r;
+    // El agregado trae la situación (abierta/cerrada) como una dimensión más,
+    // para que el primer pintado respete ese filtro igual que los otros.
+    const [e, ym, ic, cn, ab, n, tv, bv, uv] = r;
     if (ym < S.ymFrom || ym > S.ymTo) continue;
     if (!S.empresas.has(e)) continue;
     if (S.interco==='excluir' && ic) continue;
     if (S.interco==='solo' && !ic) continue;
     if (S.cancel==='excluir' && cn) continue;
     if (S.cancel==='solo' && !cn) continue;
+    if (S.situacion==='abiertas' && !ab) continue;
+    if (S.situacion==='cerradas' && ab) continue;
     A.n += n; A.total += tv; A.base += bv; A.usd += uv;
     if (cn) A.cancel += n;
     if (ic){ A.icN += n; A.icTotal += tv; }
@@ -2434,8 +2749,8 @@ document.addEventListener('focusout', e => { if (e.target.closest && e.target.cl
 addEventListener('scroll', () => { if (TIP.classList.contains('tip-help')) tipHide(); }, {passive:true, capture:true});
 
 /* ====================== pronóstico ======================
-   5 métodos básicos de pronóstico de series de tiempo (nivel introductorio,
-   estilo CFA I). Cada uno recibe "historia": arreglo [{ym, v}, ...]
+   5 métodos básicos de pronóstico de series de tiempo. Cada uno recibe
+   "historia": arreglo [{ym, v}, ...]
    ORDENADO y SIN HUECOS (un punto por cada mes consecutivo — ver
    completarHuecos), y regresa un arreglo de {ym, v} para los próximos
    nFuturo meses consecutivos. Ver la entrada correspondiente en GLOSARIO
@@ -2561,11 +2876,11 @@ function drawSerie(card, A){
       'font-family':cssv('--mono')},svg).textContent = pct ? Math.round(tk*100)+'%' : compact(tk);
   }
   const bw = iw/plotData.length, bar = Math.max(2, Math.min(34, bw*0.72));
-  const periodoLabel = o => cfg.gran==='anio' ? String(2020+Math.floor(o.ym/12))
-    : cfg.gran==='tri' ? 'T'+(Math.floor((o.ym%12)/3)+1)+' '+String(2020+Math.floor(o.ym/12)).slice(2)
+  const periodoLabel = o => cfg.gran==='anio' ? String(anioDe(o.ym))
+    : cfg.gran==='tri' ? 'T'+(Math.floor((o.ym%12)/3)+1)+' '+String(anioDe(o.ym)).slice(2)
     : ymLabel(o.ym);
-  const periodoLabelLong = o => cfg.gran==='anio' ? String(2020+Math.floor(o.ym/12))
-    : cfg.gran==='tri' ? 'T'+(Math.floor((o.ym%12)/3)+1)+' '+(2020+Math.floor(o.ym/12))
+  const periodoLabelLong = o => cfg.gran==='anio' ? String(anioDe(o.ym))
+    : cfg.gran==='tri' ? 'T'+(Math.floor((o.ym%12)/3)+1)+' '+anioDe(o.ym)
     : ymLabelLong(o.ym);
   plotData.forEach((o,i)=>{
     const x = mL + bw*i + (bw-bar)/2;
@@ -2698,7 +3013,7 @@ function drawInterco(card, A){
   const rows = [...A.byYm.values()].filter(r=>r.ym>=0).sort((a,b)=>a.ym-b.ym);
   const gY = barY+barH+30, gH = H-gY-24;
   el('text',{x:mL,y:gY-9,fill:cssv('--muted'),'font-size':10,'font-family':cssv('--mono')},svg)
-    .textContent = (LANG==='es'?'% intercompañía por mes':'% intercompany by month');
+    .textContent = t('c.ic.pct');
   if (rows.length > 1){
     const iw2 = W-mL-30, x = i => mL + (i/(rows.length-1))*iw2, y = v => gY + gH - v*gH;
     [0,.5,1].forEach(v=>{
@@ -2772,7 +3087,7 @@ function drawFx(card, A){
   const t1 = niceTicks(maxU,3), top1 = t1[t1.length-1];
   const y1 = v => 16 + (H1-26) - (v/top1)*(H1-26);
   el('text',{x:mL,y:10,fill:cssv('--muted'),'font-size':10,'font-family':cssv('--mono')},svg)
-    .textContent = (LANG==='es'?'Facturado en USD':'Billed in USD');
+    .textContent = t('k.usd');
   t1.forEach(tk=>{ el('line',{x1:mL,x2:W-mR,y1:y1(tk),y2:y1(tk),stroke:cssv('--grid'),'stroke-width':1},svg);
     el('text',{x:mL-7,y:y1(tk)+3.5,'text-anchor':'end',fill:cssv('--muted'),'font-size':9,
       'font-family':cssv('--mono')},svg).textContent = compact(tk); });
@@ -2785,7 +3100,7 @@ function drawFx(card, A){
   const tcRows = rows.filter(r=>r.tcW>0);
   const off = H1+GAP;
   el('text',{x:mL,y:off-6,fill:cssv('--muted'),'font-size':10,'font-family':cssv('--mono')},svg)
-    .textContent = (LANG==='es'?'Tipo de cambio promedio ponderado (MXN/USD)':'Weighted avg. exchange rate (MXN/USD)');
+    .textContent = t('c.fx.tc');
   if (tcRows.length){
     const vals = tcRows.map(r=>r.tcSum/r.tcW);
     const lo = Math.floor(Math.min(...vals)-0.6), hi = Math.ceil(Math.max(...vals)+0.6);
@@ -2843,37 +3158,43 @@ function drawKpis(A){
 }
 
 /* ====================== tabla maestra ====================== */
+/* Las columnas de la tabla, declaradas una vez. De aquí salen el encabezado,
+   las filas, el orden y la descarga, así que una columna nueva es UN renglón.
+   `cat` nombra el catálogo de META del que depende la columna: si viene vacío
+   —Concepto y Localidad viven en las líneas del documento del ERP, que todavía
+   no se extraen— la columna no se muestra, en vez de enseñar una fila entera
+   de guiones. El día que se extraigan, aparece sola. */
 const MT_COLS = [
-  {k:'empresa', l:'th.empresa', w:74},
-  {k:'fecha',   l:'th.fecha',   w:92},
-  {k:'folio',   l:'th.folio',   w:96},
-  {k:'cliente', l:'th.cliente', w:240},
-  {k:'concepto',l:'th.concepto',w:170},
-  {k:'localidad',l:'th.localidad',w:96},
-  {k:'estatus', l:'th.estatus', w:96},
-  {k:'base',    l:'th.base',    w:112, num:true},
-  {k:'total',   l:'th.total',   w:120, num:true},
-  {k:'tc',      l:'th.tc',      w:72,  num:true},
-  {k:'usd',     l:'th.usd',     w:100, num:true},
-  {k:'tipo',    l:'th.tipo',    w:96}
+  {k:'empresa', l:'th.empresa', w:74,  orden: i=>R.e[i]},
+  {k:'fecha',   l:'th.fecha',   w:92,  orden: i=>R.d[i]},
+  {k:'folio',   l:'th.folio',   w:96,  orden: i=>R.f[i]},
+  {k:'ref',     l:'th.ref',     w:120, orden: i=>R.r[i] || ''},
+  {k:'cliente', l:'th.cliente', w:240, orden: i=>R.c[i]},
+  {k:'concepto',l:'th.concepto',w:170, orden: i=>R.k[i], cat:'conceptos'},
+  {k:'localidad',l:'th.localidad',w:96, orden: i=>R.l[i], cat:'localidades'},
+  {k:'estatus', l:'th.estatus', w:96,  orden: i=>R.s[i]},
+  {k:'situacion', l:'th.situacion', w:90, orden: i=>R.o[i]},
+  {k:'base',    l:'th.base',    w:112, num:true, orden: i=>R.b[i]},
+  {k:'total',   l:'th.total',   w:120, num:true, orden: i=>R.t[i]},
+  {k:'tc',      l:'th.tc',      w:72,  num:true, orden: i=>R.x[i]},
+  {k:'usd',     l:'th.usd',     w:100, num:true, orden: i=>R.u[i]},
+  {k:'tipo',    l:'th.tipo',    w:96,  orden: i=>R.ic[i]}
 ];
+const columnasTabla = () => MT_COLS.filter(c => !c.cat || META[c.cat].length);
 let SORTED = null;
 const ROWH = 24, VBUF = 8;
 function sortMatches(){
   const {sort, dir} = S.local.tabla;
   SORTED = MATCH.slice(0, MATCH_N);
-  const key = {
-    fecha: i=>R.d[i], total: i=>R.t[i], base: i=>R.b[i], usd: i=>R.u[i], tc: i=>R.x[i],
-    empresa: i=>R.e[i], cliente: i=>R.c[i], concepto: i=>R.k[i], localidad: i=>R.l[i],
-    estatus: i=>R.s[i], tipo: i=>R.ic[i], folio: i=>R.f[i]
-  }[sort] || (i=>R.d[i]);
+  const col = MT_COLS.find(c => c.k === sort);
+  const key = col ? col.orden : (i=>R.d[i]);
   const arr = Array.from(SORTED);
   arr.sort((a,b)=>{ const ka=key(a), kb=key(b);
     if (ka<kb) return -dir; if (ka>kb) return dir; return 0; });
   SORTED = arr;
 }
 function fechaTxt(i){ const d = R.d[i]; if (d===-99999) return '—';
-  const dt = new Date(EPOCH_MS + d*86400000);
+  const dt = new Date(epochDe(META) + d*86400000);
   return String(dt.getUTCDate()).padStart(2,'0')+'/'+String(dt.getUTCMonth()+1).padStart(2,'0')+'/'+dt.getUTCFullYear(); }
 function rowCells(i){
   const ci = R.c[i], ki = R.k[i], li = R.l[i];
@@ -2881,41 +3202,45 @@ function rowCells(i){
     empresa: META.empresas[R.e[i]],
     fecha: fechaTxt(i),
     folio: R.f[i] || '—',
+    ref: R.r[i] || '—',
     cliente: ci>=0 ? META.clientes[ci].n : '—',
     concepto: ki>=0 ? META.conceptos[ki] : '—',
     localidad: li>=0 ? META.localidades[li] : '—',
     estatus: META.estatus[R.s[i]],
+    situacion: R.o[i] ? t('si.abierta') : t('si.cerrada'),
     base: R.b[i], total: R.t[i], tc: R.x[i], usd: R.u[i],
     tipo: R.ic[i] ? t('ic.inter') : t('ic.terceros')
   };
 }
 function renderTableHead(){
-  document.getElementById('mthead').innerHTML = MT_COLS.map(c=>{
+  document.getElementById('mthead').innerHTML = columnasTabla().map(c=>{
     const act = S.local.tabla.sort===c.k ? (S.local.tabla.dir>0?' ▲':' ▼') : '';
     return `<th class="${c.num?'num':''}" style="width:${c.w}px" data-k="${c.k}">${t(c.l)}${act}</th>`;
   }).join('');
 }
 function renderTableBody(){
   const wrap = document.getElementById('vwrap'), body = document.getElementById('mtbody');
-  if (!R.ready){ body.innerHTML = `<tr><td colspan="${MT_COLS.length}" style="padding:20px;color:var(--muted)">${t('load.wait')}</td></tr>`; return; }
+  const cols = columnasTabla(), nc = cols.length;
+  if (!R.ready){ body.innerHTML = `<tr><td colspan="${nc}" style="padding:20px;color:var(--muted)">${t('load.wait')}</td></tr>`; return; }
   const n = SORTED ? SORTED.length : 0;
-  if (!n){ body.innerHTML = `<tr><td colspan="${MT_COLS.length}" style="padding:20px;color:var(--muted)">${t('nodata')}</td></tr>`; return; }
+  if (!n){ body.innerHTML = `<tr><td colspan="${nc}" style="padding:20px;color:var(--muted)">${t('nodata')}</td></tr>`; return; }
   const top = wrap.scrollTop, h = wrap.clientHeight;
   const first = Math.max(0, Math.floor(top/ROWH) - VBUF);
   const count = Math.min(n-first, Math.ceil(h/ROWH) + VBUF*2);
-  let html = first ? `<tr style="height:${first*ROWH}px"><td colspan="${MT_COLS.length}"></td></tr>` : '';
+  let html = first ? `<tr style="height:${first*ROWH}px"><td colspan="${nc}"></td></tr>` : '';
   for (let r=0; r<count; r++){
     const i = SORTED[first+r], c = rowCells(i);
-    html += '<tr>'+MT_COLS.map(col=>{
+    html += '<tr>'+cols.map(col=>{
       let v = c[col.k];
       if (col.num) v = v ? (col.k==='tc' ? NF2.format(v) : money(v)) : '—';
       else if (col.k==='tipo') v = `<span class="chip ${R.ic[i]?'chip-ic':''}">${v}</span>`;
       else if (col.k==='estatus' && R.s[i]===1) v = `<span class="chip chip-cn">${v}</span>`;
+      else if (col.k==='situacion' && R.o[i]) v = `<span class="chip">${v}</span>`;
       return `<td class="${col.num?'num':''}">${v}</td>`;
     }).join('')+'</tr>';
   }
   const rest = n - first - count;
-  if (rest > 0) html += `<tr style="height:${rest*ROWH}px"><td colspan="${MT_COLS.length}"></td></tr>`;
+  if (rest > 0) html += `<tr style="height:${rest*ROWH}px"><td colspan="${nc}"></td></tr>`;
   body.innerHTML = html;
 }
 function renderTable(){
@@ -2926,7 +3251,7 @@ function renderTable(){
   let sT=0, sU=0; for (let i=0;i<MATCH_N;i++){ sT += R.t[MATCH[i]]; sU += R.u[MATCH[i]]; }
   document.getElementById('mtfoot').innerHTML =
     `<span>${t('th.total')}: $${money(sT)} MXN</span><span>USD: $${money(sU)}</span>`+
-    `<span>${NF.format(MATCH_N)} ${LANG==='es'?'filas':'rows'}</span>`;
+    `<span>${t('tab.filas', {n: NF.format(MATCH_N)})}</span>`;
 }
 
 /* ====================== CSV / copiar ====================== */
@@ -2938,14 +3263,20 @@ function toDelim(rows, sep){
     return (sep===',' && /[",\n]/.test(v)) ? '"'+v.replace(/"/g,'""')+'"' : v; };
   return [cols.join(sep), ...rows.map(r=>cols.map(c=>esc(r[c])).join(sep))].join('\n');
 }
+/* Filas listas para exportar: las MISMAS columnas que se ven, en el mismo
+   orden, con los importes como número para que Excel pueda sumarlos. Salen de
+   columnasTabla() y no de una lista aparte, que es como una columna nueva
+   aparecía en pantalla y faltaba en el archivo. Siguen pasando por
+   enmascararFilas() en quien las descarga. */
 function tableRowsForMaster(limit){
-  const out = [];
+  const out = [], cols = columnasTabla();
   const n = Math.min(SORTED?SORTED.length:0, limit||50000);
-  for (let r=0;r<n;r++){ const i = SORTED[r], c = rowCells(i);
-    out.push({[t('th.empresa')]:c.empresa, [t('th.fecha')]:c.fecha, [t('th.folio')]:c.folio,
-      [t('th.cliente')]:c.cliente, [t('th.concepto')]:c.concepto, [t('th.localidad')]:c.localidad,
-      [t('th.estatus')]:c.estatus, [t('th.base')]:Math.round(c.base), [t('th.total')]:Math.round(c.total),
-      [t('th.tc')]:c.tc||'', [t('th.usd')]:Math.round(c.usd), [t('th.tipo')]:c.tipo}); }
+  for (let r=0;r<n;r++){ const i = SORTED[r], c = rowCells(i), fila = {};
+    for (const col of cols){
+      const v = c[col.k];
+      fila[t(col.l)] = col.k === 'tc' ? (v || '') : col.num ? Math.round(v) : v;
+    }
+    out.push(fila); }
   return out;
 }
 function copyText(txt){
@@ -2996,8 +3327,12 @@ function marcaTiempo(){
 }
 function resumenFiltros(){
   const emp = META.empresas.filter((_,i)=>S.empresas.has(i)).join(', ') || t('f.ninguna');
-  return `${t('f.empresas')}: ${emp} · ${t('f.interco')}: ${t('f.ic.'+({todo:'todo',excluir:'excluir',solo:'solo'})[S.interco])} · `+
-    `${t('f.canceladas')}: ${t('f.cn.'+S.cancel)} · ${t('f.periodo')}: ${ymLabelLong(S.ymFrom)} — ${ymLabelLong(S.ymTo)}`;
+  // Lo primero que dice es si son ventas o compras: un Excel de facturas sin
+  // eso es un archivo que alguien va a leer al revés.
+  return `${t('tipo.' + TIPO)} · `+
+    `${t('f.empresas')}: ${emp} · ${t('f.interco')}: ${t('f.ic.'+({todo:'todo',excluir:'excluir',solo:'solo'})[S.interco])} · `+
+    `${t('f.canceladas')}: ${t('f.cn.'+S.cancel)} · ${t('f.situacion')}: ${t('f.si.'+S.situacion)} · `+
+    `${t('f.periodo')}: ${ymLabelLong(S.ymFrom)} — ${ymLabelLong(S.ymTo)}`;
 }
 
 /* El nombre va en la portada de cada archivo que sale de aquí. Escrito una
@@ -3209,7 +3544,13 @@ const HOJAS = {
 };
 
 function hojaActual(){ return HOJAS[PESTANA] ? PESTANA : 'facturacion'; }
-function tituloHojaActual(){ return t(HOJAS[hojaActual()].tit); }
+/* En Facturación el título lleva el tipo —"Facturación · Compras"—, y de ahí
+   el nombre del archivo: dos descargas, una de ventas y otra de compras, no
+   deben llamarse igual. */
+function tituloHojaActual(){
+  const h = hojaActual(), base = t(HOJAS[h].tit);
+  return h === 'facturacion' && hayTipo('compra') ? `${base} · ${t('tipo.' + TIPO)}` : base;
+}
 
 /** El renglón de contexto que va bajo el título de cada archivo: qué se estaba
  *  viendo cuando se descargó. Cada hoja tiene sus propios filtros y ninguno
@@ -3744,13 +4085,19 @@ function doRender(){
       v:restV, extra:restN, color:cssv('--axis')});
     LAST.clientes = drawBarsH(cardCli, shown, mc, {dim:t('th.cliente'), labelW:172});
 
-    const mp = S.local.plaza.metric;
-    const plz = [...A.byPlaza.values()].map(o=>({o, v:metricOf(o, mp)})).filter(d=>d.v>0)
-      .sort((a,b)=>b.v-a.v);
-    const seq = ['--seq-5','--seq-4','--seq-3','--seq-2','--seq-1'];
-    LAST.plaza = drawBarsH(cardPlz, plz.map((d,i)=>({label: d.o.p>=0?META.plazas[d.o.p]:t('sin'),
-      full: d.o.p>=0?META.plazas[d.o.p]:t('sin'), v:d.v, extra:d.o.n,
-      color: cssv(seq[Math.min(i, seq.length-1)])})), mp, {dim:t('th.plaza'), labelW:96});
+    // Sin catálogo de plazas la tarjeta está oculta (aplicarCatalogos) y no
+    // aporta nada a la descarga: dibujarla daría una sola barra "Sin dato" con
+    // el total entero, que en un Excel se lee como si fuera un dato.
+    if (!META.plazas.length) LAST.plaza = [];
+    else {
+      const mp = S.local.plaza.metric;
+      const plz = [...A.byPlaza.values()].map(o=>({o, v:metricOf(o, mp)})).filter(d=>d.v>0)
+        .sort((a,b)=>b.v-a.v);
+      const seq = ['--seq-5','--seq-4','--seq-3','--seq-2','--seq-1'];
+      LAST.plaza = drawBarsH(cardPlz, plz.map((d,i)=>({label: d.o.p>=0?META.plazas[d.o.p]:t('sin'),
+        full: d.o.p>=0?META.plazas[d.o.p]:t('sin'), v:d.v, extra:d.o.n,
+        color: cssv(seq[Math.min(i, seq.length-1)])})), mp, {dim:t('th.plaza'), labelW:96});
+    }
 
     LAST.hist = drawHist(cardHst, A);
     LAST.fx = drawFx(cardFx, A);
@@ -3761,8 +4108,26 @@ function doRender(){
   renderTable();
   sincronizarMetricaGlobal();
   document.getElementById('footnote').textContent = t('foot', {
-    rows: NF.format(META.filas), cov: PF.format(META.coberturaBase/META.filas),
-    nodate: NF.format(META.sinFecha), out: '3'});
+    rows: NF.format(META.filas), nodate: NF.format(META.sinFecha), fecha: META.generado});
+}
+
+/* Lo que depende de un catálogo vacío no se muestra. Plaza viene de las
+   líneas del documento del ERP, que todavía no se extraen: un filtro sin
+   opciones y una tarjeta con una sola barra "Sin dato" son ruido que además
+   sugiere que el dato existe. El día que llegue el catálogo, reaparecen. */
+function aplicarCatalogos(){
+  const hay = META.plazas.length > 0;
+  for (const id of ['plazasEtq', 'plazas', 'cardPlaza'])
+    document.getElementById(id).hidden = !hay;
+}
+
+/* El renglón bajo el nombre de la app: cuántas facturas y de qué años, del
+   tipo que se está viendo. Los años salen de los datos —antes decía
+   "2020–2026" escrito a mano—. */
+function pintarMarca(){
+  const a = META.anios || [];
+  document.getElementById('brandSub').textContent = t('brand.sub', {
+    n: NF.format(META.filas), desde: a[0] ?? '—', hasta: a[a.length - 1] ?? '—'});
 }
 
 /* ====================== glosario ======================
@@ -3788,59 +4153,49 @@ const GLOSARIO = [
     en:{t:'NG — Networks Group LCT, S.C.', d:'Internal administrative services (accounting, HR, finance, IT) for the rest of the group. Almost all of its billing is intercompany.'}},
   {cat:'empresas', es:{t:'NL — Networks & Logistics, S.A. de C.V.', d:'Operación logística del grupo.'},
     en:{t:'NL — Networks & Logistics, S.A. de C.V.', d:'The group\'s logistics operation.'}},
-  {cat:'empresas', es:{t:'NR — Networks Realtors, S.A. de C.V.', d:'Renta de naves industriales y oficinas al resto del grupo.'},
-    en:{t:'NR — Networks Realtors, S.A. de C.V.', d:'Leases industrial buildings and offices to the rest of the group.'}},
+  {cat:'empresas', es:{t:'NRS — Networks Realtors, S.A. de C.V.', d:'Renta de naves industriales y oficinas al resto del grupo.'},
+    en:{t:'NRS — Networks Realtors, S.A. de C.V.', d:'Leases industrial buildings and offices to the rest of the group.'}},
   {cat:'empresas', es:{t:'NTS — Networks Trucking Services, S.A. de C.V.', d:'Autotransporte. Factura por embarque/viaje, no por factura consolidada — por eso tiene muchísimas más filas que las demás empresas; no compares su número de facturas contra las otras.'},
     en:{t:'NTS — Networks Trucking Services, S.A. de C.V.', d:'Trucking. Bills per shipment/load, not per consolidated invoice — that\'s why it has far more rows than the other companies; don\'t compare its invoice count against theirs.'}},
-  {cat:'empresas', es:{t:'PL — Paragon Logistics, S.A. de C.V.', d:'Empresa incorporada a partir de 2026. En el archivo fuente aparece por error con el título de "Networks Realtors" pegado adentro; se corrigió al nombre real en la base de datos.'},
-    en:{t:'PL — Paragon Logistics, S.A. de C.V.', d:'Company added starting 2026. The source file mistakenly carries "Networks Realtors" as its internal title; corrected to the real name in the database.'}},
-  {cat:'empresas', es:{t:'NOS — Networks Outsourcing Services', d:'Aparece como cliente de otras empresas del grupo, pero no forma parte de la lista de 6 empresas usada para clasificar Intercompañía — queda fuera de ese cálculo salvo que se active explícitamente en el pipeline de datos.'},
-    en:{t:'NOS — Networks Outsourcing Services', d:'Shows up as a client of other group companies, but is not part of the 6-company list used to classify Intercompany — excluded from that calculation unless explicitly enabled in the data pipeline.'}},
+  {cat:'empresas', es:{t:'PL — Paragon Logistics, S.A. de C.V.', d:'Empresa del grupo que todavía no está dada de alta en el ERP: mientras no lo esté, no tiene facturas ni estados financieros en el tablero.'},
+    en:{t:'PL — Paragon Logistics, S.A. de C.V.', d:'Group company not yet set up in the ERP: until it is, it has no invoices or financial statements in the dashboard.'}},
+  {cat:'empresas', es:{t:'NOS — Networks Outsourcing Services', d:'Aparece como contraparte de otras empresas del grupo, pero no está en el registro intercompañía de la configuración: sus facturas cuentan como de terceros mientras no se dé de alta ahí.'},
+    en:{t:'NOS — Networks Outsourcing Services', d:'Shows up as a counterparty of other group companies, but is not in the intercompany registry of the configuration: its invoices count as third-party until it is registered there.'}},
 
-  {cat:'financieros', es:{t:'Subtotal', d:'Monto antes de impuestos, capturado directamente en el archivo origen (cuando esa columna existe).'},
-    en:{t:'Subtotal', d:'Pre-tax amount, captured directly in the source file (when that column exists).'}},
-  {cat:'financieros', es:{t:'Importe', d:'En la mayoría de los formatos equivale al Subtotal; en algunos años es un componente adicional (p. ej. la parte de flete). Revisar por año si se necesita precisión.'},
-    en:{t:'Importe (Amount)', d:'In most formats equals Subtotal; in some years it\'s an additional component (e.g. the freight portion). Check per year when precision matters.'}},
-  {cat:'financieros', es:{t:'Base sin IVA', d:'Campo que usa el tablero como "monto antes de impuestos": toma Subtotal; si no existe, usa Importe; si tampoco existe, suma Flete + Servicios + Otros + Exento. Solo existe para ~60% de las facturas — ver "cobertura" en el KPI correspondiente.'},
-    en:{t:'Net of VAT', d:'The field the dashboard uses as "pre-tax amount": takes Subtotal; if missing, uses Importe; if that\'s also missing, sums Flete + Servicios + Otros + Exento. Only exists for ~60% of invoices — see "coverage" on that KPI tile.'}},
-  {cat:'financieros', es:{t:'Flete / Servicios / Otros', d:'Desgloses del monto base según el tipo de archivo (cargo de transporte, cargo de servicio, otros conceptos).'},
-    en:{t:'Flete / Servicios / Otros (Freight / Services / Other)', d:'Breakdowns of the base amount depending on the file type (freight charge, service charge, other items).'}},
+  {cat:'financieros', es:{t:'Subtotal', d:'Monto antes de impuestos: el total del documento menos sus impuestos (DocTotal − VatSum en el ERP), en moneda local.'},
+    en:{t:'Subtotal', d:'Pre-tax amount: the document total minus its taxes (DocTotal − VatSum in the ERP), in local currency.'}},
+  {cat:'financieros', es:{t:'Base sin IVA', d:'Es el Subtotal: el monto de la factura antes de impuestos. El ERP lo trae en todas las facturas.'},
+    en:{t:'Net of VAT', d:'The Subtotal: the invoice amount before taxes. The ERP provides it for every invoice.'}},
   {cat:'financieros', es:{t:'IVA 16%', d:'Impuesto al Valor Agregado, tasa general.'},
     en:{t:'IVA 16% (VAT 16%)', d:'Value-added tax, general rate.'}},
-  {cat:'financieros', es:{t:'IVA 6% Servicios / IVA 4% Flete / IVA 6% Flete', d:'Tasas reducidas o retenciones aplicadas a esos conceptos específicos, según el archivo origen de cada empresa/año.'},
-    en:{t:'IVA 6% Servicios / IVA 4% Flete / IVA 6% Flete', d:'Reduced rates or withholdings applied to those specific items, depending on each company/year\'s source file.'}},
-  {cat:'financieros', es:{t:'Exento', d:'Parte del monto de la factura sin IVA.'},
-    en:{t:'Exento (Exempt)', d:'Portion of the invoice amount not subject to VAT.'}},
-  {cat:'financieros', es:{t:'IEPS', d:'Impuesto Especial sobre Producción y Servicios. Aparece en algunos años/meses con la tasa capturada en el propio nombre de columna (p. ej. "IEPS 26.50%").'},
-    en:{t:'IEPS', d:'Special Tax on Production and Services (Mexican excise tax). Appears in some years/months with the rate embedded in the column name itself (e.g. "IEPS 26.50%").'}},
-  {cat:'financieros', es:{t:'Total MXN', d:'Monto final de la factura en pesos mexicanos, incluyendo todos los impuestos. Es el monto que usa el tablero para todas las sumas de facturación.'},
-    en:{t:'Total MXN', d:'Final invoice amount in Mexican pesos, tax-included. This is the amount the dashboard uses for every billing total.'}},
+  {cat:'financieros', es:{t:'Total MXN', d:'Monto final de la factura en pesos, con todos los impuestos, tal como lo guarda el ERP en moneda local (DocTotal) — también en las facturas emitidas en dólares. Es el monto que usa el tablero para todas las sumas.'},
+    en:{t:'Total MXN', d:'Final invoice amount in pesos, tax-included, as the ERP stores it in local currency (DocTotal) — dollar invoices included. This is the amount the dashboard uses for every total.'}},
   {cat:'financieros', es:{t:'Tipo de Cambio', d:'Tasa MXN/USD que el ERP aplicó a la propia factura (DocRate) — no es una tasa oficial de referencia (Banxico, DOF, etc.). Las facturas en otras monedas, como euros, no entran en este promedio.'},
     en:{t:'Exchange rate', d:'MXN/USD rate the ERP applied to the invoice itself (DocRate) — not an official reference rate (Banxico, DOF, etc.). Invoices in other currencies, such as euros, are not part of this average.'}},
   {cat:'financieros', es:{t:'Total USD / Dólares', d:'Los dólares de las facturas emitidas en USD, en la moneda del documento (DocTotalFC en el ERP). El ERP guarda cada importe tres veces: en moneda local (DocTotal, los pesos que suma el Total MXN), en la moneda del documento y en la de sistema. No es una conversión del Total MXN.'},
     en:{t:'Total USD / Dólares', d:'The dollars on invoices issued in USD, in the document currency (DocTotalFC in the ERP). The ERP stores each amount three times: in local currency (DocTotal, the pesos Total MXN adds up), in the document currency and in the system currency. Not a conversion of Total MXN.'}},
-  {cat:'financieros', es:{t:'No. Factura / Folio', d:'Número de factura tal como aparece en el archivo origen. El formato varía por empresa: numérico en la mayoría, con prefijo "T" en NTS, con prefijo "FA" en PL.'},
-    en:{t:'Invoice no. / Folio', d:'Invoice number as it appears in the source file. Format varies by company: numeric for most, "T"-prefixed for NTS, "FA"-prefixed for PL.'}},
-  {cat:'financieros', es:{t:'RFC', d:'Registro Federal de Contribuyentes del cliente, cuando se capturó en el archivo origen.'},
-    en:{t:'RFC', d:'Client\'s Mexican tax ID (Registro Federal de Contribuyentes), when captured in the source file.'}},
-  {cat:'financieros', es:{t:'Concepto', d:'Descripción del servicio facturado, cuando el archivo origen la incluye (poco frecuente fuera de NG).'},
-    en:{t:'Concepto (Item)', d:'Description of the billed service, when the source file includes it (uncommon outside NG).'}},
+  {cat:'financieros', es:{t:'No. Factura / Folio', d:'Número del documento en el ERP (DocNum). No es el folio fiscal del CFDI.'},
+    en:{t:'Invoice no. / Folio', d:'Document number in the ERP (DocNum). It is not the tax folio of the CFDI.'}},
+  {cat:'financieros', es:{t:'RFC', d:'Registro Federal de Contribuyentes de la contraparte, tal como está en el maestro de socios del ERP.'},
+    en:{t:'RFC', d:'The counterparty\'s Mexican tax ID (Registro Federal de Contribuyentes), as recorded in the ERP business-partner master.'}},
+  {cat:'financieros', es:{t:'Concepto', d:'Descripción del servicio facturado. En el ERP vive en las líneas del documento, que todavía no se extraen; mientras no se extraigan, la columna no aparece.'},
+    en:{t:'Concepto (Item)', d:'Description of the billed service. In the ERP it lives on the document lines, which are not extracted yet; until they are, the column is not shown.'}},
 
-  {cat:'estatus', es:{t:'VIGENTE', d:'No se encontró ninguna marca de cancelación para esa factura.'},
-    en:{t:'VIGENTE (Active)', d:'No cancellation mark was found for that invoice.'}},
-  {cat:'estatus', es:{t:'CANCELADA', d:'El archivo origen marca la factura como cancelada — columna Estatus, o la palabra "CANCELADA"/"CANCELADO" en el nombre del cliente.'},
-    en:{t:'CANCELADA (Cancelled)', d:'The source file flags the invoice as cancelled — Estatus column, or "CANCELADA"/"CANCELADO" text in the client name.'}},
-  {cat:'estatus', es:{t:'EN SAP', d:'La factura ya fue sincronizada/capturada en SAP, según la marca del archivo origen. Frecuente en NTS.'},
-    en:{t:'EN SAP', d:'The invoice was already synced/captured in SAP, per the source file\'s flag. Common in NTS.'}},
-  {cat:'estatus', es:{t:'CARGA', d:'Marca operativa de NTS relacionada con el embarque/carga, no necesariamente con el estatus fiscal de la factura.'},
-    en:{t:'CARGA (Load)', d:'NTS operational flag related to the shipment/load, not necessarily the invoice\'s tax status.'}},
-  {cat:'estatus', es:{t:'OTRO', d:'Cualquier otra marca de estatus que no encaja en las categorías anteriores. El texto original se conserva íntegro en los datos extraídos del ERP aunque el tablero lo agrupe aquí.'},
-    en:{t:'OTRO (Other)', d:'Any other status flag that doesn\'t fit the categories above. The original text is kept in full in the data extracted from the ERP even though the dashboard groups it here.'}},
-  {cat:'estatus', es:{t:'Localidad / Plaza', d:'Sede operativa registrada en la factura. QRO = Querétaro, SLP = San Luis Potosí, TOL = Toluca. "ACTIVO" e "INTERESES" son marcas especiales del archivo origen, no plazas geográficas. "OTRAS"/"Sin dato" agrupan lo que no corresponde a una plaza reconocida o quedó en blanco.'},
-    en:{t:'Location / Site', d:'Operating site recorded on the invoice. QRO = Querétaro, SLP = San Luis Potosí, TOL = Toluca. "ACTIVO" and "INTERESES" are special source-file flags, not geographic sites. "OTRAS"/"No data" group anything that isn\'t a recognized site or was left blank.'}},
+  {cat:'financieros', es:{t:'Referencia / Folio del proveedor', d:'El número que la contraparte le puso a su documento, tal como está en el ERP (NumAtCard). En una compra es el folio de la factura del proveedor: el número que el proveedor menciona cuando pregunta por un pago. En una venta, la referencia del cliente, como su orden de compra. Se puede buscar por él.'},
+    en:{t:'Reference / Supplier invoice no.', d:'The number the counterparty gave its own document, as recorded in the ERP (NumAtCard). On a purchase it is the supplier\'s invoice number: the one the supplier quotes when asking about a payment. On a sale, the client\'s reference, such as its purchase order. It is searchable.'}},
+  {cat:'metricas', es:{t:'Ventas / Compras', d:'Las dos vistas de la pestaña Facturación. Ventas son las facturas que las empresas del grupo emiten a sus clientes (cuentas por cobrar); Compras, las que reciben de sus proveedores (cuentas por pagar). Las dos traen toda la historia del ERP, abiertas y cerradas, y usan los mismos filtros, gráficas, tabla y descargas. Al cambiar de una a otra se conservan las empresas, el periodo y los filtros.'},
+    en:{t:'Sales / Purchases', d:'The two views of the Invoicing tab. Sales are the invoices group companies issue to their clients (accounts receivable); Purchases, the ones they receive from suppliers (accounts payable). Both carry the full ERP history, open and closed, and share the same filters, charts, table and downloads. Switching keeps the companies, period and filters.'}},
+  {cat:'estatus', es:{t:'Abierta / Cerrada (Situación)', d:'Estado del documento en el ERP (DocumentStatus). Abierta: todavía tiene saldo pendiente —de cobro en una venta, de pago en una compra—. Cerrada: ya no lo tiene, porque se liquidó o porque se cerró contra otro documento. Es la foto del día de la extracción, no el estado en tiempo real.'},
+    en:{t:'Open / Closed', d:'Document status in the ERP (DocumentStatus). Open: it still has an outstanding balance —to collect on a sale, to pay on a purchase—. Closed: it no longer does, because it was settled or closed against another document. It reflects the extraction date, not real time.'}},
+  {cat:'estatus', es:{t:'VIGENTE', d:'Factura normal en el ERP: no está cancelada.'},
+    en:{t:'VIGENTE (Active)', d:'A normal invoice in the ERP: not cancelled.'}},
+  {cat:'estatus', es:{t:'CANCELADA', d:'El ERP la marca como cancelada (CancelStatus = csYes). Su documento de cancelación —que la anula y trae el importe en positivo— no se publica: sumarlo contaría la misma operación otra vez. El filtro Canceladas las excluye por omisión.'},
+    en:{t:'CANCELADA (Cancelled)', d:'The ERP flags it as cancelled (CancelStatus = csYes). Its cancellation document —which voids it and carries the amount as a positive— is not published: adding it would count the same transaction again. The Cancelled filter excludes them by default.'}},
+  {cat:'estatus', es:{t:'Localidad / Plaza', d:'Sede operativa de la factura. En el ERP vive en las líneas del documento, que todavía no se extraen; mientras no se extraigan, el filtro y la tarjeta de Plazas no aparecen.'},
+    en:{t:'Location / Site', d:'Operating site of the invoice. In the ERP it lives on the document lines, which are not extracted yet; until they are, the Site filter and card are not shown.'}},
 
-  {cat:'metricas', es:{t:'Intercompañía', d:'Una factura se clasifica como intercompañía cuando su CLIENTE es una de las 6 empresas del grupo (NCS, NG, NL, NR, NTS, PL), sin importar cuál empresa la emitió.'},
-    en:{t:'Intercompany', d:'An invoice is classified as intercompany when its CLIENT is one of the group\'s 6 companies (NCS, NG, NL, NR, NTS, PL), regardless of who issued it.'}},
+  {cat:'metricas', es:{t:'Intercompañía', d:'Una factura es intercompañía cuando su contraparte está en el registro intercompañía de la configuración —por RFC o por código de socio del ERP—, sin importar cuál empresa la emitió. No se deduce del nombre.'},
+    en:{t:'Intercompany', d:'An invoice is intercompany when its counterparty is in the configured intercompany registry —by tax ID or ERP partner code—, regardless of who issued it. It is never inferred from the name.'}},
   {cat:'metricas', es:{t:'Ticket promedio', d:'Facturación total entre número de facturas, del periodo y filtros activos en ese momento. Se distorsiona fácilmente por outliers.'},
     en:{t:'Average invoice', d:'Total billed divided by invoice count, for the currently active period/filters. Easily skewed by outliers.'}},
   {cat:'metricas', es:{t:'YTD', d:'Year To Date / lo que va del año — de enero del año más reciente en los datos a la fecha del último dato disponible.'},
@@ -3851,8 +4206,8 @@ const GLOSARIO = [
     en:{t:'Top N ("Show")', d:'Number of clients/categories shown individually before grouping the rest into "Other".'}},
   {cat:'metricas', es:{t:'Ponderado', d:'Promedio calculado dando más peso a las facturas de mayor monto — no un promedio simple. Se usa así para el tipo de cambio promedio.'},
     en:{t:'Weighted', d:'An average that gives more weight to higher-amount invoices — not a plain average. Used this way for the average exchange rate.'}},
-  {cat:'metricas', es:{t:'Cobertura', d:'% de las facturas filtradas que sí tienen un valor capturado para ese campo (usado sobre todo para "Base sin IVA", que no existe en todas las facturas).'},
-    en:{t:'Coverage', d:'% of the filtered invoices that actually have a captured value for that field (used mainly for "Net of VAT", which isn\'t present on every invoice).'}},
+  {cat:'metricas', es:{t:'Cobertura', d:'% de las facturas filtradas que tienen dato en ese campo.'},
+    en:{t:'Coverage', d:'% of the filtered invoices that have a value in that field.'}},
 
   {cat:'pronostico', es:{t:'Pronóstico', d:'Proyección de meses futuros calculada a partir del historial filtrado (respeta empresas, intercompañía, canceladas, plaza y búsqueda activos). Aparece al extender el selector "Hasta" más allá del último mes con datos reales; se distingue de los datos reales con borde punteado. Solo disponible con granularidad Mes y modo Apilado.'},
     en:{t:'Forecast', d:'Projection of future months computed from the filtered history (respects active companies, intercompany, cancelled, site and search filters). Appears when you extend the "To" selector past the last month with real data; shown with a dashed border to distinguish it from real data. Only available with Month granularity and Stacked mode.'}},
@@ -4255,20 +4610,25 @@ function buildControls(){
 
   segBind('segInterco', v=>{ S.interco = v; render(); });
   segBind('segCancel', v=>{ S.cancel = v; render(); });
+  segBind('segSituacion', v=>{ S.situacion = v; render(); });
   segBind('segMetrica', v=>{ fijarMetricaGlobal(v); });
+  // Solo si hay compras exportadas: un selector que lleva a una vista vacía es
+  // peor que no tenerlo.
+  const hayCompras = hayTipo('compra');
+  document.getElementById('segTipo').hidden = !hayCompras;
+  document.getElementById('segTipoSep').hidden = !hayCompras;
+  segBind('segTipo', v=>{ if (v !== TIPO) fijarTipo(v); });
 
   const from = document.getElementById('ymFrom'), to = document.getElementById('ymTo');
   from.innerHTML = optsDesde(); to.innerHTML = optsHasta();
   from.value = S.ymFrom; to.value = S.ymTo;
+  setSeg('segPer', S.periodo);
   from.onchange = ()=>{ S.ymFrom = +from.value; if (S.ymFrom > S.ymTo){ S.ymTo = S.ymFrom; to.value = S.ymTo; }
-    setSeg('segPer', null); render(); };
+    S.periodo = null; setSeg('segPer', null); recordarPeriodo(); render(); };
   to.onchange = ()=>{ S.ymTo = +to.value; if (S.ymTo < S.ymFrom){ S.ymFrom = S.ymTo; from.value = S.ymFrom; }
-    setSeg('segPer', null); render(); };
+    S.periodo = null; setSeg('segPer', null); recordarPeriodo(); render(); };
   segBind('segPer', v=>{
-    const last = META.ymMax;
-    if (v==='all'){ S.ymFrom = 0; S.ymTo = last; }
-    else if (v==='ytd'){ S.ymFrom = Math.floor(last/12)*12; S.ymTo = last; }
-    else { S.ymFrom = Math.max(0, last - (+v) + 1); S.ymTo = last; }
+    aplicarPeriodo(v); recordarPeriodo();
     from.value = S.ymFrom; to.value = S.ymTo; render(); });
 
   const q = document.getElementById('q');
@@ -4326,10 +4686,16 @@ function setLang(l){
   document.documentElement.lang = l;
   document.querySelectorAll('[data-i18n]').forEach(n=>{ n.textContent = t(n.dataset.i18n); });
   document.querySelectorAll('[data-i18n-ph]').forEach(n=>{ n.placeholder = t(n.dataset.i18nPh); });
+  document.querySelectorAll('[data-i18n-aria]').forEach(n=>{ n.setAttribute('aria-label', t(n.dataset.i18nAria)); });
   document.getElementById('q').placeholder = t('q.ph');
+  // Las opciones de periodo, la marca y lo que depende de catálogos se rehacen
+  // aquí y no solo al arrancar: cambiar de ventas a compras pasa por esta misma
+  // función (fijarTipo la llama), y los meses o las plazas pueden ser otros.
   const from = document.getElementById('ymFrom'), to = document.getElementById('ymTo');
   from.innerHTML = optsDesde(); from.value = S.ymFrom;
   to.innerHTML = optsHasta(); to.value = S.ymTo;
+  setSeg('segPer', S.periodo);
+  pintarMarca(); aplicarCatalogos(); pintarCarga();
   buildCardChrome(); render();
   // El recorrido de [data-i18n] no alcanza a los paneles que se pintan con
   // innerHTML: Estados Financieros, Dirección, Indicadores y la hoja de
@@ -4680,8 +5046,15 @@ function pctInterco(){
   // Del agregado mensual, que trae la dimensión de intercompañía. Se calcula
   // por importe y no por número de documentos: lo que importa para el sesgo
   // de una suma es el dinero, no cuántas facturas lo movieron.
+  // Siempre de las VENTAS, aunque Facturación esté mostrando compras: es el
+  // porcentaje de la facturación del grupo, que es lo que dice el aviso. Y sin
+  // las canceladas, que viajan en el agregado para su propio filtro.
+  // Columnas: [empresa, mes, interco, cancelada, abierta, n, total, base, usd].
   let total = 0, ic = 0;
-  for (const r of (META.agg || [])){ total += r[5]; if (r[2]) ic += r[5]; }
+  for (const r of (FACTURAS.venta.meta.agg || [])){
+    if (r[3]) continue;
+    total += r[6]; if (r[2]) ic += r[6];
+  }
   return total ? (ic / total * 100).toFixed(1) + '%' : '—';
 }
 
@@ -6077,10 +6450,11 @@ function aplicarColapso(v){
 })();
 
 /* ====================== arranque ====================== */
-document.getElementById('brandSub').textContent =
-  NF.format(META.filas) + ' facturas · 2020–2026';
+// Lo recordado va ANTES de armar los controles, para que nazcan ya en su
+// estado y no pinten primero ventas y luego salten a compras.
+fijarTipo(recordado('tipoFactura') || 'venta', false);
+restaurarPeriodo(recordado('periodo'));
 buildControls();
-buildCardChrome();
 bindGlosario();
 enCargarPendientes();
 enBindRespuesta();
@@ -6092,8 +6466,13 @@ addEventListener('hashchange', () => {
   if (location.hash === '#entradas') activarPestana('entradas');
 });
 fijarModoMontos(MODO_MONTOS, false);
-render();
-loadAll();
+// El primer pintado pasa por setLang(), el mismo camino que cambiar de idioma
+// o de tipo: recorre los textos fijos del HTML —que nacen escritos para
+// ventas en español—, la marca, los catálogos, la barra de carga y las
+// tarjetas. Un arranque con su propia lista de pasos es uno que un día se
+// olvida de uno.
+setLang(LANG);
+cargarTipo(TIPO);
 </script>
 </body>
 </html>

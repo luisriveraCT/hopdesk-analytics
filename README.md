@@ -33,13 +33,12 @@ python actualizar.py --subir
 Lo anterior más subir los datos de facturación al bucket público, que es de
 donde el navegador los pide.
 
-**No hay ningún Excel que actualizar.** Los datos salen del ERP. La base de
-Excel se retiró el 2026-09-26 y con ella todo el código que la leía; la
-constancia de por qué está en `legacy/README.md`.
+**No hay ningún archivo que actualizar a mano.** Los datos salen del ERP, con
+toda la historia que el ERP tenga.
 
 ### Qué pasa con el tablero publicado
 
-El paso 17 sube el tablero al almacén privado, y la aplicación de
+El paso 18 sube el tablero al almacén privado, y la aplicación de
 `servidor/app.py` lo toma de ahí en su siguiente arranque. **Publicar datos
 nuevos no requiere tocar Git ni volver a desplegar la aplicación.**
 
@@ -52,7 +51,7 @@ Solo se vuelve a GitHub cuando cambia el código.
 | `--solo-erp` | solo extrae; no construye el tablero |
 | `--solo-tablero` | solo reconstruye con lo que ya hay en disco |
 | `--sin-facturas` | omite la extracción de facturación (es la más lenta) |
-| `--desde 2022` | limita la extracción a partir de ese año |
+| `--desde 2022` | desde qué año se extraen los **estados financieros** (las facturas siempre traen toda la historia) |
 
 ---
 
@@ -60,7 +59,7 @@ Solo se vuelve a GitHub cuando cambia el código.
 
 | Pestaña | Para quién | Qué contesta |
 |---|---|---|
-| **Facturación** | operación | el detalle documento por documento, con filtros, búsqueda y pronóstico |
+| **Facturación** | operación y tesorería | el detalle documento por documento, con filtros, búsqueda y pronóstico. En dos vistas: **Ventas** (lo que se cobra) y **Compras** (lo que se paga) |
 | **Estados Financieros** | contabilidad | Balance y Estado de Resultados por empresa y por periodo, más el grupo consolidado |
 | **Dirección** | quien decide | ¿vamos bien? Cinco cifras, semáforo contra meta, tendencia y comparación entre empresas |
 | **Indicadores** | quien revisa | ¿por qué? Todas las razones por familia, el DuPont del ROE y el costo de capital abierto |
@@ -68,6 +67,41 @@ Solo se vuelve a GitHub cuando cambia el código.
 
 La hoja de captura no está en la barra de arriba a propósito: la usa quien tenga
 asignada la captura, no todo el que abre el tablero.
+
+**Todo lo que la app sabe hacer** está en [`CAPACIDADES.md`](CAPACIDADES.md),
+capacidad por capacidad y con la pieza de código que la sostiene. Un paso del
+pipeline comprueba que ninguna desaparezca.
+
+---
+
+## Ventas y Compras
+
+El selector **Ventas | Compras** es lo primero de la barra de filtros de
+Facturación. Cambia la pestaña entera de un juego de facturas al otro:
+
+| | Ventas | Compras |
+|---|---|---|
+| Qué son | facturas a clientes | facturas de proveedores |
+| Abierta significa | pendiente de cobro | pendiente de pago |
+| Referencia | la del cliente (su orden de compra) | **el folio del proveedor** |
+| Contraparte | cliente | proveedor |
+
+Todo lo demás es lo mismo, porque es el mismo código: filtros, búsqueda,
+tarjetas, pronóstico, tabla, descargas y el botón Montos. Al cambiar se
+conservan las empresas, el periodo y los filtros, para comparar las ventas y
+las compras de lo mismo.
+
+Para el tesorero, la búsqueda encuentra una factura por **nombre del
+proveedor, RFC, folio del ERP, folio del proveedor o monto**, y el filtro
+**Situación** separa las abiertas de las cerradas. Las dos vistas traen toda la
+historia, abiertas y cerradas.
+
+**El periodo abre en los últimos cinco años** ("60 m"). Lo que se elija —el
+periodo y la vista— se recuerda 12 horas; después vuelve a Ventas y cinco años,
+para que nadie lea compras de 2016 creyendo que son las de hoy.
+
+"Abierta" es el estado del documento **el día de la extracción** —el pie de
+página dice cuál—, no en tiempo real.
 
 ---
 
@@ -249,6 +283,7 @@ Un cliente nuevo se da de alta sin tocar un archivo `.py`.
 | `actualizar.py` | **el comando único.** Todo el ciclo, con sus dos puntos de paro |
 | `refrescar.py` | publicar lo ya construido: datos a S3 y HTML a Connect |
 | `FUNDAMENTOS.md` | **por qué se calcula así, y los errores que no hay que repetir** |
+| `CAPACIDADES.md` | **todo lo que la app sabe hacer**, y qué pieza lo sostiene |
 | `README.md` | esto |
 
 ### `finanzas/` — el cálculo
@@ -276,7 +311,7 @@ Un cliente nuevo se da de alta sin tocar un archivo `.py`.
 | Archivo | Qué hace |
 |---|---|
 | `plantilla.html` | la aplicación entera. Su encabezado explica cómo trabajar aquí |
-| `exportar_dashboard.py` | los datos de facturación (chunks) |
+| `exportar_dashboard.py` | los datos de facturación, ventas y compras, con el mismo código |
 | `exportar_finanzas.py` | Balance y Estado de Resultados |
 | `exportar_kpis.py` | indicadores, razones, DuPont y costo de capital |
 | `exportar_entradas.py` | la hoja de captura y la bitácora |
@@ -289,11 +324,7 @@ Un cliente nuevo se da de alta sin tocar un archivo `.py`.
 | `verificar_modo_discreto.py` | qué columna es un monto, y que la descarga lo respete |
 | `verificar_publicacion.py` | que no se publique ningún secreto |
 | `verificar_guardado.py` | que el botón de guardar pueda hablar con el servidor |
-
-### `legacy/`
-
-Solo un `README.md` con la constancia de por qué la fuente de verdad es el ERP
-y no los archivos de Excel. Ya no hay código ni datos ahí.
+| `verificar_capacidades.py` | que ninguna capacidad de `CAPACIDADES.md` pierda su pieza |
 
 ---
 
@@ -311,6 +342,7 @@ vez que se actualiza:
 | 13 | `verificar_alcance.py` — que ningún bloque quede dentro de otra función | no |
 | 14 | `verificar_idiomas.py` — que no falte ninguna traducción | no |
 | 15 | `verificar_modo_discreto.py` — qué es un monto, y que la descarga lo respete | no |
+| 15b | `verificar_capacidades.py` — que ninguna capacidad de `CAPACIDADES.md` haya perdido su pieza | no |
 | 16 | `verificar_guardado.py` — que el botón de guardar hable con el servidor | no |
 | 17 | `verificar_publicacion.py` — que no se publique ningún secreto | **sí** |
 
@@ -369,3 +401,12 @@ Quedan en la historia de git por si alguna vez hacen falta.
   todo el análisis.
 - **Presupuesto**: falta el permiso `BudgetScenarios` en el ERP.
 - **Unificar la identidad con HopDesk**: ver `finanzas/PLAN_UNIFICACION.md`.
+- **Privacidad de las compras (Opción B)**: los trozos de compras se publican
+  hoy en el mismo bucket público que las ventas. Las compras dicen a quién le
+  paga el grupo y cuánto; lo que corresponde son URLs firmadas con expiración.
+  Está decidido y pendiente.
+- **Estados financieros antes de 2020**: las facturas ya traen toda la historia;
+  las pólizas se siguen extrayendo desde `--desde`. Ir más atrás es una
+  extracción de horas y hay que ver primero si esos años cuadran.
+- **Concepto y plaza**: viven en las líneas del documento del ERP, que no se
+  extraen. Mientras tanto el tablero esconde lo que depende de ellos.

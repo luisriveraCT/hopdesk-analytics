@@ -188,10 +188,10 @@ def main():
            ['--publicar'], cwd=os.path.join(FINANZAS, 'configuracion'),
            detener_si_falla=False, titulo='publicación de configuración')
 
-    paso(6, 'Preparar los datos de facturación del tablero')
-    # Desde el 2026-09-25 lee `datos_erp/facturas_*.json`, no el Excel. Si falla
-    # se avisa y se sigue: quien solo quiera actualizar los estados financieros
-    # no debe quedarse sin tablero por esto.
+    paso(6, 'Preparar los datos de facturación del tablero (ventas y compras)')
+    # Lee `datos_erp/facturas_*.json`. Si falla se avisa y se sigue: quien solo
+    # quiera actualizar los estados financieros no debe quedarse sin tablero
+    # por esto.
     if not correr(os.path.join(TABLERO, 'exportar_dashboard.py'), [], cwd=TABLERO,
                   detener_si_falla=False, titulo='exportación de facturación'):
         print('   (el tablero conserva los datos de la corrida anterior)')
@@ -263,6 +263,14 @@ def main():
     # hay error en ningún lado. Esto comprueba que las tres piezas —lo que la
     # página manda, lo que el servidor escucha y lo que la página oye de
     # vuelta— sigan coincidiendo.
+    # Una capacidad que desaparece no rompe nada que se vea: se borra una
+    # función que "ya nadie usaba" y la pantalla sigue bien, solo le falta algo.
+    # CAPACIDADES.md dice qué sabe hacer la app y con qué piezas; esto comprueba
+    # que las piezas sigan ahí.
+    paso('15b', 'Ninguna capacidad de la app se perdió')
+    correr(os.path.join(TABLERO, 'verificar_capacidades.py'), [], cwd=TABLERO,
+           detener_si_falla=False, titulo='verificación de capacidades')
+
     paso(16, 'El botón de guardar puede hablar con el servidor')
     correr(os.path.join(TABLERO, 'verificar_guardado.py'), ['index.html'],
            cwd=TABLERO, detener_si_falla=False, titulo='verificación del guardado')
@@ -279,8 +287,8 @@ def main():
            detener_si_falla=False, titulo='publicación del tablero')
 
     if args.subir:
-        # Llamaba a refrescar.py cuando refrescar.py estaba en legacy/, y con
-        # una bandera que aquella versión no tenía. La subida llevaba tiempo
+        # Llamaba a refrescar.py cuando refrescar.py estaba en otra carpeta, y
+        # con una bandera que aquella versión no tenía. La subida llevaba tiempo
         # fallando sin que nadie lo notara, porque el paso no detiene la
         # corrida. Ahora existen las dos cosas y se prueba con --simular.
         # SOLO los datos de facturación al bucket público. El HTML ya NO se

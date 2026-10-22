@@ -141,8 +141,26 @@ def leer_kpis():
         'vacías. Genera con: python exportar_kpis.py')
 
 
-def construir_html(chunk_urls, estaticos, out_path=None):
-    """chunk_urls: lista de dicts {'archivo': <url o ruta>, 'n': <filas>}.
+def leer_indice(tipo):
+    """El índice de trozos de un tipo de factura, o [] si no se ha exportado.
+
+    Las compras son opcionales a propósito: sin su índice el tablero arranca
+    igual y esconde el selector Ventas | Compras, en vez de ofrecer una vista
+    vacía."""
+    nombre = 'indice.json' if tipo == 'venta' else f'indice-{tipo}.json'
+    try:
+        with open(os.path.join(HERE, nombre), encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        if tipo == 'venta':
+            raise
+        print(f'  aviso: no hay {nombre}; el tablero mostrará solo ventas')
+        return []
+
+
+def construir_html(chunk_urls, estaticos, out_path=None, chunk_urls_compra=None):
+    """chunk_urls: lista de dicts {'archivo': <url o ruta>, 'n': <filas>}, uno
+    por tipo de factura (ventas, compras).
     No le importa si 'archivo' es una ruta relativa, una URL pública de S3 o
     (a futuro, Opción B) una URL pre-firmada — ese detalle lo decide quien
     llama a esta función, no esta función."""
@@ -150,8 +168,14 @@ def construir_html(chunk_urls, estaticos, out_path=None):
         html = f.read()
     with open(os.path.join(HERE, 'meta.json'), encoding='utf-8') as f:
         meta = f.read()
+    meta_compra = _leer_json_crudo(
+        'meta-compra.json', 'no hay meta-compra.json; el tablero mostrará solo '
+        'ventas. Genera con: python exportar_dashboard.py')
     html = html.replace('__META_JSON__', meta)
     html = html.replace('__CHUNKS_JSON__', json.dumps(chunk_urls, ensure_ascii=False))
+    html = html.replace('__META_COMPRA_JSON__', meta_compra)
+    html = html.replace('__CHUNKS_COMPRA_JSON__',
+                        json.dumps(chunk_urls_compra or [], ensure_ascii=False))
     # Las librerías y las fuentes. Mismo criterio que los trozos: ruta
     # relativa para verlo en esta máquina, URL del bucket para publicar.
     html = html.replace('__ESTATICOS__', estaticos)
@@ -164,7 +188,9 @@ def construir_html(chunk_urls, estaticos, out_path=None):
     with open(out_path, 'w', encoding='utf-8') as f:
         f.write(html)
     print('index.html:', round(os.path.getsize(out_path) / 1024, 1), 'KB')
-    print('chunks:', len(chunk_urls), 'filas:', sum(c['n'] for c in chunk_urls))
+    print('trozos de ventas:', len(chunk_urls), 'filas:', sum(c['n'] for c in chunk_urls))
+    print('trozos de compras:', len(chunk_urls_compra or []), 'filas:',
+          sum(c['n'] for c in chunk_urls_compra or []))
     return out_path
 
 
@@ -176,15 +202,15 @@ def main():
                          "'local' para verlo en esta máquina; 's3' para publicar.")
     args = ap.parse_args()
 
-    with open(os.path.join(HERE, 'indice.json'), encoding='utf-8') as f:
-        idx = json.load(f)
+    idx, idx_compra = leer_indice('venta'), leer_indice('compra')
 
     if args.modo == 'local':
-        chunks = [{'archivo': 'data/' + c['archivo'], 'n': c['n']} for c in idx]
-        estaticos = 'estaticos'
+        base, estaticos = 'data', 'estaticos'
     else:
-        chunks = [{'archivo': f'{S3_BASE_URL}/{c["archivo"]}', 'n': c['n']} for c in idx]
-        estaticos = f'{S3_BASE_URL}/estaticos'
+        base, estaticos = S3_BASE_URL, f'{S3_BASE_URL}/estaticos'
+    chunks = [{'archivo': f'{base}/{c["archivo"]}', 'n': c['n']} for c in idx]
+    chunks_compra = [{'archivo': f'{base}/{c["archivo"]}', 'n': c['n']} for c in idx_compra]
+    if args.modo != 'local':
         # Aviso, no error: construir en modo s3 es correcto y necesario para
         # publicar. Lo que no es correcto es ABRIR ese archivo aquí esperando
         # ver los datos recién extraídos — los leería del bucket, que tiene la
@@ -195,7 +221,7 @@ def main():
         print('       data/. Para ver lo recién extraído en esta máquina usa:')
         print('           python ..\\actualizar.py --ver')
 
-    construir_html(chunks, estaticos)
+    construir_html(chunks, estaticos, chunk_urls_compra=chunks_compra)
     print(f'modo: {args.modo}')
 
 
