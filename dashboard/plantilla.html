@@ -6375,7 +6375,10 @@ function enMetaFmt(k, v){
   return String(Math.round(n * 10000) / 10000);
 }
 const enEsGrupo = () => !!KPIS.clave_grupo && EN.empresa === KPIS.clave_grupo;
-const enNombreEntidad = e => e === EN_TODAS ? t('en.dest.todas') : kpNombre(e);
+// La sigla para las empresas, como en el resto del tablero; el Grupo sí lleva
+// su nombre, porque no tiene sigla. El nombre completo empujaba la columna.
+const enNombreEntidad = e => e === EN_TODAS ? t('en.dest.todas')
+  : e === KPIS.clave_grupo ? kpNombre(e) : e;
 
 /* A qué entidades va lo que se escriba en la tabla de metas. El Grupo solo se
    fija a sí mismo: "Todas" y "Selección" son de empresas. */
@@ -6431,7 +6434,7 @@ function enTablaMetas(){
       hayPct ? `<span class="epct">${t('en.unidad.pct')}</span>` : ''}${
       srv ? '' : `<span class="epct">${t('en.metas.sinsrv')}</span>`}</caption>
     <thead><tr><th>${t('en.metas.col.ind')}</th><th>${t('en.col.unidad')}</th>
-      <th class="num">${ajEsc(t('en.metas.col.vigente.de', {e: kpNombre(EN.empresa)}))}</th>
+      <th class="num">${ajEsc(t('en.metas.col.vigente.de', {e: enNombreEntidad(EN.empresa)}))}</th>
       <th>${t('en.metas.col.nueva')}</th></tr></thead>
     <tbody>${filas}</tbody></table>`;
 }
