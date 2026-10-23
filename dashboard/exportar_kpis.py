@@ -185,6 +185,13 @@ def serie_consolidada(fin, series_empresa):
         }
         for k in suma:
             fila[k] = suma[k] if presente[k] else None
+        # Apertura: el grupo conserva su balance y sus flujos van vacíos, igual
+        # que cada empresa (ver mapeo_kpis.fila_financiera).
+        if c.get('apertura'):
+            fila['es_apertura'] = True
+            for k in ('ingresos', 'costo_servicio', 'gastos_operacion',
+                      'gastos_financieros', 'impuestos', 'depreciacion'):
+                fila[k] = None
         for k, elim in (('activo_circulante', c.get('eliminado_activo') or 0.0),
                         ('pasivo_circulante', c.get('eliminado_pasivo') or 0.0)):
             if fila[k] is not None:

@@ -511,6 +511,14 @@ def consolidar(anio, mes, empresas=None):
     ic = _interco_resultados(cliente, anio, mes, inis)
     comun = min(ic['ingresos'], ic['gastos'])
     descalce = round(ic['ingresos'] - ic['gastos'], 2)
+    # En el periodo de APERTURA no hay estado de resultados que consolidar (ver
+    # estado_resultados): restarle la facturación interna de ese mes dejaba al
+    # grupo con ingresos negativos. Solo vale su balance.
+    # Basta una: las que todavía no existían en esa fecha (NG nació en 2021) no
+    # traen renglón de apertura, y con "todas" el periodo nunca se reconocía.
+    apertura = any(p['resultados'].get('es_apertura') for p in por_empresa.values())
+    if apertura:
+        comun = descalce = 0.0
     er['ingresos'] -= comun
     er['gastos_operacion'] -= comun
     er['utilidad_bruta'] = er['ingresos'] - er['costo']
@@ -521,7 +529,7 @@ def consolidar(anio, mes, empresas=None):
 
     return {
         'periodo': f'{anio}-{mes:02d}', 'empresas': list(por_empresa),
-        'balance': bal, 'resultados': er,
+        'balance': bal, 'resultados': er, 'es_apertura': apertura,
         'eliminado_saldos': round(min(elim_activo, elim_pasivo), 2),
         # Cada lado por separado, además del mínimo. Quien consolide un rubro
         # —el activo circulante, por ejemplo— necesita restar exactamente lo

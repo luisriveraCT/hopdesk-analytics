@@ -422,6 +422,29 @@ def fila_financiera(ini: str, anio: int, mes: int, datos=None,
 
     ing = er['ingresos']
     ebit = er['utilidad_operacion']
+    if er.get('es_apertura'):
+        # El periodo de apertura solo aporta su Balance (el saldo inicial que
+        # promedian las razones de enero). Sus flujos van VACÍOS, no en cero:
+        # en cero, un acumulado de doce meses que lo incluyera sumaría once
+        # meses y se presentaría como año.
+        return {
+            'empresa': ini, 'anio': anio, 'mes': mes, 'periodo': f'{anio}-{mes:02d}',
+            'es_apertura': True,
+            'ingresos': None, 'costo_servicio': None, 'gastos_operacion': None,
+            'depreciacion': None, 'gastos_financieros': None, 'ebit': None,
+            'ebitda': None, 'ebt': None, 'impuestos': None, 'utilidad_neta': None,
+            'tasa_efectiva': None, 'tasa_confiable': False,
+            'activos_totales': bal['activo'], 'pasivos_totales': bal['pasivo'],
+            'patrimonio': bal['capital'],
+            'efectivo': rub.get('efectivo'), 'cuentas_x_cobrar': rub.get('cuentas_x_cobrar'),
+            'inventarios': rub.get('inventarios'), 'cuentas_x_pagar': rub.get('cuentas_x_pagar'),
+            'deuda_con_costo': rub.get('deuda_con_costo'), 'activo_fijo': rub.get('activo_fijo'),
+            'activo_circulante': rub.get('activo_circulante'),
+            'pasivo_circulante': rub.get('pasivo_circulante'),
+            'partes_relacionadas': rub.get('partes_relacionadas'),
+            'es_cierre_anual': bal.get('es_cierre_anual', False),
+            'mes_incompleto': False, 'descuadre': bal['descuadre'],
+        }
     return {
         'empresa': ini, 'anio': anio, 'mes': mes,
         'periodo': f'{anio}-{mes:02d}',

@@ -99,7 +99,8 @@ def pruebas_sobre_datos_reales():
             # 2) Articulación: el ER acumulado del año reproduce el resultado
             #    del ejercicio del Balance. Dos caminos independientes.
             acum_por_anio[a] = acum_por_anio.get(a, 0.0) + er['utilidad_neta']
-            if not bal.get('es_cierre_anual'):
+            # La apertura no tiene meses que sumar: solo se prueba su identidad.
+            if not bal.get('es_cierre_anual') and not er.get('es_apertura'):
                 check(f'{etq}: ER acumulado articula con el Balance',
                       abs(acum_por_anio[a] - bal['resultado_ejercicio']) <= 1.0,
                       f"difiere {acum_por_anio[a] - bal['resultado_ejercicio']:,.2f}")
@@ -128,6 +129,11 @@ def pruebas_sobre_datos_reales():
             check(f'{etq}: los rubros de activo no exceden el activo',
                   f['activos_totales'] is None or suma <= abs(f['activos_totales']) + 1,
                   f"rubros {suma:,.0f} > activo {f['activos_totales']:,.0f}")
+            # La apertura solo trae balance: sus flujos van vacíos a propósito.
+            if f.get('es_apertura'):
+                check(f'{etq}: la apertura no trae flujos',
+                      all(f[k] is None for k in ('ingresos', 'ebitda', 'ebit', 'utilidad_neta')))
+                continue
             check(f'{etq}: EBITDA = EBIT + depreciación',
                   casi(f['ebitda'], f['ebit'] + f['depreciacion']))
             # Volvió a ser un invariante válido al aplicar IFRS/NIF: antes

@@ -69,8 +69,8 @@ def _cargar(empresa):
 
 
 def periodos_de(saldos):
-    """Los (año, mes) presentes, ordenados, excluyendo el renglón de apertura
-    (que es anterior al primer ejercicio y no es un periodo reportable)."""
+    """Los (año, mes) presentes, ordenados. Incluye el de apertura: su balance
+    se comprueba como cualquier otro; lo que se salta es su articulación."""
     return sorted({(s['anio'], s['mes']) for s in saldos})
 
 
@@ -120,7 +120,11 @@ def verificar_empresa(empresa, verboso=True):
 
             d1 = bal['descuadre']
             d2 = acumulado - bal['resultado_ejercicio']
-            ok1, ok2 = abs(d1) <= TOLERANCIA, abs(d2) <= TOLERANCIA
+            # La apertura no tiene estado de resultados (ver estado_resultados):
+            # su resultado del ejercicio viene de años anteriores y no hay meses
+            # que sumar. Su identidad contable sí se prueba; la articulación no.
+            ok1 = abs(d1) <= TOLERANCIA
+            ok2 = bool(er.get('es_apertura')) or abs(d2) <= TOLERANCIA
             filas.append((f'{a}-{m:02d}', bal['activo'], bal['pasivo'],
                           bal['resultado_ejercicio'], acumulado, d1, d2, ok1, ok2))
             # PUNTO CIEGO QUE ESTA PRUEBA TUVO Y YA NO: un balance en CEROS

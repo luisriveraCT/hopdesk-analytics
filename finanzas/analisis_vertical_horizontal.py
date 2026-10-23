@@ -175,8 +175,18 @@ def estado_resultados(saldos: List[Dict], cuentas: Dict[str, Dict],
     tot = {'INGRESO': 0.0, 'COSTO': 0.0, 'GASTO': 0.0,
            'FINANCIERO': 0.0, 'OTRO': 0.0, 'IMPUESTO': 0.0}
     detalle = {c: [] for c in tot}
+    # EL RENGLÓN DE APERTURA NO ES UN MES. La extracción guarda como diciembre
+    # del año anterior al inicio todo lo registrado ANTES —años de movimientos
+    # en un solo renglón— para que el Balance arranque con la posición real.
+    # Como estado de resultados no significa nada: presentado como mes, NCS
+    # "facturaba" 952 millones en diciembre de 2019 y el acumulado de doce
+    # meses de noviembre de 2020 lo incluía. Su balance sí vale; sus flujos no.
+    apertura = False
     for s in saldos:
         if s['anio'] != anio or s['mes'] != mes:
+            continue
+        if s.get('es_apertura'):
+            apertura = True
             continue
         cta = cuentas.get(s['codigo'])
         if not cta or cta.get('es_acumulativa'):
@@ -209,6 +219,7 @@ def estado_resultados(saldos: List[Dict], cuentas: Dict[str, Dict],
         tot['IMPUESTO'], resultado_antes_impuestos, banda_tasa)
     return {
         'anio': anio, 'mes': mes,
+        'es_apertura': apertura,
         'ingresos': ingresos,
         'costo': tot['COSTO'],
         'utilidad_bruta': utilidad_bruta,

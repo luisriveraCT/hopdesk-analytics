@@ -187,6 +187,8 @@ def consolidado_por_periodo(periodos, empresas):
             'eliminado_resultados': c['eliminado_resultados'],
             'descalce_facturacion': c['descalce_facturacion'],
             'sin_conciliar': c['sin_conciliar'],
+            # El periodo de apertura solo tiene balance (ver estado_resultados).
+            'apertura': bool(c.get('es_apertura')),
         }
     return out, avisos
 
