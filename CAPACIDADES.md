@@ -43,7 +43,7 @@ Cómo se escriben las piezas (entre comillas invertidas):
 | Menos filtros | Pliega todo menos la primera fila, y se recuerda por navegador | `aplicarColapso()` `#fColapsar` |
 | Mosaicos de cifras | Total, base, facturas, ticket promedio, % intercompañía, USD, tipo de cambio ponderado, canceladas | `drawKpis()` `#kpis` |
 | Serie mensual | Apilada por empresa o en 100%, por mes, trimestre o año | `drawSerie()` `#cardSerie` |
-| Pronóstico | Cinco métodos, al extender "Hasta" al futuro. Los mismos parámetros que el reporte de Finanzas | `calcularPronostico()` `pronosticoHolt()` `finanzas/precision_pronostico.py` |
+| Pronóstico | Cinco métodos, al extender "Hasta" al futuro. Los mismos parámetros que la medición de precisión | `calcularPronostico()` `pronosticoHolt()` `finanzas/precision_pronostico.py` |
 | Tarjetas de análisis | Empresa, intercompañía vs. terceros, clientes o proveedores, tamaño de factura, exposición en dólares | `drawBarsH()` `drawInterco()` `drawHist()` `drawFx()` |
 | Plazas | Aparece sola cuando el catálogo de sedes tenga datos (hoy viven en las líneas del documento, que no se extraen) | `aplicarCatalogos()` `#cardPlaza` |
 | Tabla de detalle | Todas las facturas filtradas, virtualizada, ordenable por cualquier columna | `renderTable()` `columnasTabla()` `#mt` |

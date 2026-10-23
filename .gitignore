@@ -63,7 +63,6 @@ dashboard/base_financiera.json
 servidor/index.html
 
 # --- Salidas generadas -----------------------------------------------------
-finanzas/KPIs_Finanzas_generado.xlsx
 *.xlsx
 
 # --- Credenciales ----------------------------------------------------------

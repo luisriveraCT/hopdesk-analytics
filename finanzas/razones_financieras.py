@@ -3,16 +3,15 @@
 ===============================================================================
  RAZONES FINANCIERAS — cálculo mensual a partir del esquema financiero
 ===============================================================================
-Todas las razones del "Diccionario_KPIs" de KPIs_Finanzas.xlsx, más las de
-liquidez que ese archivo no incluye pero que salen gratis si Contabilidad
-manda activo y pasivo circulante.
+Las razones de rentabilidad, rendimiento sobre capital, ciclo de efectivo,
+apalancamiento y liquidez, con el catálogo que dice qué es cada una
+(CATALOGO_KPIS, más abajo).
 
 Tres convenciones que hay que tener presentes al leer los números:
 
 1) ANUALIZACIÓN. Los datos son mensuales pero ROE, ROIC, rotación y Deuda
    Neta/EBITDA se leen en términos anuales. Aquí se anualiza multiplicando el
-   flujo del mes por 12 (no por un promedio móvil), que es como lo hace
-   KPIs_Finanzas.xlsx. Es simple y consistente, pero amplifica la
+   flujo del mes por 12 (no por un promedio móvil). Es simple y consistente, pero amplifica la
    estacionalidad: un diciembre fuerte se ve como un año espectacular. Por eso
    cada razón anualizada trae también su versión TTM (últimos 12 meses) cuando
    hay historia suficiente — esa es la que conviene mirar para decidir.
@@ -458,8 +457,8 @@ def razones(fila, fila_anterior=None, ttm=None, dias_anio=None, periodos_por_ani
 
 
 def dupont_5_factores(f, fila_anterior=None):
-    """Descomposición DuPont de 5 factores del ROE — la que pide el
-    Diccionario_KPIs. ROE = carga fiscal × carga de intereses × margen EBIT ×
+    """Descomposición DuPont de 5 factores del ROE.
+    ROE = carga fiscal × carga de intereses × margen EBIT ×
     rotación de activos × apalancamiento. El producto debe reproducir el ROE;
     si no, es que hay un dato inconsistente (se reporta la diferencia)."""
     pat_prom = _prom(f.get('patrimonio'), (fila_anterior or {}).get('patrimonio'))
@@ -635,9 +634,8 @@ CATALOGO_KPIS = {
     'razon_efectivo':    _k('Razón de efectivo', 'x', True, 'liquidez'),
 }
 
-# Qué tan cerca de la meta sigue contando como amarillo. Es el valor que usa
-# KPIs_Finanzas.xlsx y por eso es el de arranque, pero se puede cambiar desde
-# la configuración del cliente: qué tan estrecha es la banda de tolerancia es
+# Qué tan cerca de la meta sigue contando como amarillo. Es el valor de
+# arranque, y se puede cambiar desde la configuración del cliente: qué tan estrecha es la banda de tolerancia es
 # una decisión de quien fija las metas, no del programa.
 HOLGURA_AMARILLO = 0.10
 

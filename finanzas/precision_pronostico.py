@@ -3,10 +3,9 @@
 ===============================================================================
  PRECISIÓN DE PRONÓSTICO — backtest honesto de los métodos del tablero
 ===============================================================================
-Produce exactamente lo que pide la pestaña "Precision_Pronostico" de
-KPIs_Finanzas.xlsx (MAPE, MPE, RSFE, MAD, tracking signal, banda μ+1σ y
-semáforo) y además responde la pregunta que esa pestaña no contesta:
-¿CUÁL de los métodos de pronóstico es el más preciso para esta operación?
+Mide la precisión de los métodos de pronóstico del tablero (MAPE, MPE, RSFE,
+MAD, tracking signal, banda μ+1σ y semáforo) y responde la pregunta que
+importa: ¿CUÁL de los métodos es el más preciso para esta operación?
 
 LA PARTE QUE IMPORTA: el backtest es de origen móvil (walk-forward). Para
 pronosticar el mes t solo se usa información hasta t-1, se compara contra el
@@ -19,7 +18,7 @@ SINCRONÍA CON EL TABLERO — IMPORTANTE:
 Los 5 métodos de abajo son la contraparte en Python de las funciones
 pronosticoSMA/SES/Lineal/Estacional/Holt de dashboard/plantilla.html. Si se
 cambia un parámetro allá (ventana=3, alpha=0.3, beta=0.1) hay que cambiarlo
-aquí, o el tablero y el reporte de finanzas dirán cosas distintas sobre el
+aquí, o el tablero y esta medición dirán cosas distintas sobre el
 mismo mes. Los parámetros viven en PARAMS justo para que el cambio sea en un
 solo lugar por archivo y sea fácil de cotejar.
 ===============================================================================
@@ -33,8 +32,8 @@ PARAMS = {
     'holt_beta': 0.1,     # = beta  en pronosticoHolt
 }
 
-UMBRAL_VERDE = 0.05    # MAPE ≤ 5%  (igual que KPIs_Finanzas.xlsx, celda C3)
-UMBRAL_AMBAR = 0.10    # MAPE ≤ 10% (celda G3)
+UMBRAL_VERDE = 0.05    # MAPE ≤ 5%: la meta de precisión de la Gerencia de Finanzas
+UMBRAL_AMBAR = 0.10    # MAPE ≤ 10%
 
 
 # ---------------------------------------------------------------------------
@@ -133,13 +132,12 @@ def backtest(serie, metodo, min_historia=12, horizonte=1):
 
 
 def metricas(filas):
-    """Calcula, acumulando mes a mes, exactamente las columnas de la pestaña
-    Precision_Pronostico: error, |error|, APE, PE, MAPE acum., MPE acum.,
-    RSFE, MAD, tracking signal, banda de control (μ+1σ) y estado."""
+    """Calcula, acumulando mes a mes: error, |error|, APE, PE, MAPE acum.,
+    MPE acum., RSFE, MAD, tracking signal, banda de control (μ+1σ) y estado."""
     out, apes, errores, abs_errores = [], [], [], []
     for f in filas:
         real, pron = f['real'], f['pronostico']
-        error = real - pron                      # + = subestimamos (igual que el Excel: C−B)
+        error = real - pron                      # + = el pronóstico se quedó corto
         abs_error = abs(error)
         ape = abs_error / real if real else None
         pe = error / real if real else None
@@ -176,7 +174,7 @@ def metricas(filas):
 
 
 def resumen(filas_metricas):
-    """Bloque 'RESUMEN ESTADÍSTICO' de la pestaña (filas 19-25)."""
+    """Resumen estadístico de la precisión: MAPE, MPE, sesgo y dispersión."""
     apes = [f['ape'] for f in filas_metricas if f['ape'] is not None]
     pes = [f['pe'] for f in filas_metricas if f['pe'] is not None]
     if not apes:

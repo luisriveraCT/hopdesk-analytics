@@ -95,9 +95,9 @@ SEMILLA_EMPRESAS = [
 ]
 
 # Política financiera de arranque: los supuestos del costo de capital y las
-# metas del semáforo. Las metas son las del "Diccionario_KPIs" de
-# KPIs_Finanzas.xlsx —las que ya usa Finanzas— y los supuestos son los que
-# estaban en el mismo archivo.
+# metas del semáforo. Son los valores con los que arrancó la Gerencia de
+# Finanzas; desde entonces se editan en la app (hoja de captura y vista
+# Avanzado) o con --politica.
 #
 # Están aquí y no en el código porque son de ESTE cliente. Otro grupo, en otro
 # sector, tiene otro ciclo de cobranza y otro costo de capital; debe poder
@@ -142,8 +142,8 @@ SEMILLA_CONVENCIONES = {
     # Días del año para las razones de días. 365 es lo usual en estados
     # financieros; 360 se usa en tesorería y en varios contratos de crédito.
     'dias_anio': '365',
-    # Qué tan cerca de la meta sigue siendo amarillo, en tanto por uno. Lo que
-    # usa KPIs_Finanzas.xlsx.
+    # Qué tan cerca de la meta sigue siendo amarillo, en tanto por uno: 10% de
+    # la meta. Lo decide quien fija las metas.
     'holgura_semaforo': '0.10',
     # Dentro de qué banda una tasa efectiva de impuestos es utilizable. La de
     # aquí cubre el régimen mexicano (ISR 30% más PTU 10% sobre otra base, que
