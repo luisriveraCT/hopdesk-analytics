@@ -445,8 +445,17 @@ def estado_actual(almacen=None, cliente=None, entradas_obj=None):
         bitacora = None
     # Las metas de CADA empresa y del Grupo, igual que las publica kpis.json.
     ents = [e.iniciales for e in cliente.empresas if e.activa] + [CLAVE_GRUPO]
+    # El catálogo viaja con las series que el servidor acaba de calcular: es el
+    # que dice cuáles tienen versión de doce meses, y tiene que ser el mismo
+    # código que las produjo, no el de la última publicación.
+    try:
+        import razones_financieras as rz
+        catalogo = rz.CATALOGO_KPIS if series else None
+    except Exception:                                        # noqa: BLE001
+        catalogo = None
     return {'entradas': ent.entradas, 'metas': cliente.politica.todas_las_metas(ents),
-            'series': series, 'periodicas': periodicas, 'bitacora': bitacora, 'bitacora_actos': bc.ACTOS}
+            'series': series, 'periodicas': periodicas, 'catalogo': catalogo,
+            'bitacora': bitacora, 'bitacora_actos': bc.ACTOS}
 
 
 def aplicar_metas(cambios_metas, autor):

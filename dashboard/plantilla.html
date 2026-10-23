@@ -771,6 +771,12 @@ tr.esob .ecelda{border-color:var(--sem-bad);background:rgba(220,38,38,.09);
   .card-hero .plot{min-height:230px}
   .search{margin-left:0;width:100%}
   .txtin{flex:1;min-width:0}
+  /* Cuatro pestañas no caben en 390 px y empujaban la página a lo ancho. Se
+     desplazan dentro de su barra, sin barra de desplazamiento visible, y
+     cada botón conserva su texto completo. */
+  .tabbar{overflow-x:auto;scrollbar-width:none;padding:0 8px}
+  .tabbar::-webkit-scrollbar{display:none}
+  .tabbar button{flex:0 0 auto;padding:11px 12px 9px;white-space:nowrap}
 }
 
 @media print{
@@ -7168,6 +7174,10 @@ function enAplicarEstado(r){
   if (r.metas) KPIS.metas = r.metas;
   if (r.series) KPIS.series = r.series;
   if (r.periodicas) KPIS.periodicas = r.periodicas;
+  // El catálogo también: dice qué indicador tiene versión de doce meses. Si
+  // solo viajara en lo publicado, un indicador nuevo del servidor se vería
+  // sin su versión de doce meses hasta la siguiente publicación.
+  if (r.catalogo) KPIS.catalogo = r.catalogo;
   if (r.bitacora_actos) ENTRADAS.bitacora_actos = r.bitacora_actos;
   if (r.bitacora){ ENTRADAS.bitacora = r.bitacora; enPintarBitacora(); }
   const abierta = PESTANA;
