@@ -73,3 +73,7 @@ servidor/index.html
 # --- Registro del despliegue anterior de Connect ---------------------------
 # Apunta a un contenido concreto de una cuenta concreta; no es del proyecto.
 dashboard/rsconnect/
+
+# --- Reportes para el equipo (PDF, Excel) ---------------------------------
+# Llevan cifras de las empresas: viven en este equipo, nunca en el repositorio.
+reportes/
