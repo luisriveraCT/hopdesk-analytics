@@ -172,6 +172,15 @@ def serie_consolidada(fin, series_empresa):
             'gastos_operacion': r['gastos'],
             'gastos_financieros': r['financiero'],
             'impuestos': r['impuestos'],
+            # LA UTILIDAD DE OPERACIÓN SE ENTREGA HECHA, igual que en cada
+            # empresa. Sin ella, derivar_estado la recalculaba restando la
+            # depreciación de unos gastos que YA la incluyen: el Grupo perdía
+            # su depreciación dos veces —58.5 M en doce meses— y su EBITDA, su
+            # utilidad, su ROE y su flujo salían muy por debajo de la suma de
+            # sus empresas. Consolidar no crea ni destruye utilidad.
+            'ebit': r['operacion'],
+            'ebt': r['antes_impuestos'],
+            'utilidad_neta': r['neta'],
             'activos_totales': b['activo'], 'pasivos_totales': b['pasivo'],
             'patrimonio': b['capital'],
             'es_cierre_anual': bool(b.get('cierre')),

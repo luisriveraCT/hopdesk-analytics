@@ -315,6 +315,25 @@ def pruebas_sobre_kpis():
                           f'{a} contra {b}')
 
     G = d['clave_grupo']
+
+    # CONSOLIDAR NO CREA NI DESTRUYE UTILIDAD. Las eliminaciones restan lo mismo
+    # del ingreso de quien vende y del gasto de quien compra, así que el EBITDA,
+    # la depreciación y la utilidad neta del Grupo son la suma de sus empresas.
+    # Esta prueba faltaba, y el Grupo restó su depreciación dos veces durante un
+    # tiempo —58.5 M en doce meses— sin que nada lo marcara.
+    seccion('Grupo — el EBITDA y la utilidad son la suma de las empresas')
+    por_emp = {e: {f['periodo']: f for f in s} for e, s in d['series'].items() if e != G}
+    for f in d['series'].get(G, []):
+        p = f['periodo']
+        if f.get('es_apertura') or f.get('ebitda') is None:
+            continue
+        for campo in ('ebitda', 'depreciacion', 'utilidad_neta'):
+            vals = [(por_emp[e].get(p) or {}).get(campo) for e in por_emp if p in por_emp[e]]
+            if None in vals or f.get(campo) is None:
+                continue
+            check(f'Grupo {p}: {campo} = suma de las empresas',
+                  abs(f[campo] - sum(vals)) <= 1.0, f'{f[campo]:,.2f} contra {sum(vals):,.2f}')
+
     for empresa, serie in d['series'].items():
         if not serie:
             continue
