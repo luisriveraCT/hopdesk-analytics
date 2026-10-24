@@ -300,12 +300,19 @@ def pruebas_sobre_kpis():
             # dar EXACTAMENTE lo mismo. Los que llevan saldos (días, ROE) no se
             # comparan: el año usa el saldo al cierre y los doce meses el
             # promedio de la ventana, a propósito.
+            # Ventas y flujo también: el año es la suma de sus meses, y el
+            # cambio de capital de trabajo del año va de diciembre a diciembre
+            # por los dos caminos.
             for kpi in ('margen_bruto', 'margen_ebitda', 'margen_ebit', 'margen_neto',
-                        'cobertura_intereses', 'tasa_efectiva'):
+                        'cobertura_intereses', 'tasa_efectiva', 'ventas',
+                        'crecimiento_ventas', 'flujo_operacion', 'margen_flujo_operacion'):
                 a, b = f['r'].get(kpi), dic.get(kpi + '_ttm')
                 if a is not None and b is not None:
                     check(f'{ent} {f["anio"]}: {kpi} del año = acumulado a diciembre',
-                          abs(a - b) <= 1e-6, f'{a} contra {b}')
+                          # Los montos se comparan al centavo; las razones, a la
+                          # millonésima.
+                          abs(a - b) <= (0.01 if kpi in ('ventas', 'flujo_operacion') else 1e-6),
+                          f'{a} contra {b}')
 
     G = d['clave_grupo']
     for empresa, serie in d['series'].items():

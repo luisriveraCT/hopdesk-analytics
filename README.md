@@ -63,7 +63,7 @@ Solo se vuelve a GitHub cuando cambia el código.
 | **Facturación** | operación y tesorería | el detalle documento por documento, con filtros, búsqueda y pronóstico. En dos vistas: **Ventas** (lo que se cobra) y **Compras** (lo que se paga) |
 | **Estados Financieros** | contabilidad | Balance y Estado de Resultados por empresa y por periodo, más el grupo consolidado |
 | **Dirección** | quien decide | ¿vamos bien? Cinco cifras, semáforo contra meta, tendencia y comparación entre empresas |
-| **Indicadores** | quien revisa | ¿por qué? Todas las razones por familia, el DuPont del ROE y el costo de capital abierto |
+| **Indicadores** | quien revisa | ¿por qué? Ventas, crecimiento y flujo de operación; todas las razones por familia, el DuPont del ROE y el costo de capital abierto |
 | **Avanzado** (dentro de Indicadores) | quien analiza | ¿es tendencia o ruido? Un indicador en el tiempo, con estadística, tendencia, control y meta. Se abre con el botón **Avanzado** o con `#analisis` |
 | **Hoja de captura** | quien tenga asignada la tarea | las cifras que el ERP no tiene, y las correcciones a mano. Se abre desde **Ajustes**, o con `#entradas` en la dirección |
 
@@ -81,7 +81,7 @@ pequeña, los resultados con sus valores p. En la barra:
   periodo se calcula con sus propias cifras en el servidor
   (`series_periodicas()` en `dashboard/exportar_kpis.py`), no promediando meses.
 - **12 m móviles / Por periodo**: con periodicidad 12. Todo indicador que lleva
-  un flujo tiene versión de doce meses (20 de 26); se apaga solo en los que son
+  un flujo tiene versión de doce meses (24 de 30); se apaga solo en los que son
   saldo al cierre (deuda / patrimonio, pasivo / activo, las tres de liquidez) y
   en el WACC, que es una tasa.
 - **Periodo**: 12, 24 o 36 periodos, todo, o **Elegir…**: una barra de rango

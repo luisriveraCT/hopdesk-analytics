@@ -437,7 +437,10 @@ def procesar(filas, supuestos, metas, interco=None, conv=None, entradas=None,
             ttm['tasa_efectiva'], ttm['tasa_confiable'] = av.tasa_efectiva_de(
                 ttm.get('impuestos'), ttm.get('ebt'), conv.get('banda_tasa_efectiva'))
         ant = derivadas[i - 1] if i else None
-        r = rz.razones(d, ant, ttm, dias_anio=conv['dias_anio'])
+        # El mismo mes del año anterior, para el crecimiento de ventas.
+        hace_un_anio = derivadas[i - rz.PERIODOS_POR_ANIO] if i >= rz.PERIODOS_POR_ANIO else None
+        r = rz.razones(d, ant, ttm, dias_anio=conv['dias_anio'],
+                       fila_hace_un_anio=hace_un_anio)
         suprimidos = depurar_dias(r, conv['dias_anio'])
         du = rz.dupont_5_factores(d, ant)
         fila = {'periodo': d['periodo']}
@@ -540,7 +543,7 @@ def series_periodicas(filas, supuestos, interco=None, conv=None, entradas=None,
         for f, sup in preparadas:
             llave = (f['anio'], (f['mes'] - 1) // meses_por_periodo + 1)
             bloques.setdefault(llave, []).append((f, sup))
-        filas_p, anterior = [], None
+        filas_p, anterior, derivadas_p = [], None, []
         for (anio, idx), meses in bloques.items():
             fs = [m[0] for m in meses]
             agg = {'empresa': fs[-1].get('empresa'), 'anio': anio,
@@ -559,9 +562,16 @@ def series_periodicas(filas, supuestos, interco=None, conv=None, entradas=None,
             agg['costo_inmaterial'] = costo_inmaterial(agg)
             # Los supuestos del último mes: son los vigentes al cerrar el periodo.
             d = rz.derivar_estado(agg, meses[-1][1], anterior)
+            # El mismo periodo del año anterior: p periodos atrás (un trimestre
+            # contra el mismo trimestre, un año contra el anterior).
             r = rz.razones(d, anterior, None, dias_anio=conv.get('dias_anio'),
-                           periodos_por_anio=p)
+                           periodos_por_anio=p,
+                           fila_hace_un_anio=derivadas_p[-p] if len(derivadas_p) >= p else None)
             depurar_dias(r, conv.get('dias_anio') or rz.DIAS_ANIO)
+            # Un periodo a medias no tiene crecimiento: nueve meses de 2026
+            # contra el año completo de 2025 saldría "−8%" sin serlo.
+            if len(fs) != meses_por_periodo:
+                r['crecimiento_ventas'] = None
             valores = {}
             for k, cat in rz.CATALOGO_KPIS.items():
                 v = d.get(k) if cat['fuente'] == 'derivado' else r.get(k)
@@ -575,6 +585,7 @@ def series_periodicas(filas, supuestos, interco=None, conv=None, entradas=None,
                 'es_cierre_anual': any(x.get('es_cierre_anual') for x in fs),
                 'r': valores})
             anterior = d
+            derivadas_p.append(d)
         salida[str(p)] = filas_p
     return salida
 

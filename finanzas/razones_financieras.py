@@ -233,7 +233,8 @@ def _ctn(f):
     return cxc + inv - cxp
 
 
-def razones(fila, fila_anterior=None, ttm=None, dias_anio=None, periodos_por_anio=None):
+def razones(fila, fila_anterior=None, ttm=None, dias_anio=None, periodos_por_anio=None,
+            fila_hace_un_anio=None):
     """Razones financieras de un mes ya derivado (pasar la salida de derivar_estado).
 
     ttm: opcional, dict con los agregados de los últimos 12 meses y los saldos
@@ -345,6 +346,29 @@ def razones(fila, fila_anterior=None, ttm=None, dias_anio=None, periodos_por_ani
         r['ccc'] = None
     r['ctn_sobre_ventas'] = _div(_ctn(f), ing)
 
+    # --- Ventas y flujo ------------------------------------------------------
+    # Ventas: los ingresos del periodo. Crecimiento: contra el MISMO periodo del
+    # año anterior (`fila_hace_un_anio`, que entrega quien llama), no contra el
+    # periodo inmediato: así la estacionalidad no se lee como crecimiento.
+    r['ventas'] = ing
+    ing_prev = (fila_hace_un_anio or {}).get('ingresos')
+    r['crecimiento_ventas'] = (_div(ing - ing_prev, ing_prev)
+                               if ing is not None and ing_prev and ing_prev > 0 else None)
+    # FLUJO DE OPERACIÓN, por el método indirecto simplificado:
+    #
+    #     EBITDA − impuestos − aumento del capital de trabajo
+    #
+    # Es el efectivo que deja la operación antes de invertir y de financiarse.
+    # Se arma con lo que ya está calculado; no hace falta la extracción de
+    # capex, que es lo que le falta al flujo LIBRE. Es una aproximación: los
+    # impuestos son los registrados, no los pagados, y el capital de trabajo es
+    # el operativo (cobrar + inventarios − pagar).
+    ctn_hoy, ctn_antes = _ctn(f), _ctn(fila_anterior or {})
+    r['flujo_operacion'] = (f['ebitda'] - f['impuestos'] - (ctn_hoy - ctn_antes)
+                            if None not in (f.get('ebitda'), f.get('impuestos'), ctn_hoy, ctn_antes)
+                            else None)
+    r['margen_flujo_operacion'] = _div(r['flujo_operacion'], ing) if ing and ing > 0 else None
+
     # --- Apalancamiento y solvencia -----------------------------------------
     r['deuda_entre_patrimonio'] = _div(f.get('deuda_con_costo'), f.get('patrimonio'))
     ebitda_anual = (f['ebitda'] * P) if f.get('ebitda') is not None else None
@@ -453,6 +477,16 @@ def razones(fila, fila_anterior=None, ttm=None, dias_anio=None, periodos_por_ani
         # La tasa la resuelve quien llama, con la regla única de
         # tasa_efectiva_de() y la banda del cliente; aquí solo se respeta.
         r['tasa_efectiva_ttm'] = ttm.get('tasa_efectiva') if ttm.get('tasa_confiable') else None
+        # Ventas y flujo de doce meses: el año móvil completo.
+        r['ventas_ttm'] = ing12
+        prev12 = ttm.get('ingresos_previos')
+        r['crecimiento_ventas_ttm'] = (_div(ing12 - prev12, prev12)
+                                       if ing12 is not None and prev12 and prev12 > 0 else None)
+        r['flujo_operacion_ttm'] = (ttm['ebitda'] - ttm['impuestos'] - ttm['delta_ctn']
+                                    if None not in (ttm.get('ebitda'), ttm.get('impuestos'),
+                                                    ttm.get('delta_ctn')) else None)
+        r['margen_flujo_operacion_ttm'] = (_div(r['flujo_operacion_ttm'], ing12)
+                                           if ing12 and ing12 > 0 else None)
     return r
 
 
@@ -518,6 +552,17 @@ def calcular_ttm(filas_derivadas, i):
         if all(c in f for f in ventana):
             vals = [f[c] for f in ventana]
             out[c] = sum(vals) if all(v is not None for v in vals) else None
+    # Para el crecimiento: los ingresos de los doce meses ANTERIORES a la
+    # ventana. Para el flujo: cuánto cambió el capital de trabajo en el año,
+    # del cierre del mes previo a la ventana al cierre del último.
+    out['ingresos_previos'] = None
+    if i >= 2 * PERIODOS_POR_ANIO - 1:
+        prev = [f.get('ingresos') for f in filas_derivadas[i - 2 * PERIODOS_POR_ANIO + 1:i - PERIODOS_POR_ANIO + 1]]
+        out['ingresos_previos'] = sum(prev) if all(v is not None for v in prev) else None
+    out['delta_ctn'] = None
+    if i >= PERIODOS_POR_ANIO:
+        hoy, antes = _ctn(filas_derivadas[i]), _ctn(filas_derivadas[i - PERIODOS_POR_ANIO])
+        out['delta_ctn'] = hoy - antes if None not in (hoy, antes) else None
     return out
 
 
@@ -538,9 +583,10 @@ def calcular_ttm(filas_derivadas, i):
 # Antes de esta separación, las metas de Networks —ROE 18%, WACC 11%, DSO 55—
 # estaban aquí como constantes. Funcionaba porque solo había un cliente.
 # Las familias son el orden de lectura de un análisis financiero: primero
-# cuánto gana, luego sobre cuánto capital, luego cuánto tarda el dinero en dar
+# cuánto vende y cuánto efectivo deja, luego cuánto gana, sobre cuánto capital, luego cuánto tarda el dinero en dar
 # la vuelta, cuánto debe y con qué holgura paga lo que vence.
 FAMILIAS = [
+    ('crecimiento',  'Ventas y flujo'),
     ('rentabilidad', 'Rentabilidad'),
     ('rendimiento',  'Rendimiento sobre capital'),
     ('ciclo',        'Ciclo de efectivo'),
@@ -563,8 +609,12 @@ FAMILIAS = [
 # que son puro saldo (deuda/patrimonio, pasivo/activo, liquidez) y el WACC, que
 # es una tasa, no llevan. Todo lo que lleva un flujo, sí.
 def _k(nombre, unidad, mayor_mejor, familia, ttm=None, monetario=False,
-       destacado=False, fuente='razon'):
+       destacado=False, fuente='razon', en=None):
     return {'nombre': nombre, 'unidad': unidad, 'mayor_mejor': mayor_mejor,
+            # El nombre en inglés viaja con el indicador: el tablero lo usa
+            # cuando la página está en inglés (kpNombreInd). Sin él, la tabla
+            # en inglés mostraba los nombres en español.
+            'nombre_en': en or nombre,
             'familia': familia, 'ttm': ttm, 'monetario': monetario,
             # 'destacado' marca los que salen en el comparativo entre empresas
             # del tablero de dirección — no caben todos, y cuáles caben es una
@@ -583,17 +633,31 @@ def _k(nombre, unidad, mayor_mejor, familia, ttm=None, monetario=False,
 
 
 CATALOGO_KPIS = {
+    # --- Ventas y flujo ----------------------------------------------------
+    # Lo primero que se pregunta de un negocio: cuánto vende, si crece y cuánto
+    # efectivo deja su operación. Son montos (en pesos) y su crecimiento; los
+    # montos de doce meses son las ventas y el flujo de un año completo.
+    'ventas':            _k('Ventas', '$', True, 'crecimiento', ttm='ventas_ttm',
+                            monetario=True, en='Sales'),
+    'crecimiento_ventas': _k('Crecimiento de ventas', '%', True, 'crecimiento',
+                            ttm='crecimiento_ventas_ttm', en='Sales growth'),
+    'flujo_operacion':   _k('Flujo de operación', '$', True, 'crecimiento',
+                            ttm='flujo_operacion_ttm', monetario=True,
+                            en='Operating cash flow'),
+    'margen_flujo_operacion': _k('Flujo de operación / ventas', '%', True, 'crecimiento',
+                            ttm='margen_flujo_operacion_ttm',
+                            en='Operating cash flow / sales'),
     # --- Rentabilidad ------------------------------------------------------
     'margen_bruto':      _k('Margen bruto', '%', True, 'rentabilidad',
-                            ttm='margen_bruto_ttm'),
+                            ttm='margen_bruto_ttm', en='Gross margin'),
     'margen_ebitda':     _k('Margen EBITDA', '%', True, 'rentabilidad',
-                            ttm='margen_ebitda_ttm', destacado=True),
+                            ttm='margen_ebitda_ttm', destacado=True, en='EBITDA margin'),
     'margen_ebit':       _k('Margen operativo', '%', True, 'rentabilidad',
-                            ttm='margen_ebit_ttm'),
+                            ttm='margen_ebit_ttm', en='Operating margin'),
     'margen_neto':       _k('Margen neto', '%', True, 'rentabilidad',
-                            ttm='margen_neto_ttm', destacado=True),
+                            ttm='margen_neto_ttm', destacado=True, en='Net margin'),
     'margen_fcf':        _k('Margen de flujo libre', '%', True, 'rentabilidad',
-                            ttm='margen_fcf_ttm'),
+                            ttm='margen_fcf_ttm', en='Free cash flow margin'),
     # --- Rendimiento sobre capital ----------------------------------------
     'roe':               _k('ROE', '%', True, 'rendimiento', ttm='roe_ttm'),
     'roa':               _k('ROA', '%', True, 'rendimiento', ttm='roa_ttm'),
@@ -606,32 +670,38 @@ CATALOGO_KPIS = {
     # un solo mes, así que brinca mucho; la de doce meses es la que sirve para
     # decidir, y es la que el tablero muestra por defecto.
     'eva':               _k('EVA (valor económico agregado)', '$', True,
-                            'rendimiento', ttm='eva_ttm', monetario=True),
+                            'rendimiento', ttm='eva_ttm', monetario=True,
+                            en='EVA (economic value added)'),
     'rotacion_activos':  _k('Rotación de activos', 'x', True, 'rendimiento',
-                            ttm='rotacion_activos_ttm'),
+                            ttm='rotacion_activos_ttm', en='Asset turnover'),
     # --- Ciclo de efectivo -------------------------------------------------
     'dso':               _k('Días de cobranza', 'días', False, 'ciclo',
-                            ttm='dso_ttm', destacado=True),
-    'dio':               _k('Días de inventario', 'días', False, 'ciclo', ttm='dio_ttm'),
-    'dpo':               _k('Días de pago', 'días', True, 'ciclo', ttm='dpo_ttm'),
-    'ccc':               _k('Ciclo de efectivo', 'días', False, 'ciclo', ttm='ccc_ttm'),
+                            ttm='dso_ttm', destacado=True, en='Days sales outstanding'),
+    'dio':               _k('Días de inventario', 'días', False, 'ciclo', ttm='dio_ttm',
+                            en='Days inventory outstanding'),
+    'dpo':               _k('Días de pago', 'días', True, 'ciclo', ttm='dpo_ttm',
+                            en='Days payable outstanding'),
+    'ccc':               _k('Ciclo de efectivo', 'días', False, 'ciclo', ttm='ccc_ttm',
+                            en='Cash conversion cycle'),
     'ctn_sobre_ventas':  _k('Capital de trabajo / ventas', '%', False, 'ciclo',
-                            ttm='ctn_sobre_ventas_ttm'),
+                            ttm='ctn_sobre_ventas_ttm', en='Working capital / sales'),
     # --- Apalancamiento y solvencia ---------------------------------------
-    'deuda_entre_patrimonio': _k('Deuda / patrimonio', 'x', False, 'deuda'),
+    'deuda_entre_patrimonio': _k('Deuda / patrimonio', 'x', False, 'deuda',
+                            en='Debt / equity'),
     'deuda_neta_ebitda': _k('Deuda neta / EBITDA', 'x', False, 'deuda',
-                            ttm='deuda_neta_ebitda_ttm', destacado=True),
+                            ttm='deuda_neta_ebitda_ttm', destacado=True,
+                            en='Net debt / EBITDA'),
     'cobertura_intereses': _k('Cobertura de intereses', 'x', True, 'deuda',
-                            ttm='cobertura_intereses_ttm'),
+                            ttm='cobertura_intereses_ttm', en='Interest coverage'),
     'costo_deuda_efectivo': _k('Costo de la deuda', '%', False, 'deuda',
-                            ttm='costo_deuda_efectivo_ttm'),
-    'razon_deuda':       _k('Pasivo / activo', '%', False, 'deuda'),
+                            ttm='costo_deuda_efectivo_ttm', en='Cost of debt'),
+    'razon_deuda':       _k('Pasivo / activo', '%', False, 'deuda', en='Liabilities / assets'),
     'tasa_efectiva':     _k('Tasa efectiva de impuestos', '%', False, 'deuda',
-                            ttm='tasa_efectiva_ttm'),
+                            ttm='tasa_efectiva_ttm', en='Effective tax rate'),
     # --- Liquidez ----------------------------------------------------------
-    'razon_circulante':  _k('Razón circulante', 'x', True, 'liquidez'),
-    'prueba_acida':      _k('Prueba del ácido', 'x', True, 'liquidez'),
-    'razon_efectivo':    _k('Razón de efectivo', 'x', True, 'liquidez'),
+    'razon_circulante':  _k('Razón circulante', 'x', True, 'liquidez', en='Current ratio'),
+    'prueba_acida':      _k('Prueba del ácido', 'x', True, 'liquidez', en='Quick ratio'),
+    'razon_efectivo':    _k('Razón de efectivo', 'x', True, 'liquidez', en='Cash ratio'),
 }
 
 # Qué tan cerca de la meta sigue contando como amarillo. Es el valor de

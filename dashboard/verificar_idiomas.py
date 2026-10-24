@@ -42,9 +42,9 @@ IDIOMAS = sorted(set(re.findall(r"LANG\s*===\s*'(\w+)'", s))
 # Familias de claves que se arman concatenando. Cada entrada es
 # (prefijo, [sufijos]) y se expande al producto.
 DINAMICAS = [
-    ('tf.fam.', ['rentabilidad', 'rendimiento', 'ciclo', 'deuda', 'liquidez']),
+    ('tf.fam.', ['crecimiento', 'rentabilidad', 'rendimiento', 'ciclo', 'deuda', 'liquidez']),
     ('tf.fam.', [f'{x}.s' for x in
-                 ('rentabilidad', 'rendimiento', 'ciclo', 'deuda', 'liquidez')]),
+                 ('crecimiento', 'rentabilidad', 'rendimiento', 'ciclo', 'deuda', 'liquidez')]),
     ('tf.du.', ['carga_fiscal', 'carga_intereses', 'margen_ebit',
                 'rotacion_activos', 'apalancamiento', 'roe', 'descuadre']),
     ('tf.w.', ['rf', 'beta', 'erp', 'kd', 'tasa', 'tasa.n', 'tasa.nofiable',

@@ -1284,9 +1284,11 @@ const ENTRADAS = __ENTRADAS_JSON__;
 /* ============================================================================
    QUÉ ES ESTA APP, CÓMO SE TRABAJA AQUÍ, Y HACIA DÓNDE VA
    (párrafo vivo: actualízalo cuando una decisión de fondo cambie —
-    última edición: 2026-10-21, al agregar Ventas | Compras a Facturación,
-    corregir "Total USD" —que sumaba pesos—, publicar toda la historia del
-    ERP y dejar la lista de capacidades en CAPACIDADES.md)
+    última edición: 2026-10-24, al agregar la familia Ventas y flujo
+    —ventas, crecimiento y flujo de operación— y los nombres de los
+    indicadores en inglés; antes, 2026-10-21: Ventas | Compras en
+    Facturación, "Total USD" corregido, toda la historia del ERP y la lista
+    de capacidades en CAPACIDADES.md)
    ============================================================================
    ESTA APP es el tablero analítico de un grupo de empresas, construido
    directamente sobre su ERP. Qué empresas son, con qué ERP se conecta cada
@@ -1357,8 +1359,11 @@ const ENTRADAS = __ENTRADAS_JSON__;
      · **Dirección** — la lectura de quien decide. Cinco cifras, el semáforo
        contra meta, la tendencia de doce meses y la comparación entre empresas.
      · **Indicadores** — la lectura de quien revisa. Todas las razones por
-       familia, el DuPont del ROE y el costo de capital abierto insumo por
-       insumo.
+       familia —empezando por Ventas y flujo: ventas, su crecimiento y el
+       flujo de operación—, el DuPont del ROE y el costo de capital abierto
+       insumo por insumo. Su vista Avanzado lleva cada indicador en el tiempo,
+       por año o por los periodos que se elijan, para fijar metas sustentadas
+       en la historia.
 
    Y una quinta que NO está en la barra: la **hoja de captura** de entradas
    manuales, que se abre desde Ajustes o con #entradas en la dirección. La usa
@@ -1706,6 +1711,7 @@ const ENTRADAS = __ENTRADAS_JSON__;
      kpForma(estado)             ▲ ● ▼ — el semáforo nunca es solo color
      kpValor(fila, clave, base)  respeta la base de doce meses o del mes
      kpEstado()                  recalcula el semáforo contra la meta
+     kpNombreInd(clave)          el nombre del indicador en el idioma de la página
      kpTTM(clave, periodo, campo)  suma doce meses, o None si no hay doce
      kpAvisosDe / kpPintarAvisos   por qué una cifra puede no ser lo que parece
      kpHeroPintar / kpSemPintar / kpGrafica / kpComparativo
@@ -2056,6 +2062,7 @@ const I18N = {
     'kp.aviso.sinmetas':'No hay metas configuradas, así que no se pinta semáforo. Se capturan con: python finanzas/configuracion/configurar.py --politica metas.roe=0.18',
     'kp.aviso.sinsupuestos':'Faltan supuestos del costo de capital, así que el WACC, el spread contra ROIC y el EVA no se pueden calcular.',
     'tf.indicador':'Indicador','tf.valor':'Valor','tf.meta':'Meta','tf.previo':'Hace un año',
+    'tf.fam.crecimiento':'Ventas y flujo','tf.fam.crecimiento.s':'Cuánto vende, si crece y cuánto efectivo deja la operación',
     'tf.fam.rentabilidad':'Rentabilidad','tf.fam.rentabilidad.s':'Cuánto queda de cada peso facturado',
     'tf.fam.rendimiento':'Rendimiento sobre capital','tf.fam.rendimiento.s':'Cuánto rinde el capital empleado, y si supera lo que cuesta',
     'tf.fam.ciclo':'Ciclo de efectivo','tf.fam.ciclo.s':'Cuánto tarda el dinero en dar la vuelta',
@@ -2585,6 +2592,7 @@ const I18N = {
     'kp.aviso.sinmetas':'No targets are configured, so no status is shown. Set them with: python finanzas/configuracion/configurar.py --politica metas.roe=0.18',
     'kp.aviso.sinsupuestos':'Cost-of-capital assumptions are missing, so WACC, the spread against ROIC and EVA cannot be computed.',
     'tf.indicador':'Metric','tf.valor':'Value','tf.meta':'Target','tf.previo':'A year ago',
+    'tf.fam.crecimiento':'Sales and cash flow','tf.fam.crecimiento.s':'How much it sells, whether it grows and how much cash operations leave',
     'tf.fam.rentabilidad':'Profitability','tf.fam.rentabilidad.s':'How much is left of every peso billed',
     'tf.fam.rendimiento':'Return on capital','tf.fam.rendimiento.s':'What the capital employed earns, and whether it beats its cost',
     'tf.fam.ciclo':'Cash cycle','tf.fam.ciclo.s':'How long money takes to come back around',
@@ -5101,6 +5109,14 @@ const GLOSARIO = [
     en:{t:'EBITDA', d:'Operating income plus depreciation and amortization. It approximates cash generation from operations, before financing and tax decisions. Under IFRS/NIF the "A" is amortization of intangibles and right-of-use assets — NOT the consumption of a prepayment such as an insurance premium, which is a current expense.'}},
   {cat:'razones', es:{t:'Últimos 12 meses (TTM)', d:'Acumulado de los doce meses que terminan en el corte elegido. Es la base por defecto porque cierra un ciclo estacional completo: anualizar un solo mes multiplicándolo por doce convierte un diciembre fuerte en un año espectacular que nunca existió. Sale vacío si no hay doce meses de historia — no se calcula con los que haya.'},
     en:{t:'Trailing twelve months (TTM)', d:'The total of the twelve months ending at the selected period. It is the default basis because it closes a full seasonal cycle: annualizing a single month by multiplying by twelve turns a strong December into a spectacular year that never existed. It comes out empty if there are not twelve months of history — it is not computed from however many exist.'}},
+  {cat:'razones', es:{t:'Ventas', d:'Los ingresos del periodo según el Estado de Resultados. En doce meses, las ventas de un año móvil completo. En el Grupo, sin las ventas entre empresas del grupo.'},
+    en:{t:'Sales', d:'Revenue for the period per the income statement. On a twelve-month basis, a full rolling year of sales. For the Group, excluding sales between group companies.'}},
+  {cat:'razones', es:{t:'Crecimiento de ventas', d:'Cuánto cambiaron las ventas contra el MISMO periodo del año anterior: un mes contra ese mes, un trimestre contra ese trimestre, doce meses contra los doce anteriores. Así la temporada no se lee como crecimiento. Un periodo que no ha terminado no tiene crecimiento.'},
+    en:{t:'Sales growth', d:'How much sales changed against the SAME period a year earlier: a month against that month, a quarter against that quarter, twelve months against the previous twelve. That way seasonality is not read as growth. A period that has not ended has no growth.'}},
+  {cat:'razones', es:{t:'Flujo de operación', d:'El efectivo que deja la operación antes de invertir y de financiarse: EBITDA menos impuestos menos el aumento del capital de trabajo (cuentas por cobrar más inventarios menos cuentas por pagar). Si los clientes tardan más en pagar, el flujo baja aunque la utilidad no cambie. Es una aproximación: usa los impuestos registrados, no los pagados.'},
+    en:{t:'Operating cash flow', d:'The cash operations leave before investing and financing: EBITDA minus taxes minus the increase in working capital (receivables plus inventories minus payables). If customers take longer to pay, cash flow drops even if profit does not change. It is an approximation: it uses taxes recorded, not taxes paid.'}},
+  {cat:'razones', es:{t:'Flujo de operación / ventas', d:'Qué parte de cada peso vendido se convierte en efectivo de la operación. Comparado con el margen EBITDA, dice cuánta utilidad se queda atorada en capital de trabajo.'},
+    en:{t:'Operating cash flow / sales', d:'What share of each peso sold turns into operating cash. Compared with the EBITDA margin, it shows how much profit gets stuck in working capital.'}},
   {cat:'razones', es:{t:'ROE', d:'Rendimiento sobre el patrimonio: utilidad neta entre el capital de los dueños. Cuánto gana la empresa por cada peso que le pusieron. Se calcula contra el patrimonio PROMEDIO del periodo, no el final, porque la utilidad es un flujo y el patrimonio un saldo.'},
     en:{t:'ROE', d:'Return on equity: net income over the owners\' capital. How much the company earns per peso put in. Computed against AVERAGE equity for the period, not ending equity, because income is a flow and equity is a balance.'}},
   {cat:'razones', es:{t:'ROIC', d:'Rendimiento sobre el capital invertido: utilidad operativa después de impuestos entre patrimonio más deuda neta. A diferencia del ROE, no se deja inflar por el apalancamiento: mide qué tan bien rinde el negocio en sí, sin importar cómo se financió.'},
@@ -6150,6 +6166,12 @@ const TF = {empresa: null, periodo: null, base: 'ttm'};
    ningún error que lo delatara.
 -------------------------------------------------------------------------- */
 function kpCat(clave){ return (KPIS.catalogo || {})[clave] || {}; }
+/* El nombre de un indicador en el idioma de la página. El catálogo trae los
+   dos (nombre, nombre_en); todo lugar que muestre un indicador pasa por aquí. */
+function kpNombreInd(clave){
+  const c = kpCat(clave);
+  return (LANG === 'en' && c.nombre_en) || c.nombre || clave;
+}
 
 function kpFamilias(){
   /* Las familias en el orden que trae el catálogo, cada una con sus claves.
@@ -6339,7 +6361,7 @@ function kpSemPintar(){
   cont.innerHTML = filas.map(x => `
     <div class="sem" data-e="${x.e}">
       <span class="f" aria-hidden="true">${kpForma(x.e)}</span>
-      <span class="b"><span class="k">${ajEsc(kpCat(x.k).nombre || x.k)}</span>
+      <span class="b"><span class="k">${ajEsc(kpNombreInd(x.k))}</span>
         <span class="m">${ajEsc(kpTextoMeta(x.k, c))}</span></span>
       <span class="v">${kpFmt(x.k, x.v)}</span>
     </div>`).join('');
@@ -6420,7 +6442,7 @@ function kpComparativo(){
   const cat = KPIS.catalogo || {};
   const cols = Object.keys(cat).filter(k => cat[k].destacado);
   let h = `<thead><tr><th>${t('fz.empresa')}</th><th class="num">${t('fz.ingresos')}</th>` +
-    cols.map(k => `<th class="num">${ajEsc(cat[k].nombre || k)}</th>`).join('') +
+    cols.map(k => `<th class="num">${ajEsc(kpNombreInd(k))}</th>`).join('') +
     '</tr></thead><tbody>';
   let hubo = false;
   for (const c of kpClaves()){
@@ -6461,7 +6483,7 @@ function tfTablaFamilia(fam, fila, filaPrev, base, ent){
     const meta = metasDe(ent)[k];
     h += `<tr>
       <td class="e" data-e="${e}" aria-hidden="true">${kpForma(e)}</td>
-      <td>${ajEsc(kpCat(k).nombre || k)}</td>
+      <td>${ajEsc(kpNombreInd(k))}</td>
       <td class="num">${kpFmt(k, v)}</td>
       <td class="meta">${meta === undefined || meta === null ? '' : kpFmt(k, meta)}</td>
       <td class="num">${vp === null || vp === undefined || !isFinite(vp)
@@ -7098,7 +7120,7 @@ function enTablaMetas(){
     const sentido = t(c.mayor_mejor ? 'en.metas.mayor' : 'en.metas.menor');
     const titulo = !srv ? t('en.metas.sinsrv') : oculta ? t('en.oculto') : t('en.metas.vaciar');
     return `<tr>
-      <td><span class="cam">${ajEsc(c.nombre || k)}</span>${
+      <td><span class="cam">${ajEsc(kpNombreInd(k))}</span>${
         pend ? `<span class="epend">${t('en.marca.pend')}</span>` : ''}
         <span class="pista">${ajEsc(sentido)}</span></td>
       <td class="uni">${ajEsc(c.unidad || '')}</td>
@@ -7260,7 +7282,7 @@ function enPintarBitacora(){
       : ajEsc(esMeta ? enMetaFmt(d.campo, v) + (enMetaEsFraccion(d.campo) ? ' ' + enMetaCat(d.campo).unidad : '')
                      : String(v));
     if (d.campo){
-      if (esMeta) partes.push(`<b>${ajEsc(t('en.metas.de', {k: enMetaCat(d.campo).nombre || d.campo}))}</b>`
+      if (esMeta) partes.push(`<b>${ajEsc(t('en.metas.de', {k: kpNombreInd(d.campo)}))}</b>`
         + (d.empresa ? ` <span class="pista" style="display:inline">[${ajEsc(
             d.empresa === KPIS.clave_grupo ? kpNombre(d.empresa) : d.empresa)}]</span>` : ''));
       else {
@@ -7939,7 +7961,7 @@ function anPintarLista(){
                    : (iguales && metas[0] !== undefined ? enMetaFmt(k, metas[0]) : '');
     const oculta = DISCRETO && kpCat(k).monetario;
     return `<tr class="${k === AN.kpi ? 'sel' : ''}">
-      <td class="ind" data-k="${ajEsc(k)}">${ajEsc(cat[k].nombre || k)}</td>${AN.ents.map(e => {
+      <td class="ind" data-k="${ajEsc(k)}">${ajEsc(kpNombreInd(k))}</td>${AN.ents.map(e => {
         const v = anValorUltimo(e, k), est = anEstado(v, metasDe(e)[k], k);
         const col = est === 'Verde' ? 'var(--sem-ok)' : est === 'Rojo' ? 'var(--sem-bad)'
                   : est === 'Amarillo' ? 'var(--sem-warn)' : '';
@@ -8540,7 +8562,7 @@ function anModResultados(R, r0){
 /* Lo que depende del indicador elegido, sin reconstruir la barra ni la lista. */
 function anPintarCuerpo(){
   const k = AN.kpi, cat = kpCat(k);
-  document.getElementById('anTitulo').textContent = cat.nombre || k;
+  document.getElementById('anTitulo').textContent = kpNombreInd(k);
   const base = AN.p === 12 ? (anUsaTTM(k) ? t('an.sub.ttm') : t('an.sub.mes')) : t('an.sub.p', {p: AN.p});
   const res = AN.ents.map(e => anAnalizar(e, k));
   const dud = res.reduce((s, r) => s + r.dudosos, 0);

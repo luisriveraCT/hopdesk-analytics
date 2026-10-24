@@ -398,8 +398,15 @@ def mes_parece_incompleto(saldos, cuentas, anio, mes,
         return any(s['codigo'] in recurrentes and abs(s['debe'] - s['haber']) > 0.5
                    for s in saldos if s['anio'] == a and s['mes'] == m)
 
-    # Si se movió en todos los meses previos y en éste no, falta el cierre.
-    return all(movio(a, m) for a, m in previos) and not movio(anio, mes)
+    # Si se movió en la MAYORÍA de los meses previos y en éste no, falta el
+    # cierre. Antes se exigía "en todos", y dos meses abiertos seguidos se
+    # tapaban entre sí: con septiembre sin cerrar, octubre —el mes en curso—
+    # tenía un mes previo sin depreciación y pasaba como mes normal, así que el
+    # "último dato" de toda la app era un mes a medias. Lo mismo dejaba sin
+    # marcar mayo de 2023 en NRS, el segundo de dos meses sin depreciación.
+    if movio(anio, mes):
+        return False
+    return sum(1 for a, m in previos if movio(a, m)) >= max(3, len(previos) - 2)
 
 
 def fila_financiera(ini: str, anio: int, mes: int, datos=None,

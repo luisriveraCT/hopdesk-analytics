@@ -59,6 +59,8 @@ Cómo se escriben las piezas (entre comillas invertidas):
 | Netear intercompañía | Ver solo el negocio con terceros de una empresa | `fzNetear()` `#fzNeteo` |
 | Dirección | Cinco cifras, semáforo contra meta, tendencia de doce meses, comparación entre empresas | `kpConstruir()` `kpSemPintar()` `kpComparativo()` |
 | Indicadores | Todas las razones por familia, DuPont del ROE y costo de capital abierto | `tfConstruir()` `tfDupont()` `tfWacc()` |
+| Ventas y flujo | Ventas, su crecimiento contra el mismo periodo del año anterior, flujo de operación (EBITDA − impuestos − aumento del capital de trabajo) y flujo sobre ventas; en el mes, en doce meses y por cualquier periodicidad | `t:tf.fam.crecimiento` `finanzas/razones_financieras.py` `dashboard/exportar_kpis.py` |
+| Nombres de los indicadores en dos idiomas | Cada indicador trae su nombre en inglés y todas las pantallas lo toman de un solo lugar | `kpNombreInd()` |
 | Huecos honestos | Lo que no se puede calcular con honestidad no se muestra, y dice por qué | `kpAvisosDe()` `finanzas/razones_financieras.py` |
 
 ## Análisis de indicadores (Avanzado)
@@ -73,7 +75,7 @@ Cómo se escriben las piezas (entre comillas invertidas):
 | 12 meses móviles o el mes | Por omisión, doce meses móviles; con periodicidad 12 se puede ver el dato del mes | `#anBase` `t:an.base.ttm` |
 | Ventana | 12, 24, 36 periodos, toda la historia, o un rango en una barra cuyos pasos son los periodos de la periodicidad; el rango se conserva en las mismas fechas al cambiarla. Se mueve por los extremos, arrastrando la ventana entera, con clic en la pista o con el teclado | `#anVentana` `anPintarRango()` `#anRango` `t:an.rango.help` |
 | Base honesta | "12 m móviles" se apaga en los indicadores que no tienen versión de doce meses (solo los saldos al cierre y el WACC), y el botón marcado es lo que se ve | `anPintarBase()` `t:an.base.sinttm` |
-| Doce meses en todo lo que lleva un flujo | 20 de 26 indicadores con versión de doce meses: flujos sumados y saldos promediados en la misma ventana; el año completo por periodos cuadra con diciembre | `finanzas/razones_financieras.py` `finanzas/verificar_datos.py` |
+| Doce meses en todo lo que lleva un flujo | 24 de 30 indicadores con versión de doce meses: flujos sumados y saldos promediados en la misma ventana; el año completo por periodos cuadra con diciembre | `finanzas/razones_financieras.py` `finanzas/verificar_datos.py` |
 | Modelo ARIMA / SARIMA | Automático (d y D por KPSS y STL, órdenes por AICc) o manual (p,d,q)(P,D,Q)ₛ, con log (bloqueado si hay valores ≤ 0), rezagos, horizonte y α. Se calcula en el servidor; sin servidor lo dice | `anPintarModelo()` `anModPreparar()` `#anModelo` `finanzas/modelos_series.py` |
 | Pruebas de hipótesis del modelo | Coeficientes con error estándar, z, p e IC; ADF y KPSS sobre nivel y diferencias; STL; Ljung-Box, Jarque-Bera, varianza constante y raíces; validación fuera de muestra contra el pronóstico ingenuo | `anModResultados()` `t:an.mod.n.est` `t:an.mod.n.res` |
 | Correlogramas | ACF y PACF de la serie diferenciada y ACF de los residuos, con su banda | `anCorrSVG()` `css:.ancorr` |
