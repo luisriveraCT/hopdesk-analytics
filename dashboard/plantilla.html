@@ -216,6 +216,11 @@ button,select,input{font:inherit;color:inherit}
 /* ---------- barra superior + filtros ---------- */
 .topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:var(--surface-3);border-bottom:1px solid var(--line)}
 .topbar-in{display:flex;align-items:center;gap:14px;padding:9px 16px;flex-wrap:wrap}
+/* La barra de pestañas también es sticky con z-index 40 y va después, así que
+   tapa todo lo que salga de ésta: los menús de Montos y de Descargar se abrían
+   por debajo de las pestañas. Subirla siempre no sirve —al desplazar, taparía
+   las pestañas—; sube solo mientras tiene un menú abierto. */
+.topbar:has([aria-expanded="true"]){z-index:46}
 .brand{display:flex;align-items:baseline;gap:9px;margin-right:auto;min-width:0}
 .brand b{font-size:14px;font-weight:600;letter-spacing:-.01em;white-space:nowrap}
 .brand span{font-size:11px;color:var(--muted);font-family:var(--mono);white-space:nowrap}
